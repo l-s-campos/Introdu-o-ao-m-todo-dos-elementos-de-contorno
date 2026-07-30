@@ -199,6 +199,54 @@ a:hover { color: #115e59; }
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   overflow-x: auto;
+  margin: 0;
+  padding: 0.9rem 1rem;
+}
+.code-block {
+  position: relative;
+  margin: 1.1rem 0;
+}
+.code-block pre {
+  padding-right: 4.2rem;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.92);
+  color: var(--muted);
+  border-radius: 0.5rem;
+  padding: 0.28rem 0.55rem;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.copy-btn:hover {
+  background: #fff;
+  color: var(--ink);
+  border-color: #a8a29e;
+}
+.copy-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.copy-btn.copied {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: #99f6e4;
+}
+.copy-btn svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
 }
 .article img {
   max-width: 100%;
@@ -396,6 +444,64 @@ btn?.addEventListener('click', () => {
   if (sidebar.classList.contains('open')) closeMenu(); else openMenu();
 });
 backdrop?.addEventListener('click', closeMenu);
+
+(function enhanceCodeBlocks() {
+  const iconCopy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  const iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
+
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('main.article pre').forEach((pre) => {
+    if (pre.closest('.code-block')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-block';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy-btn';
+    button.setAttribute('aria-label', 'Copiar código');
+    button.innerHTML = iconCopy + '<span>Copiar</span>';
+    wrap.appendChild(button);
+
+    let resetTimer;
+    button.addEventListener('click', async () => {
+      const code = pre.innerText.replace(/
+$/, '');
+      try {
+        await copyText(code);
+        button.classList.add('copied');
+        button.innerHTML = iconCheck + '<span>Copiado</span>';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          button.classList.remove('copied');
+          button.innerHTML = iconCopy + '<span>Copiar</span>';
+        }, 1600);
+      } catch (err) {
+        button.innerHTML = iconCopy + '<span>Erro</span>';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          button.innerHTML = iconCopy + '<span>Copiar</span>';
+        }, 1600);
+      }
+    });
+  });
+})();
 </script>
 </body>
 </html>
