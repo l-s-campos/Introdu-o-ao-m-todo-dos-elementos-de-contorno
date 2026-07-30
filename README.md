@@ -2,34 +2,34 @@
 
 Notas de aula sobre o Método dos Elementos de Contorno (BEM), em [Typst](https://typst.app/).
 
-**Site:** https://l-s-campos.github.io/Introdu-o-ao-m-todo-dos-elementos-de-contorno/
+**Site (multipágina):** https://l-s-campos.github.io/Introdu-o-ao-m-todo-dos-elementos-de-contorno/
 
-## Conteúdo
+## Capítulos
 
-1. Apresentação
-2. Interpolação
-3. Equações diferenciais
-4. Viga de Euler
-5. Indo para 2D
-6. Laplace 2D
-7. Medidas de erro
-8. Poisson 2D
-9. Elasticidade 2D
-10. Propgeo 3D
+1. [Apresentação](docs/apresentacao.html)
+2. [Interpolação](docs/interpolacao.html)
+3. [Equações diferenciais](docs/equacoes-diferenciais.html)
+4. [Viga de Euler](docs/viga-euler.html)
+5. [Indo para 2D](docs/indo-para-2d.html)
+6. [Laplace 2D](docs/laplace-2d.html)
+7. [Poisson 2D](docs/poisson-2d.html)
+8. [Elasticidade 2D](docs/elasticidade-2d.html)
+9. [Propgeo 3D](docs/propgeo-3d.html)
+10. [Extra](docs/extra.html)
 
 ## Compilar
 
 ```bash
-# PDF
+# PDF completo
 typst compile main.typ
 
-# HTML
-typst compile --features html -f html main.typ docs/index.html
+# Site multipágina (HTML)
+node build-site.mjs
 ```
 
 ## Conversão
 
-As notas foram convertidas de Markdown (export Notion) com [`markdown2typst`](https://github.com/Mapaor/markdown2typst) e matemática via [`tex2typst`](https://github.com/qwinsi/tex2typst) (Typst nativo).
+Markdown → Typst com [`markdown2typst`](https://github.com/Mapaor/markdown2typst) + [`tex2typst`](https://github.com/qwinsi/tex2typst).
 
 ## Links
 
