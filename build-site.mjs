@@ -464,7 +464,7 @@ backdrop?.addEventListener('click', closeMenu);
 
     let resetTimer;
     button.addEventListener('click', async () => {
-      const code = pre.innerText.replace(/\n$/, '');
+      const code = pre.innerText.replace(/\\n$/, '');
       try {
         await copyText(code);
         button.classList.add('copied');
