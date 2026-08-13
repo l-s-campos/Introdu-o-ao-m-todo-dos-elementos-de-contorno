@@ -14,9 +14,9 @@ Ao final, você deve ser capaz de:
 + Calcular $T$ em pontos *internos* a partir só dos dados de contorno já resolvidos.
 + Resolver no Julia (com `Plots`) os dois casos-modelo e o exercício de convecção.
 
-Não é necessário, nesta aula, clonar repositório de produção nem gerar malha com Gmsh: o laboratório é o BEM *em uma dimensão*, onde o “contorno” são só dois pontos.
 
-== Gancho: um problema que só “mora” nas pontas
+
+== O problema reduz para o contorno
 
 Considere uma barra (ou a espessura de uma grande placa) no intervalo
 
@@ -43,7 +43,7 @@ Em 1D o contorno $Gamma$ *é* o par de pontas. A pergunta do BEM fica literal:
   será que basta conhecer o que acontece em $Gamma$?_
 ]
 
-Para Laplace 1D a resposta analítica é óbvia ($T$ é reta). O valor da aula é outro: montar a *mesma* lógica que, em 2D/3D, transforma um problema de domínio em um problema só de contorno.
+Para Laplace 1D a resposta analítica é óbvia ($T$ é reta). O objetivo é outro: montar a *mesma* lógica que, em 2D/3D, transforma um problema de domínio em um problema só de contorno.
 
 == O BEM em uma figura
 
@@ -72,7 +72,7 @@ Comparação rápida com métodos de domínio:
 
 #image("../assets/image.png", width: 85%)
 
-Em 2D, malhar só a curva que cerca a peça reduz uma dimensão da discretização. Em troca, cada ponto de contorno “enxerga” todos os outros: a matriz deixa de ser esparsa. Não existe almoço grátis — só um trade-off diferente.
+Em 2D, malhar só a curva que cerca a peça reduz uma dimensão da discretização. Em troca, cada ponto de contorno “enxerga” todos os outros: a matriz deixa de ser esparsa. Não existe almoço grátis.
 
 == Quando o BEM costuma valer a pena
 
@@ -388,8 +388,6 @@ plot!(xs, T_num; label="BEM (interior)", ls=:dash, lw=2)
 
 === Caso 2 — mista (um dado em cada ponta)
 
-Pedagogicamente mais limpo do que dois dados no mesmo extremo:
-
 $
   T(0) = 100, quad Q(1) = 0
   quad => quad T equiv 100, quad Q equiv 0.
@@ -404,7 +402,7 @@ T, Q, A, b, x = solve_bem1d(H, G, T_data, Q_data)
 
 *Caso 2b (variante).* $T(0)=100$, $Q(0)=0$ também fecha algebricamente e devolve $T_f=100$, $Q_f=0$. Serve para ver que bastam *dois dados independentes* entre os quatro slots — não necessariamente um em cada lado.
 
-== Roteiro mental
+== Roteiro
 
 + Operador no domínio $->$ resíduo ponderado.
 + Integrar por partes até o operador cair na função peso.
