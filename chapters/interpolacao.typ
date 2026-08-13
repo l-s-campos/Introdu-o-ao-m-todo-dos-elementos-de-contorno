@@ -4,6 +4,9 @@
 = Interpolação
 <interpolacao>
 
+Gráficos deste capítulo usam *CairoMakie* (ver glossário).
+
+
 == Interpolação polinomial
 
 Suponha que queremos conhecer a população às vezes entre os anos do censo ou estimar populações futuras. Uma técnica é encontrar um polinômio que passa por todos os pontos de dados.
@@ -72,16 +75,16 @@ p(2005-1980)
 O valor oficial da população para 2005 foi 1303,72, então nosso resultado é bastante bom.
 
 ```julia
-using Plots
-scatter(t,y, label="real", legend=:topleft,
-xlabel="anos desde 1980", ylabel="população (milhões)",
-title="População da China")
-
-# interpole em 500 pontos no intervalo [0,35].
-tt = range(0,35,length=500)   
-# avalie o polinômio nesses pontos
+using CairoMakie
+fig = Figure(size=(700, 400))
+ax = Axis(fig[1, 1], xlabel="anos desde 1980", ylabel="população (milhões)",
+          title="População da China")
+scatter!(ax, t, y, label="real")
+tt = range(0, 35; length=500)
 yy = p.(tt)
-plot!(tt,yy,label="interpolante")
+lines!(ax, tt, yy, label="interpolante")
+axislegend(ax, position=:lt)
+fig
 ```
 
 == Exercícios
@@ -110,14 +113,21 @@ n = 5
 t = range(-1,1,length=n+1)
 y = @. t^2 + t + 0.05*sin(20*t)
 
-scatter(t,y,label="dados",leg=:top)
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1]); scatter!(ax, t, y, label="dados"); fig
 ```
 
 O interpolante polinomial, calculado usando o `fit`, parece muito bom.
 
 ```julia
-p = Polynomials.fit(t,y,n)     
-plot!(p,-1,1,label="interpolant")
+using CairoMakie
+p = Polynomials.fit(t, y, n)
+xx = range(-1, 1; length=400)
+fig = Figure(); ax = Axis(fig[1, 1])
+scatter!(ax, t, y, label="dados")
+lines!(ax, xx, p.(xx), label="interpolante")
+axislegend(ax, position=:lt)
+fig
 ```
 
 Mas agora considere um conjunto diferente de pontos gerados quase exatamente da mesma maneira.
@@ -127,15 +137,21 @@ n = 18
 t = range(-1,1,length=n+1)
 y = @. t^2 + t + 0.05*sin(20*t)
 
-scatter(t,y,label="data",leg=:top)
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1]); scatter!(ax, t, y); fig
 ```
 
-Os pontos em si não tem nada de especial. Mas dê uma olhada no que acontece com a interpolante polinomial.
+Os pontos em si não têm nada de especial. Mas observe o que acontece com o interpolante polinomial.
 
 ```julia
-p = Polynomials.fit(t,y,n)
-x = range(-1,1,length=1000)    
-plot!(x,p.(x),label="interpolant")
+using CairoMakie
+p = Polynomials.fit(t, y, n)
+x = range(-1, 1; length=1000)
+fig = Figure(); ax = Axis(fig[1, 1])
+scatter!(ax, t, y, label="dados")
+lines!(ax, x, p.(x), label="interpolante")
+axislegend(ax, position=:lt)
+fig
 ```
 
 Certamente deve haver funções que são mais representativas desses pontos!
@@ -147,14 +163,18 @@ Para manter pequenos graus de polinomial enquanto interpolam grandes conjuntos d
 Geralmente, designamos antecipadamente um grau máximo  para cada parte polinomial de p (x).
 
 ```julia
-scatter(t,y,label="data",leg=:top)
-using Dierckx
-p1 = Spline1D(t,y;k=1)#grau 1
-p2 = Spline1D(t,y;k=2)#grau 2 
-p3 = Spline1D(t,y;k=3)#grau 3
-plot!(x->p1(x),-1,1,label="piecewise linear")
-plot!(x->p2(x),-1,1,label="piecewise quadrático")
-plot!(x->p3(x),-1,1,label="piecewise cúbico")
+using CairoMakie, Dierckx
+p1 = Spline1D(t, y; k=1)
+p2 = Spline1D(t, y; k=2)
+p3 = Spline1D(t, y; k=3)
+xx = range(-1, 1; length=400)
+fig = Figure(); ax = Axis(fig[1, 1])
+scatter!(ax, t, y, label="dados")
+lines!(ax, xx, p1.(xx), label="linear por partes")
+lines!(ax, xx, p2.(xx), label="quadrático por partes")
+lines!(ax, xx, p3.(xx), label="cúbico por partes")
+axislegend(ax, position=:lt)
+fig
 ```
 
 == Exercício
@@ -179,13 +199,18 @@ Podemos considerar x e y como funções de um parâmetro s, com os pontos sendo 
 Escolhemos uma função em relação ao intervalo  $[0, 1]$ .
 
 ```julia
-f = x -> sin(exp(2*x));
-plot(f,0,1,label="função",legend=:bottomleft)
-t = (0:6)/6
+using CairoMakie
+f = x -> sin(exp(2*x))
+t = (0:6) ./ 6
 y = f.(t)
-scatter!(t,y,label="nós")
-p = Polynomials.fit(t,y)
-plot!(p,0,1,label="interpolante",title="Interpolante equidistante, n=6")
+p = Polynomials.fit(t, y)
+xx = range(0, 1; length=400)
+fig = Figure(); ax = Axis(fig[1, 1], title="Interpolante equidistante, n=6")
+lines!(ax, xx, f.(xx), label="função")
+scatter!(ax, t, y, label="nós")
+lines!(ax, xx, p.(xx), label="interpolante")
+axislegend(ax, position=:lb)
+fig
 ```
 
 Isso parece bom. Queremos rastrear o comportamento do erro à medida que $N$ aumenta. Estimaremos o erro no interpolante contínuo, amostrando-o em um grande número de pontos e tomando a norma máxima.
@@ -197,11 +222,14 @@ x = range(0,1,length=2001)      # pontos para medir o erro
 for (i,n) in enumerate(n)
 	t = (0:n)/n                   
 	y = f.(t)                     
-	p = Polynomials.fit(t,y)
-	err[i] = norm( (@. f(x)-p(x)), Inf )
+	p = Polynomials.fit(t, y)
+	err[i] = norm((@. f(x) - p(x)), Inf)
 end
-plot(n,err,m=:o,title="Erro de interpolação para nós equidistantes",
-xaxis=("n"),yaxis=(:log10,"max error"),)
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="n", ylabel="max error",
+          yscale=log10, title="Erro de interpolação para nós equidistantes")
+scatterlines!(ax, n, err)
+fig
 ```
 
 O erro diminui inicialmente como seria de esperar, mas começa a crescer. Ambas as fases ocorrem a taxas exponenciais em $n$, ou seja,  $O(k^n)$, aparecendo linear em um gráfico semi-log.
@@ -211,66 +239,62 @@ O erro diminui inicialmente como seria de esperar, mas começa a crescer. Ambas 
 A decepcionante perda de convergência  é um sinal de mau condicionamento devido ao uso de nós igualmente espaçados.
 
 ```julia
- using Plots,LaTeXStrings,LinearAlgebra
-
+using CairoMakie, LinearAlgebra
 f = x -> 1/(x^2 + 16)
-plot(f,-1,1,title="Função teste",legend=:none)
+xx = range(-1, 1; length=400)
+fig = Figure(); ax = Axis(fig[1, 1], title="Função teste")
+lines!(ax, xx, f.(xx)); fig
 ```
 
-Essa função possui infinitamente muitos derivadas contínuas em toda a linha real e parece fácil de aproximar em $[- 1, 1]$. Começamos fazendo interpolação polinomial equispacada para alguns pequenos valores de $n$.
+Essa função possui infinitamente muitas derivadas contínuas em toda a linha real e parece fácil de aproximar em $[- 1, 1]$. Começamos fazendo interpolação polinomial equispacada para alguns pequenos valores de $n$.
 
 ```julia
-plot(xaxis=(L"x"),yaxis=(:log10,L"|f(x)-p(x)|",[1e-20,1]))
-
-x = range(-1,1,length=2501)
-n = 4:4:12
-
-for (k,n) in enumerate(n)
-    t = range(-1,1,length=n+1)      
-    y = f.(t)                       
-		p = Polynomials.fit(t,y)
-    err = @. abs(f(x)-p(x))
-    plot!(x,err,m=(1,:o,stroke(0)),label="grau $n")
+using CairoMakie
+x = range(-1, 1; length=2501)
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="x", ylabel="|f-p|", yscale=log10,
+          title="Erro para graus baixos", limits=(nothing, (1e-20, 1)))
+for n in 4:4:12
+    tt = range(-1, 1; length=n+1)
+    pp = Polynomials.fit(tt, f.(tt))
+    lines!(ax, x, abs.(f.(x) .- pp.(x)), label="grau $n")
 end
-title!("Erro para graus baixos") 
+axislegend(ax); fig
 ```
 
 A convergência até agora parece bastante boa, embora não seja uniformemente. No entanto, observe o que acontece à medida que continuamos aumentando o grau.
 
 ```julia
-n = @. 12 + 15*(1:3)
-plot(xaxis=(L"x"),yaxis=(:log10,L"|f(x)-p(x)|",[1e-20,1]))
-
-for (k,n) in enumerate(n)
-    t = range(-1,1,length=n+1)      
-    y = f.(t)                       
-		p = Polynomials.fit(t,y)
-    err = @. abs(f(x)-p(x))
-    plot!(x,err,m=(1,:o,stroke(0)),label="grau $n")
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="x", ylabel="|f-p|", yscale=log10,
+          title="Erro para graus altos", limits=(nothing, (1e-20, 1)))
+for n in @. 12 + 15*(1:3)
+    tt = range(-1, 1; length=n+1)
+    pp = Polynomials.fit(tt, f.(tt))
+    lines!(ax, x, abs.(f.(x) .- pp.(x)), label="grau $n")
 end
-title!("Erro para graus altos") 
+axislegend(ax); fig
 ```
 
 A convergência no meio não pode ficar melhor do que a precisão da máquina em relação aos valores da função. Portanto, a manutenção da lacuna crescente entre o centro e as extremidades empurra as curvas de erro exponencialmente rapidamente nas extremidades, destruindo a convergência.
 
-A observação da instabilidade é conhecida como o fenômeno runge. O fenômeno de Runge é uma instabilidade manifestada quando os nós do interpolante são igualmente espaçados e o grau do polinomial aumenta.
-Significativamente, a convergência observada  é estável dentro de uma parte do intervalo. Ao redistribuir os nós de interpolação, sacrificaremos um pouco da convergência na parte do meio, a fim de melhorá-lo perto das extremidades e resgatar o processo globalmente.
+A observação da instabilidade é conhecida como o fenômeno de Runge. O fenômeno de Runge é uma instabilidade manifestada quando os nós do interpolante são igualmente espaçados e o grau do polinomial aumenta.
+Significativamente, a convergência observada  é estável dentro de uma parte do intervalo. Ao redistribuir os nós de interpolação, sacrificaremos um pouco da convergência na parte do meio, a fim de melhorá-la perto das extremidades e resgatar o processo globalmente.
 
 Uma família de nós que fornece convergência estável para a interpolação polinomial é os pontos  Chebyshev do segundo tipo definido por:
 
 $ t_k = - cos((k pi)/n), wide k = 0, ..., n . $
 
 ```julia
-plot(label="",xaxis=(L"x"),yaxis=(:log10,L"|f(x)-p(x)|",[1e-20,1]))
-x = range(-1,1,length=2001)
-for (k,n) in enumerate([4,10,16,40])
-    t = [ -cos(pi*k/n) for k in 0:n ]
-    y = f.(t)                           
-		p = Polynomials.fit(t,y)
-    err = @.abs(f(x)-p(x))
-    plot!(x,err,m=(1,:o,stroke(0)),label="degree $n")
+using CairoMakie
+x = range(-1, 1; length=2001)
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="x", ylabel="|f-p|", yscale=log10,
+          title="Erro com os pontos de Chebyshev", limits=(nothing, (1e-20, 1)))
+for n in [4, 10, 16, 40]
+    tt = [-cos(pi * k / n) for k in 0:n]
+    pp = Polynomials.fit(tt, f.(tt))
+    lines!(ax, x, abs.(f.(x) .- pp.(x)), label="grau $n")
 end
-title!("Erro com os pontos de Chebyshev")
+axislegend(ax); fig
 ```
 
 A partir do grau 16, o erro está dentro da precisão de máquina e ele permanece lá à medida que $n$ aumenta.
@@ -310,12 +334,17 @@ In = dot(w, f.(x))
 Quando você olha para os gráficos dessas funções, o que é notável é que uma dessas áreas é muito simples, enquanto o outro é analiticamente muito difícil. Do ponto de vista numérico, eles são praticamente o mesmo problema.
 
 ```julia
- using Plots,LaTeXStrings
-plot([exp,x->exp(sin(x))],-1,1,fill=0,layout=(2,1),
-    xlabel=L"x",ylabel=[L"e^x" L"e^{\sin(x)}"],ylim=[0,2.7])
+using CairoMakie
+xx = range(-1, 1; length=400)
+fig = Figure(size=(700, 500))
+ax1 = Axis(fig[1, 1], xlabel="x", ylabel="exp(x)", limits=(nothing, (0, 2.7)))
+ax2 = Axis(fig[2, 1], xlabel="x", ylabel="exp(sin(x))", limits=(nothing, (0, 2.7)))
+band!(ax1, xx, zero(xx), exp.(xx)); lines!(ax1, xx, exp.(xx))
+band!(ax2, xx, zero(xx), exp.(sin.(xx))); lines!(ax2, xx, exp.(sin.(xx)))
+fig
 ```
 
-A integração numérica, que também passa pelo nome mais antigo quadratura, é executado pela combinação de valores do integrando amostrados nos nós. Nesta seção, assumiremos nós igualmente espaçados:
+A integração numérica, que também passa pelo nome mais antigo quadratura, é executada pela combinação de valores do integrando amostrados nos nós. Nesta seção, assumiremos nós igualmente espaçados:
 
 $ t_i = a + i h, quad h = (b - a)/n , wide i = 0, ..., n . $
 
@@ -354,7 +383,6 @@ end
 Vamos aproximar $f(x) = e^(sin 7 x)$ no intervalo $[0, 2]$.
 
 ```julia
-using PrettyTables
 f = x -> exp(sin(7*x));
 a = 0;  b = 2;
 
@@ -369,7 +397,7 @@ for n in n
     push!(err,Integral-T)
 end
 
-pretty_table([n err],["n","erro"])
+foreach(args -> println(args[1], "	", args[2]), zip(n, err))
 ```
 
 Cada aumento em um fator de 10 em $n$ reduz o erro em um fator de cerca de 100, o que é consistente com a convergência de segunda ordem.
@@ -401,9 +429,12 @@ end
 
 errT[iszero.(errT)] .= NaN
 errG[iszero.(errG)] .= NaN
-plot(n,[errT errG],m=:o,label=["T" "GL"],
-    xaxis=("nós"), yaxis=(:log10,"error",[1e-16,1]), 
-    title="integração numérica")
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="nós", ylabel="erro", yscale=log10,
+          title="integração numérica", limits=(nothing, (1e-16, 1)))
+scatterlines!(ax, collect(n), errT, label="trapézio")
+scatterlines!(ax, collect(n), errG, label="Gauss-Legendre")
+axislegend(ax); fig
     
     
 ```
@@ -427,9 +458,12 @@ end
 
 errT[iszero.(errT)] .= NaN
 errG[iszero.(errG)] .= NaN
-plot(n,[errT errG],m=:o,label=["T" "GL"],
-    xaxis=("nós"), yaxis=(:log10,"error",[1e-16,1]), 
-    title="integração numérica")
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="nós", ylabel="erro", yscale=log10,
+          title="integração numérica", limits=(nothing, (1e-16, 1)))
+scatterlines!(ax, collect(n), errT, label="trapézio")
+scatterlines!(ax, collect(n), errG, label="Gauss-Legendre")
+axislegend(ax); fig
 ```
 
 === Exercícios
@@ -477,9 +511,14 @@ end
 ```
 
 ```julia
-x=range(-1,1,length=100)    
-xt,jac=sinhtrans(x, 0.5, 0.01)
-plot(xt,[x,jac],layout=(2,1),xlabel=L"s",ylabel=[L"\xi" L"\frac{d\xi}{ds}"],legend=false)
+using CairoMakie
+x = range(-1, 1; length=100)
+xt, jac = sinhtrans(x, 0.5, 0.01)
+fig = Figure(size=(700, 500))
+ax1 = Axis(fig[1, 1], xlabel="s", ylabel="ξ")
+ax2 = Axis(fig[2, 1], xlabel="s", ylabel="dξ/ds")
+lines!(ax1, collect(x), xt); lines!(ax2, collect(x), jac)
+fig
 ```
 
 aplicando essa técnica para a integral do último exemplo pode-se observar uma redução significativa do erro para a mesma quantidade de pontos.

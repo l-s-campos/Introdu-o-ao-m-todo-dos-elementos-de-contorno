@@ -1,22 +1,37 @@
 // Viga de Euler
 // markdown2typst + tex2typst
+// Material EXTRA — fora da trilha principal de 30 h
 
-= Viga de Euler
+= Viga de Euler (extra)
 <viga-euler>
+
+#block(
+  width: 100%,
+  fill: luma(245),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+)[
+  *Material extra / standalone.* Este capítulo aprofunda o BEM 1D em vigas (Euler–Bernoulli, transiente, Timoshenko). *Não* faz parte da trilha obrigatória de 30 h.
+
+  O repositório #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`] concentra-se em *Laplace/Poisson e elasticidade 2D* (malhas Gmsh, DIBEM, H-matrizes, contato, ondas escalares). *Não* há, no núcleo atual, um solver de viga de Euler–Bernoulli pronto como os de `Laplace` / `Elasticity`.
+
+  Os códigos deste capítulo são *pedagógicos e autônomos*: rode-os em um script Julia simples (com `CairoMakie` se for plotar), sem esperar um `Viga(...)` + `format2d` no `BEM_gmsh`. Servem para fixar SF de ordem alta, dualidade deslocamento/rotação e, se desejar, um projeto de monografia.
+]
 
 == Teoria de vigas
 
-Considerando a viga representada a equação governante do problema pode ser escrita como :
+Considerando a viga representada, a equação governante pode ser escrita como:
 
 $E I (dif^4 u)/(dif x^4) = q(x)$
 
-A partir de $u$  as podemos definir:
+A partir de $u$ definimos a rotação, o momento fletor e a cortante:
 
-$phi = (dif u)/(dif x) , quad M = - E I (dif^2 u)/(dif x^2) , quad upright(e) quad Q = - E I (dif^3 u)/(dif x^3)$ que são a rotação, momento fletor e cortante.
+$phi = (dif u)/(dif x) , quad M = - E I (dif^2 u)/(dif x^2) , quad Q = - E I (dif^3 u)/(dif x^3) .$
 
 #image("../assets/viga-euler/viga-teoria.png", width: 80%)
 
-usando essas definições, aplicando o método dos resíduos ponderados e integração por partes 4 vezes obtemos:
+Usando essas definições, o método dos resíduos ponderados e integração por partes quatro vezes, obtém-se:
 
 $ u(xi) &= + u^* (xi, x) Q(x) |_(x = L) - u^* (xi, x) Q(x) |_(x = 0) \ & -lr(phi^* (xi, x) M(x)|)_(x = L) + lr(phi^* (xi, x) M(x)|)_(x = 0) \ & +lr(M^* (xi, x) phi(x)|)_(x = L) - lr(M^* (xi, x) phi(x)|)_(x = 0) \ & -Q^* (xi, x) u(x) |_(x = L) + Q^* (xi, x) u(x) |_(x = 0) \ & +integral_0^L u^* (xi, x) q(x) dif x, $
 
@@ -125,7 +140,7 @@ a solução fundamental para esse problema é dada por:
 
 $ u^* (x, xi, t, tau) = 1/c {r/2 [upright(S) (r/sqrt(2 pi a)) - upright(C) (r/sqrt(2 pi a))] + sqrt(a)/sqrt(2 pi) [sin((r^2)/(4 a)) + cos((r^2)/(4 a))]} $
 
-onde as funções S e C são denominadas #link("https://kiranshila.github.io/FresnelIntegrals.jl/dev/")[integrais de Fresnel], $r = | x - xi |$e $a = c(t - tau)$.
+onde as funções S e C são denominadas #link("https://kiranshila.github.io/FresnelIntegrals.jl/dev/")[integrais de Fresnel], $r = | x - xi |$ e $a = c(t - tau)$.
 
 $ theta^* (x, xi, t, tau) = + 1/c {1/2 [upright(S) (r/sqrt(2 pi a)) - upright(C) (r/sqrt(2 pi a))]}((partial r)/(partial x)), \ M^* (x, xi, t, tau) = - (E I)/c {1/(2 sqrt(2 pi a)) [sin((r^2)/(4 a)) - cos((r^2)/(4 a))]}((partial r)/(partial x))^2 , \ Q^* (x, xi, t, tau) = - (E I)/c {r/(4 sqrt(2 pi a^3)) [sin((r^2)/(4 a)) + cos((r^2)/(4 a))]}((partial r)/(partial x))^3 , $
 
@@ -140,7 +155,7 @@ $ theta(xi, t) = & -1/(rho A) {integral_0^t [(partial u^*)/(partial xi) Q - (par
 
 === Exercício
 
-3 - Faça um gráfico 3d de $u^*$ e $d u^* \/ d xi$. Considere $xi$ e $tau$ iguais a zero, que o tempo varia de 0 a 10s e que o  $x$ varia de $0$ a $L$. #link("https://docs.juliaplots.org/stable/gallery/gr/generated/gr-ref050/#gr_ref050")[Exemplo de superfície].
+3 - Faça um gráfico 3D de $u^*$ e $partial u^* / partial xi$. Considere $xi$ e $tau$ iguais a zero, tempo de 0 a 10 s e $x$ de $0$ a $L$. Em CairoMakie use `surface` (#link("https://docs.makie.org/stable/")[docs Makie]).
 
 = Desafio
 

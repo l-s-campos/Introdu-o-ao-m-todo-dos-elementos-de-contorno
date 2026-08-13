@@ -35,26 +35,26 @@ O comprimento $Gamma$ do perímetro da figura é então dado por:
 
 $Gamma = sum_(i = 1)^n integral_(-1)^1 (d Gamma)/(d xi) d xi = sum_(i = 1)^n integral_(-1)^1 sqrt(((d x)/(d xi))^2 + ((d y)/(d xi))^2) d xi = sum_(i = 1)^n [integral_(-1)^1 J(xi) d xi]$ em que a função $J(xi) = sqrt(((d x)/(d xi))^2 + ((d y)/(d xi))^2)$ é chamada jacobiano da transformação. Usando quadratura de Gauss com $p$ pontos de Gauss, conclui-se que $Gamma = sum_(i = 1)^n [sum_(k = 1)^p w_k J(xi_k)]$.
 
-#link("https://1drv.ms/f/s!AmfyGvdmTYongqYkwQK1hIXEROJbEA?e=omRWUR")[código para propriedade geométrica]
+No `BEM_gmsh` as propriedades geométricas saem diretamente de um `BEMdata` (integrais de contorno com as mesmas funções de forma e jacobianos do BEM):
 
 ```julia
-include("dad.jl")
-include("format.jl")
-include("calcula_PropGeom.jl")
-include("calc_fforma.jl")
-using FastGaussQuadrature,GLMakie
+using DrWatson
+@quickactivate :BEM
+include(datadir("Laplace", "Laplace_dad.jl"))
 
-PONTOS,SEGMENTOS,MALHA=dad_1(10,1) #Arquivo de entrada de dados
+# Malha Gmsh do contorno (e domínio, se houver Surface física)
+msh = quadrado(ndiv=20, show=false)
+dad = format2d(msh, Laplace(1.0); pontointerno=false)
 
-NOS,ELEM=format_dad(PONTOS,SEGMENTOS,MALHA)# formata os dados (cria as
-  # matrizes NOS e ELEM a partir das matrizes PONTOS, SEGMENTOS e MALHA)
-display(mostra_geo(SEGMENTOS,PONTOS,ELEM,NOS))
+plot_geo(dad)   # visualiza nós, elementos e normais
 
-Perimetro,Area,xbarra,ybarra=calcula_PropGeom(ELEM,NOS,4,4); # Calcula as propriedades geom�tricas de figuras plana
-println("Perimetro calculado numericamente: $Perimetro")
-println("Área calculada numericamente: $Area")
-println("Centróide calculado numericamente: ( $xbarra, $ybarra)")
+gp = geometric_props(dad)   # ou geometric_props_2d(dad)
+println("Perímetro: ", gp.perimeter)
+println("Área:      ", gp.area)
+println("Centróide: ", gp.centroid)
 ```
+
+Para uma poligonal simples (sem Gmsh), use `geometric_props_2d_polygon` com a lista de vértices em sentido anti-horário. Material antigo em planilhas/OneDrive permanece como referência histórica: #link("https://1drv.ms/f/s!AmfyGvdmTYongqYkwQK1hIXEROJbEA?e=omRWUR")[código legado de propriedade geométrica].
 
 #image("../assets/indo-para-2d/geo-exemplo.png", width: 80%)
 
@@ -116,7 +116,7 @@ $I_x = (a^4)/96 (9 sqrt(3) - 2 pi)$
 $I_x = 2 dot.op 10^4 pi - (20^2 dot.op pi)/2 (80/(3 dot.op pi))^2
 + ((20^2 pi)/2) (15 + 80/(3 pi))^2$
 
-Calcule, modificando o programa propgeo, os momentos de inércia em relação ao eixo x para as duas figuras e compare com o resultado analítico.
+Calcule, estendendo `geometric_props` (ou um script próprio no espírito do `propgeo`), os momentos de inércia em relação ao eixo $x$ para as duas figuras e compare com o resultado analítico. Sugestão: reutilize a malha Gmsh + `format2d` e integre $y^2$ via a mesma redução a contorno apresentada acima.
 
 - Gravações
   #link("https://youtu.be/TZvHS2JzKOs")[https://youtu.be/TZvHS2JzKOs]

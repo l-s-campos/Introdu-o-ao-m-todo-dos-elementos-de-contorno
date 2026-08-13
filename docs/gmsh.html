@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gmsh e malhas · Introdução ao método dos elementos de contorno</title>
+<meta name="authors" content="Lucas S. Campos">
+<style>/* Alignment */
+mtable.right-align mtd,
+mtable mtd.right-align,
+mtable.left-align mtd.right-align,
+mtable.aligned mtd:nth-child(odd) {
+  justify-items: end;
+  text-align: right;
+}
+mtable.cases mtd,
+mtable.left-align mtd,
+mtable mtd.left-align,
+mtable.aligned mtd:nth-child(even),
+math:is(:not([display])) > mtable.multiline-equation mtd {
+  justify-items: start;
+  text-align: left;
+}
+mtable.cases mtd,
+mtable.aligned mtd,
+mtable mtd.flushed,
+mtable mtd.left-flush {
+  padding-left: 0;
+}
+mtable.cases mtd,
+mtable.aligned mtd,
+mtable mtd.flushed,
+mtable mtd.right-flush {
+  padding-right: 0;
+}
+
+/* Tables */
+mtable {
+  math-style: inherit;
+}
+mtd {
+  math-depth: auto-add;
+  math-style: compact;
+  math-shift: compact;
+}
+
+/* Equations */
+mtable.multiline-equation mtd {
+  math-depth: inherit;
+  math-style: inherit;
+  math-shift: inherit;
+  padding: 0;
+}
+math > mtable.multiline-equation mtr:not(:last-child) mtd {
+  padding-bottom: 0.5em;
+}
+
+/* Fractions */
+mfrac {
+  padding-inline: 0;
+  margin-inline: 0.1em;
+}
+
+/* Accents */
+mover[accent="true" i] > :first-child {
+  font-feature-settings: "dtls";
+}
+mover.dotted[accent="true" i] > :first-child {
+  font-feature-settings: "dtls" 0;
+}
+
+/* Other rules for scriptlevel, displaystyle and math-shift */
+munder > :nth-child(2),
+munderover > :nth-child(2) {
+  math-shift: compact
+}
+munder[accentunder="true" i] > :not(:first-child),
+mover[accent="true" i] > :not(:first-child) {
+  math-depth: inherit;
+  math-style: inherit;
+  math-shift: inherit;
+}</style>
+<style>/* site chrome */
+:root {
+  --bg: #f7f4ef;
+  --surface: #ffffff;
+  --ink: #1c1917;
+  --muted: #57534e;
+  --accent: #0f766e;
+  --accent-soft: #ccfbf1;
+  --line: #e7e5e4;
+  --code-bg: #f5f5f4;
+  --nav-w: 280px;
+  --shadow: 0 10px 30px rgba(28, 25, 23, 0.06);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, #ecfeff 0, transparent 28%),
+    radial-gradient(circle at top right, #fff7ed 0, transparent 24%),
+    var(--bg);
+  line-height: 1.65;
+}
+a { color: var(--accent); }
+a:hover { color: #115e59; }
+.layout {
+  display: grid;
+  grid-template-columns: var(--nav-w) 1fr;
+  min-height: 100vh;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+  padding: 1.5rem 1rem 2rem;
+  background: rgba(28, 25, 23, 0.94);
+  color: #fafaf9;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.brand {
+  display: block;
+  color: #fff !important;
+  text-decoration: none !important;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  margin-bottom: 0.35rem;
+}
+.brand-sub {
+  color: #a8a29e;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+.nav-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: #a8a29e;
+  margin: 1rem 0 0.5rem 0.55rem;
+}
+.nav a {
+  display: block;
+  color: #e7e5e4 !important;
+  text-decoration: none !important;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.95rem;
+}
+.nav a:hover { background: rgba(255,255,255,0.06); color: #fff !important; }
+.nav a.active {
+  background: var(--accent);
+  color: #fff !important;
+  font-weight: 600;
+}
+.content-wrap {
+  padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
+}
+.topbar {
+  display: none;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.menu-btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+.article {
+  max-width: 920px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  box-shadow: var(--shadow);
+  padding: clamp(1.25rem, 3vw, 2.4rem);
+}
+.article h1, .article h2, .article h3, .article h4 {
+  line-height: 1.25;
+  color: #0c0a09;
+}
+.article h1 { font-size: 2rem; margin-top: 0; }
+.article h2 {
+  margin-top: 2rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+.article pre {
+  background: var(--code-bg) !important;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 0;
+  padding: 0.9rem 1rem;
+}
+.code-block {
+  position: relative;
+  margin: 1.1rem 0;
+}
+.code-block pre {
+  padding-right: 4.2rem;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.92);
+  color: var(--muted);
+  border-radius: 0.5rem;
+  padding: 0.28rem 0.55rem;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.copy-btn:hover {
+  background: #fff;
+  color: var(--ink);
+  border-color: #a8a29e;
+}
+.copy-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.copy-btn.copied {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: #99f6e4;
+}
+.copy-btn svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+.article img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.6rem;
+}
+.article figure { margin: 1.4rem auto; text-align: center; }
+.pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.pager a {
+  text-decoration: none !important;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  padding: 0.75rem 1rem;
+  background: #fafaf9;
+  color: var(--ink) !important;
+  min-width: min(100%, 220px);
+}
+.pager a:hover { border-color: var(--accent); background: var(--accent-soft); }
+.pager .label { display:block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.15rem; }
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+  margin: 1.5rem 0 0.5rem;
+}
+.card {
+  display: block;
+  text-decoration: none !important;
+  color: inherit !important;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 1rem 1.05rem;
+  background: linear-gradient(180deg, #fff, #fafaf9);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.card:hover {
+  transform: translateY(-2px);
+  border-color: #99f6e4;
+  box-shadow: var(--shadow);
+}
+.card .num {
+  display: inline-flex;
+  width: 1.7rem;
+  height: 1.7rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.55rem;
+}
+.card strong { display: block; font-size: 1.02rem; margin-bottom: 0.2rem; }
+.card span { color: var(--muted); font-size: 0.9rem; }
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin: 1.2rem 0 0.2rem;
+}
+.links a {
+  text-decoration: none !important;
+  background: var(--accent);
+  color: white !important;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+}
+.backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 20;
+}
+/* soften typst default full-page styles inside article */
+.article > style { display: none; }
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; }
+  .topbar { display: flex; }
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: min(86vw, 320px);
+    z-index: 30;
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .backdrop.show { display: block; }
+}
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="index.html">Introdução ao método dos elementos de contorno</a>
+    <div class="brand-sub">Notas de aula · Lucas S. Campos</div>
+    <div class="nav-label">Capítulos</div>
+    <nav class="nav">
+      <a href="index.html">Início</a>
+<a href="apresentacao.html">Apresentação</a>
+<a href="glossario.html">Glossário</a>
+<a href="interpolacao.html">Interpolação</a>
+<a href="equacoes-diferenciais.html">Equações diferenciais</a>
+<a href="indo-para-2d.html">Indo para 2D</a>
+<a href="gmsh.html" class="active">Gmsh e malhas</a>
+<a href="laplace-2d.html">Laplace 2D</a>
+<a href="poisson-2d.html">Poisson 2D</a>
+<a href="elasticidade-2d.html">Elasticidade 2D</a>
+<a href="propgeo-3d.html">Propgeo 3D</a>
+<a href="trabalhos-finais.html">Trabalhos finais</a>
+<a href="viga-euler.html">Viga de Euler (extra)</a>
+<a href="extra.html">Extra</a>
+    </nav>
+  </aside>
+  <div class="content-wrap">
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" type="button">Menu</button>
+      <strong>Gmsh e malhas</strong>
+    </div>
+    <main class="article">
+      <h2>1 Gmsh e malhas para o BEM</h2><p>O <span style="text-decoration: underline"><a href="https://gmsh.info/">Gmsh</a></span> é um gerador de malhas de código aberto amplamente usado em elementos finitos e, cada vez mais, em elementos de contorno. No curso usamos o repositório <span style="text-decoration: underline"><a href="https://github.com/l-s-campos/BEM_gmsh"><code>BEM_gmsh</code></a></span>, que acopla o Gmsh ao fluxo de trabalho em Julia: geometria → grupos físicos (condições de contorno) → malha <code>.msh</code> → <code>format2d</code> / <code>format3d</code> → montagem e solução.</p><h3>1.1 Por que Gmsh no BEM?</h3><p>No BEM clássico 2D, a malha é <strong>apenas o contorno</strong> (curvas). Ainda assim, o Gmsh é útil porque:</p><ol><li value="1">descreve geometrias com furos, arcos, splines e múltiplas regiões de forma robusta;</li><li value="2">associa <strong>nomes de grupos físicos</strong> às condições de contorno (Dirichlet / Neumann);</li><li value="3">gera malhas de ordem 1 ou 2 (elementos lineares ou quadráticos);</li><li value="4">permite refinamento local (campos de tamanho perto de cantos e furos);</li><li value="5">integra-se ao ONELAB (interface gráfica de parâmetros + pós-processamento).</li></ol><p>Para o BEM, o domínio volumétrico da malha 2D do Gmsh serve sobretudo para <strong>pontos internos</strong> e para métodos de domínio (DIBEM). Os elementos de contorno são extraídos das <strong>curvas físicas</strong> (dimensão 1).</p><h3>1.2 Instalação rápida</h3><p>No ambiente do projeto <code>BEM_gmsh</code>:</p><pre><code data-lang="julia"><span style="color: #d73948">using</span> Pkg
+Pkg.activate(<span style="color: #198810">"</span><span style="color: #198810">.</span><span style="color: #198810">"</span>)   <span style="color: #74747c">#</span><span style="color: #74747c"> pasta do BEM_gmsh</span>
+Pkg.instantiate()
+
+<span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span></code></pre><p>O pacote Julia <code>Gmsh.jl</code> já vem como dependência e embute (ou localiza) o executável do Gmsh. Para a interface gráfica completa, instale também o <span style="text-decoration: underline"><a href="https://gmsh.info/#Download">Gmsh do sistema</a></span>.</p><h3>1.3 Anatomia de um arquivo <code>.geo</code></h3><p>Um script Gmsh típico para o BEM 2D tem quatro blocos:</p><ol><li value="1"><strong>Pontos e curvas</strong> — geometria;</li><li value="2"><strong>Superfície</strong> — domínio (para pontos internos / DIBEM);</li><li value="3"><strong>Grupos físicos</strong> — nomes que codificam as CDCs;</li><li value="4"><strong>Geração da malha</strong> — <code>Mesh 2</code>, opcionalmente <code>RecombineMesh</code> e ordem.</li></ol><p>Exemplo mínimo (quadrado unitário, campo <math><mi>𝑇</mi><mo>=</mo><mi>𝑥</mi></math>):</p><pre><code data-lang="geo">// quadrado_bem.geo
+lc = 0.1;
+
+Point(1) = {0, 0, 0, lc};
+Point(2) = {1, 0, 0, lc};
+Point(3) = {1, 1, 0, lc};
+Point(4) = {0, 1, 0, lc};
+
+Line(1) = {1, 2}; // base
+Line(2) = {2, 3}; // direita
+Line(3) = {3, 4}; // topo
+Line(4) = {4, 1}; // esquerda
+
+Curve Loop(1) = {1, 2, 3, 4};
+Plane Surface(1) = {1};
+
+Transfinite Curve {1, 2, 3, 4} = 12;
+Transfinite Surface{1};
+Recombine Surface{1};
+
+// Convenção BEM_gmsh (Laplace): "tipo;valor"
+// tipo 0 = Dirichlet (T), tipo 1 = Neumann (q = -k ∂T/∂n)
+Physical Curve("1;0")  = {1, 3}; // isolado
+Physical Curve("1;-1") = {2};    // q = -1  (∂T/∂n = +1 se k=1)
+Physical Curve("0;0")  = {4};    // T = 0
+Physical Surface("Domain") = {1};
+
+Mesh 2;</code></pre><p>Gere a malha no terminal:</p><pre><code data-lang="bash"><span style="color: #4b69c6">gmsh</span> -2 quadrado_bem.geo -o quadrado_bem.msh</code></pre><p>ou, de dentro do Julia / <code>BEM_gmsh</code>, use os geradores prontos (recomendado no curso):</p><pre><code data-lang="julia"><span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span>
+include(datadir(<span style="color: #198810">"</span><span style="color: #198810">Laplace</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">Laplace_dad.jl</span><span style="color: #198810">"</span>))
+
+msh <span style="color: #d73948">=</span> quadrado(ndiv<span style="color: #d73948">=</span><span style="color: #b60157">20</span>, show<span style="color: #d73948">=</span><span style="color: #d73948">false</span>)  <span style="color: #74747c">#</span><span style="color: #74747c"> grava .msh e devolve o caminho</span></code></pre><h3>1.4 Convenção de condições de contorno</h3><p>Os <strong>nomes</strong> dos grupos físicos carregam o tipo e o valor da CDC. Isso evita arquivos auxiliares de contorno.</p><h4>1.4.1 Laplace / Poisson</h4><table><tr><td><strong>Nome do grupo</strong></td><td><strong>Significado</strong></td></tr><tr><td><code>"0;T"</code></td><td>Dirichlet: temperatura (ou potencial) preescrita <math><mi>𝑇</mi></math></td></tr><tr><td><code>"1;q"</code></td><td>Neumann: fluxo <math><mi>𝑞</mi><mo>=</mo><mo form="prefix">−</mo><mi>𝑘</mi><mi>𝜕</mi><mi>𝑇</mi><mi>/</mi><mi>𝜕</mi><mi>𝑛</mi></math></td></tr></table><p>Exemplos: <code>"0;100"</code>, <code>"1;0"</code> (isolado), <code>"1;-1"</code>.</p><h4>1.4.2 Elasticidade 2D</h4><p>Cada aresta usa <strong>quatro</strong> tokens <code>tx;ux;ty;uy</code>:</p><ul><li>token ímpar (<code>tx</code>, <code>ty</code>): <code>0</code> = deslocamento preescrito, <code>1</code> = tração preescrita;</li><li>token par (<code>ux</code>, <code>uy</code>): valor correspondente.</li></ul><table><tr><td><strong>Nome</strong></td><td><strong>Significado</strong></td></tr><tr><td><code>"0;0;0;0"</code></td><td>engaste (<math><msub><mi>𝑢</mi><mi>𝑥</mi></msub><mo>=</mo><msub><mi>𝑢</mi><mi>𝑦</mi></msub><mo>=</mo><mn>0</mn></math>)</td></tr><tr><td><code>"1;0;1;0"</code></td><td>livre de tração</td></tr><tr><td><code>"1;P;1;0"</code></td><td>tração <math><msub><mi>𝑡</mi><mi>𝑥</mi></msub><mo>=</mo><mi>𝑃</mi></math>, <math><msub><mi>𝑡</mi><mi>𝑦</mi></msub><mo>=</mo><mn>0</mn></math></td></tr><tr><td><code>"0;0;1;0"</code></td><td>rolo vertical (<math><msub><mi>𝑢</mi><mi>𝑥</mi></msub><mo>=</mo><mn>0</mn></math>, <math><msub><mi>𝑡</mi><mi>𝑦</mi></msub><mo>=</mo><mn>0</mn></math>)</td></tr></table><h3>1.5 Do arquivo <code>.msh</code> ao <code>BEMdata</code></h3><p>O fluxo canônico no <code>BEM_gmsh</code> é:</p><pre><code data-lang="julia"><span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span>
+include(datadir(<span style="color: #198810">"</span><span style="color: #198810">Laplace</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">Laplace_dad.jl</span><span style="color: #198810">"</span>))
+
+props <span style="color: #d73948">=</span> Laplace(<span style="color: #b60157">1.0</span>)                 <span style="color: #74747c">#</span><span style="color: #74747c"> k = 1</span>
+msh   <span style="color: #d73948">=</span> quadrado(ndiv<span style="color: #d73948">=</span><span style="color: #b60157">20</span>, show<span style="color: #d73948">=</span><span style="color: #d73948">false</span>)
+dad   <span style="color: #d73948">=</span> format2d(msh, props)         <span style="color: #74747c">#</span><span style="color: #74747c"> lê grupos físicos → CDCs</span>
+
+attach_analytical!(dad, ana_laplace_linear(; direction<span style="color: #d73948">=</span>SA[<span style="color: #b60157">1.0</span>, <span style="color: #b60157">0.0</span>]))
+H_G_full_direct(dad, <span style="color: #b60157">20</span>)             <span style="color: #74747c">#</span><span style="color: #74747c"> monta H e G (densa)</span>
+solve(dad)
+
+@<span style="color: #4b69c6">show</span> rel_error(dad)
+plot_geo(dad)</code></pre><p>Palavras-chave úteis de <code>format2d</code>:</p><ul><li><code>tipo=1|2|3</code> — ordem do elemento de contorno (linear, quadrático, cúbico), quando compatível com a malha;</li><li><code>pontointerno=true|false</code> — usa nós internos da malha de superfície para pós-processamento / DIBEM;</li><li><code>finalize=false, reopen=false</code> — quando a sessão Gmsh já está aberta (pipelines ONELAB).</li></ul><p>Para problemas grandes:</p><pre><code data-lang="julia">H_G_Hmat(dad; atol<span style="color: #d73948">=</span><span style="color: #b60157">1e-6</span>, nmax<span style="color: #d73948">=</span><span style="color: #b60157">32</span>)   <span style="color: #74747c">#</span><span style="color: #74747c"> montagem hierárquica</span>
+solve(dad)
+@<span style="color: #4b69c6">show</span> compression_ratio(dad.H)</code></pre><h3>1.6 Gerando geometria em Julia (API Gmsh)</h3><p>Além de arquivos <code>.geo</code>, o <code>BEM_gmsh</code> constrói malhas pela API Julia. Esqueleto de um anel (quarto de coroa):</p><pre><code data-lang="julia"><span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span>
+
+<span style="color: #d73948">function</span> <span style="color: #4b69c6">meu_quarto_circulo</span>(; ndiv<span style="color: #d73948">=</span><span style="color: #b60157">12</span>, ri<span style="color: #d73948">=</span><span style="color: #b60157">1.0</span>, re<span style="color: #d73948">=</span><span style="color: #b60157">2.0</span>, nome<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">meu_qc</span><span style="color: #198810">"</span>)
+    gmsh.initialize()
+    gmsh.option.setNumber(<span style="color: #198810">"</span><span style="color: #198810">General.Terminal</span><span style="color: #198810">"</span>, <span style="color: #b60157">0</span>)
+    gmsh.model.add(nome)
+    lc <span style="color: #d73948">=</span> (re <span style="color: #d73948">-</span> ri) <span style="color: #d73948">/</span> max(ndiv, <span style="color: #b60157">4</span>)
+
+    c  <span style="color: #d73948">=</span> gmsh.model.geo.addPoint(<span style="color: #b60157">0.0</span>, <span style="color: #b60157">0.0</span>, <span style="color: #b60157">0.0</span>, lc)
+    p1 <span style="color: #d73948">=</span> gmsh.model.geo.addPoint(ri, <span style="color: #b60157">0.0</span>, <span style="color: #b60157">0.0</span>, lc)
+    p2 <span style="color: #d73948">=</span> gmsh.model.geo.addPoint(re, <span style="color: #b60157">0.0</span>, <span style="color: #b60157">0.0</span>, lc)
+    p3 <span style="color: #d73948">=</span> gmsh.model.geo.addPoint(<span style="color: #b60157">0.0</span>, re, <span style="color: #b60157">0.0</span>, lc)
+    p4 <span style="color: #d73948">=</span> gmsh.model.geo.addPoint(<span style="color: #b60157">0.0</span>, ri, <span style="color: #b60157">0.0</span>, lc)
+
+    lbot  <span style="color: #d73948">=</span> gmsh.model.geo.addLine(p1, p2)
+    aout  <span style="color: #d73948">=</span> gmsh.model.geo.addCircleArc(p2, c, p3)
+    lleft <span style="color: #d73948">=</span> gmsh.model.geo.addLine(p3, p4)
+    ain   <span style="color: #d73948">=</span> gmsh.model.geo.addCircleArc(p4, c, p1)
+
+    cl <span style="color: #d73948">=</span> gmsh.model.geo.addCurveLoop([lbot, aout, lleft, ain])
+    s  <span style="color: #d73948">=</span> gmsh.model.geo.addPlaneSurface([cl])
+    gmsh.model.geo.synchronize()
+
+    <span style="color: #d73948">for</span> crv <span style="color: #d73948">in</span> (lbot, aout, lleft, ain)
+        gmsh.model.mesh.setTransfiniteCurve(crv, ndiv)
+    <span style="color: #d73948">end</span>
+    gmsh.model.mesh.setTransfiniteSurface(s)
+
+    gmsh.model.addPhysicalGroup(<span style="color: #b60157">1</span>, [lbot, lleft], <span style="color: #d73948">-</span><span style="color: #b60157">1</span>, <span style="color: #198810">"</span><span style="color: #198810">1;0</span><span style="color: #198810">"</span>)   <span style="color: #74747c">#</span><span style="color: #74747c"> isolado</span>
+    gmsh.model.addPhysicalGroup(<span style="color: #b60157">1</span>, [ain], <span style="color: #d73948">-</span><span style="color: #b60157">1</span>, <span style="color: #198810">"</span><span style="color: #198810">0;100</span><span style="color: #198810">"</span>)         <span style="color: #74747c">#</span><span style="color: #74747c"> T = 100</span>
+    gmsh.model.addPhysicalGroup(<span style="color: #b60157">1</span>, [aout], <span style="color: #d73948">-</span><span style="color: #b60157">1</span>, <span style="color: #198810">"</span><span style="color: #198810">1;-200</span><span style="color: #198810">"</span>)       <span style="color: #74747c">#</span><span style="color: #74747c"> q = -200</span>
+    gmsh.model.addPhysicalGroup(<span style="color: #b60157">2</span>, [s], <span style="color: #d73948">-</span><span style="color: #b60157">1</span>, <span style="color: #198810">"</span><span style="color: #198810">Domain</span><span style="color: #198810">"</span>)
+
+    gmsh.model.mesh.generate(<span style="color: #b60157">2</span>)
+    out <span style="color: #d73948">=</span> datadir(<span style="color: #198810">"</span><span style="color: #198810">Laplace</span><span style="color: #198810">"</span>, nome <span style="color: #d73948">*</span> <span style="color: #198810">"</span><span style="color: #198810">.msh</span><span style="color: #198810">"</span>)
+    mkpath(dirname(out))
+    gmsh.write(out)
+    gmsh.finalize()
+    <span style="color: #d73948">return</span> out
+<span style="color: #d73948">end</span></code></pre><p>Geradores prontos no repositório (vale estudar o código-fonte):</p><ul><li><code>data/Laplace/Laplace_dad.jl</code> — <code>quadrado</code>, <code>placa_com_furo</code>, <code>quadrado_elasticity</code>;</li><li><code>data/Laplace/potencial_problems.jl</code> — Laquini, quarto de círculo, Moulton;</li><li><code>data/elastico/iso/*.jl</code> — cilindro pressurizado, placa com furo, viga em balanço, trinca central.</li></ul><h3>1.7 Propriedades geométricas via contorno</h3><p>O módulo <code>geometric_props</code> do <code>BEM_gmsh</code> calcula perímetro, área e centróide <strong>só com integrais de contorno</strong> — o mesmo espírito do capítulo “Indo para 2D”:</p><pre><code data-lang="julia"><span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span>
+include(datadir(<span style="color: #198810">"</span><span style="color: #198810">Laplace</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">Laplace_dad.jl</span><span style="color: #198810">"</span>))
+
+msh <span style="color: #d73948">=</span> quadrado(ndiv<span style="color: #d73948">=</span><span style="color: #b60157">30</span>, show<span style="color: #d73948">=</span><span style="color: #d73948">false</span>)
+dad <span style="color: #d73948">=</span> format2d(msh, Laplace(<span style="color: #b60157">1.0</span>); pontointerno<span style="color: #d73948">=</span><span style="color: #d73948">false</span>)
+
+gp <span style="color: #d73948">=</span> geometric_props(dad)
+@<span style="color: #4b69c6">show</span> gp.perimeter gp.area gp.centroid</code></pre><p>Em 3D (<code>format3d</code> + malha de superfície fechada):</p><pre><code data-lang="julia"><span style="color: #74747c">#</span><span style="color: #74747c"> exemplo conceitual — requer um .geo/.msh 3D (ex.: cubo)</span>
+<span style="color: #74747c">#</span><span style="color: #74747c"> dad3 = format3d(datadir("Laplace", "cubo.msh"), Laplace(1.0))</span>
+<span style="color: #74747c">#</span><span style="color: #74747c"> gp3  = geometric_props(dad3)   # área superficial, volume, centróide</span></code></pre><h3>1.8 ONELAB: Gmsh como interface do solver</h3><p>O <code>BEM_gmsh</code> publica um cliente ONELAB. Parâmetros (<code>ndiv</code>, <math><mi>𝑘</mi></math>, tipo de montagem, …) ficam no painel do Gmsh; ao clicar em <strong>Run</strong>, a malha é gerada, o BEM resolve e as views de pós-processamento voltam para a GUI.</p><pre><code data-lang="julia"><span style="color: #d73948">using</span> BEM
+dad <span style="color: #d73948">=</span> bem_onelab_run(<span style="color: #198810">"</span><span style="color: #198810">data/Laplace/onelab_square.geo</span><span style="color: #198810">"</span>; ndiv<span style="color: #d73948">=</span><span style="color: #b60157">12</span>)
+<span style="color: #74747c">#</span><span style="color: #74747c"> interativo:</span>
+<span style="color: #74747c">#</span><span style="color: #74747c"> bem_onelab_gui("data/Laplace/onelab_square.geo")</span></code></pre><p>Na linha de comando:</p><pre><code data-lang="bash"><span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/bem_onelab.jl data/Laplace/onelab_square.geo
+<span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/bem_onelab.jl data/Laplace/onelab_square.geo --gui</code></pre><p>Para registrar como solver do Gmsh do sistema (<strong>Tools → Options → Solver</strong>):</p><p><code>julia --project=C:/caminho/BEM_gmsh C:/caminho/BEM_gmsh/scripts/bem_onelab.jl %s</code></p><h3>1.9 Boas práticas de malha para o BEM</h3><ol><li value="1"><strong>Contorno fechado e orientado</strong> — curvas no sentido anti-horário no contorno externo (normal para fora).</li><li value="2"><strong>Furos</strong> — contornos internos no sentido horário.</li><li value="3"><strong>Cantos com CDC mista</strong> — elementos descontínuos (padrão do código) evitam conflito de nós compartilhados.</li><li value="4"><strong>Refino local</strong> — use <code>Distance</code> + <code>Threshold</code> perto de furos e reentrâncias (<code>placa_com_furo</code> é um bom modelo).</li><li value="5"><strong>Ordem geométrica = ordem de interpolação</strong> — malha de ordem 2 combina com elementos quadráticos.</li><li value="6"><strong>Estudo de convergência</strong> — varie <code>ndiv</code> (ou <code>lc</code>) e reporte erro médio / máximo / <math><msub><mi>𝐿</mi><mn>2</mn></msub></math> (capítulo de medidas de erro).</li><li value="7"><strong>Não exagere nos pontos internos</strong> — eles encarecem o DIBEM; comece com malha de contorno e poucos internos.</li></ol><h3>1.10 Exercícios</h3><ol><li value="1">Reproduza o quadrado unitário com <math><mi>𝑇</mi><mo>=</mo><mi>𝑥</mi></math> a partir de um <code>.geo</code> próprio (não use <code>quadrado</code>). Compare <code>rel_error</code> com <code>ndiv = 8, 16, 32</code>.</li><li value="2">Modele uma placa retangular com um furo circular deslocado do centro. Imponha <math><mi>𝑇</mi><mo>=</mo><mn>0</mn></math> à esquerda, <math><mi>𝑇</mi><mo>=</mo><mn>1</mn></math> à direita e isolamento no restante. Plote o campo com <code>plot_geo</code> e exporte com <code>export_results_to_gmsh</code>.</li><li value="3">Calcule perímetro, área e centróide da figura do item 2 com <code>geometric_props</code> e confira com a fórmula analítica (retângulo menos círculo).</li><li value="4">Abra <code>onelab_square.geo</code> no modo GUI e varie <code>ndiv</code>. Registre o tempo de montagem densa vs. <code>assembly=hmat</code> para o maior <code>ndiv</code> que sua máquina permitir.</li></ol><h3>1.11 Leitura e código de referência</h3><ul><li>Documentação do projeto: <code>BEM_gmsh/docs</code> (EN e pt-BR)</li><li>Começando: <code>docs/src/pt-br/getting_started.md</code></li><li>ONELAB: <code>docs/src/api/onelab.md</code></li><li>Exemplos: <code>scripts/intro.jl</code>, <code>data/examples/</code>, <code>scripts/bem_onelab.jl</code></li><li>Manual Gmsh: <span style="text-decoration: underline"><a href="https://gmsh.info/doc/texinfo/gmsh.html">gmsh.info/doc</a></span></li></ul>
+      <div class="pager">
+        <a href="indo-para-2d.html"><span class="label">Anterior</span><strong>Indo para 2D</strong></a><a href="laplace-2d.html" style="text-align:right"><span class="label">Próximo</span><strong>Laplace 2D</strong></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script>
+const btn = document.getElementById('menuBtn');
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeMenu(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+function openMenu(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+btn?.addEventListener('click', () => {
+  if (sidebar.classList.contains('open')) closeMenu(); else openMenu();
+});
+backdrop?.addEventListener('click', closeMenu);
+
+(function enhanceCodeBlocks() {
+  const iconCopy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  const iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
+
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('main.article pre').forEach((pre) => {
+    if (pre.closest('.code-block')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-block';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy-btn';
+    button.setAttribute('aria-label', 'Copiar código');
+    button.innerHTML = iconCopy + '<span>Copiar</span>';
+    wrap.appendChild(button);
+
+    let resetTimer;
+    button.addEventListener('click', async () => {
+      const code = pre.innerText.replace(/
+$/, '');
+      try {
+        await copyText(code);
+        button.classList.add('copied');
+        button.innerHTML = iconCheck + '<span>Copiado</span>';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          button.classList.remove('copied');
+          button.innerHTML = iconCopy + '<span>Copiar</span>';
+        }, 1600);
+      } catch (err) {
+        button.innerHTML = iconCopy + '<span>Erro</span>';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          button.innerHTML = iconCopy + '<span>Copiar</span>';
+        }, 1600);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

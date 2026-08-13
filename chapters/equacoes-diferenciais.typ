@@ -4,6 +4,9 @@
 = Equações diferenciais
 <equacoes-diferenciais>
 
+Gráficos deste capítulo usam *CairoMakie*.
+
+
 Quantidades que mudam continuamente no tempo ou no espaço são frequentemente modeladas por equações diferenciais.  As equações diferenciais precisam de condições suplementares para definir de maneira única tanto a situação de modelagem quanto as soluções teóricas. O problema de valor inicial (PVI), no qual todas as condições são dadas em um único valor da variável independente, é a situação mais simples. Muitas vezes, a variável independente neste caso representa o tempo.
 
 Os métodos para PVIs geralmente começam a partir do valor inicial conhecido e iteram ou "avançam" a partir daí. Há um grande número desses métodos, em parte devido às diferenças em precisão, estabilidade e conveniência.
@@ -28,7 +31,7 @@ Como muitos problemas práticos vêm com parâmetros que são fixos dentro de um
 Para criar um problema de valor inicial para $u(t)$, você deve fornecer uma função que calcula $u'$, um valor inicial para $u$ e os pontos finais do intervalo para $t$. O intervalo $t$ deve ser definido como `(a,b)`, onde pelo menos um dos valores é um float.
 
 ```julia
-using DifferentialEquations,LaTeXStrings
+using DifferentialEquations, CairoMakie
 f = (u,p,t) -> sin((t+u)^2)     # define du/dt, deve incluir o argumento p
 u₀ = 1.0                       # valor inicial
 tspan = (0.0,4.0)               # intervalo t 
@@ -41,11 +44,11 @@ ivp = ODEProblem(f,u₀,tspan)
 sol = solve(ivp,Tsit5());
 ```
 
-O objeto solução resultante pode ser mostrado usando `plot`.
+O objeto solução resultante pode ser mostrado com CairoMakie.
 
 ```julia
-plot(sol,label="solução",legend=:bottom,
-    xlabel="t",ylabel=L"u(t)",title=L"u'=\\sin((t+u)^2)") 
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", ylabel="u(t)", title="solução ODE")
+lines!(ax, sol.t, sol.u, label="solução"); axislegend(ax, position=:b); fig
 ```
 
 A solução também funciona como qualquer função que pode ser avaliada em diferentes valores de $t$.
@@ -63,7 +66,7 @@ Nos bastidores, o objeto solução contém algumas informações sobre como os v
 O solucionador inicialmente encontra valores aproximados da solução (segunda coluna acima) em alguns tempos escolhidos automaticamente (primeira coluna acima). Para calcular a solução em outros momentos, o objeto realiza uma interpolação nesses valores. Este capítulo trata de como os valores discretos de $t$ e $u$ são calculados. Por enquanto, apenas observe como podemos extraí-los do objeto solução.
 
 ```julia
-scatter!(sol.t,sol.u,label="valores discretos") 
+scatter!(ax, sol.t, sol.u, label="valores discretos"); fig 
 ```
 
 === Método de Euler
@@ -124,15 +127,15 @@ u0 = -1.0;
 ivp = ODEProblem(f,u0,tspan)
 t,u = euler(ivp,20)
 
-plot(t,u,m=2,label="n=20",
-    xlabel=L"t",ylabel=L"u(t)",title="Solução por Euler" )
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", ylabel="u(t)", title="Solução por Euler")
+scatterlines!(ax, t, u, label="n=20"); axislegend(ax); fig
 ```
 
 Poderíamos definir um interpolador diferente para obter uma imagem mais suave acima, mas a derivação do método de Euler assumiu um interpolador linear por partes. Podemos, em vez disso, solicitar mais passos para fazer o interpolador parecer mais suave.
 
 ```julia
 t,u = euler(ivp,50)
-plot!(t,u,m=2,label="n=50")
+scatterlines!(ax, t, u, label="n=50"); axislegend(ax); fig
 ```
 
 Aumentar $n$ mudou a solução de maneira notável. Como sabemos que interpoladores e diferenças finitas se tornam mais precisos à medida que $h -> 0$, devemos antecipar o mesmo comportamento do método de Euler. Não temos uma solução exata para comparar, então usaremos um solucionador `DifferentialEquations` para construir uma solução de referência precisa.
@@ -140,7 +143,7 @@ Aumentar $n$ mudou a solução de maneira notável. Como sabemos que interpolado
 ```julia
 u_exact = solve(ivp,Tsit5(),reltol=1e-14,abstol=1e-14)
 
-plot!(u_exact,l=(2,:black),label="referência")
+lines!(ax, t, u_exact.(t), color=:black, linewidth=2, label="referência"); axislegend(ax); fig
 ```
 
 Agora podemos realizar um estudo de convergência.
@@ -153,7 +156,7 @@ for n in n
     push!( err, norm(u_exact.(t)-u,Inf) )
 end
 
-pretty_table((n=n,err=err),header=["n","Inf-norm error"])
+foreach(((ni, ei),) -> println(ni, "	", ei), zip(n, err))
 ```
 
 O erro é aproximadamente reduzido por um fator de 10 para cada aumento em $n$ pelo mesmo fator.
@@ -205,14 +208,16 @@ tspan = (0.,50.);
 γ,L,k = 0,0.5,0
 ivp = ODEProblem(couple,u₀,tspan,[γ,L,k])
 sol = solve(ivp,Tsit5())
-plot(sol,vars=[1,2],label=[L"\theta_1" L"\theta_2"],
-    xlims=[20,50],title="k=0")
-    
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", title="k=0", limits=((20, 50), nothing))
+lines!(ax, sol.t, [u[1] for u in sol.u], label="θ1")
+lines!(ax, sol.t, [u[2] for u in sol.u], label="θ2"); axislegend(ax); fig
+
 k = 1
-ivp = ODEProblem(couple,u₀,tspan,[γ,L,k])
-sol = solve(ivp,Tsit5())
-plot(sol,vars=[1,2],label=[L"\theta_1" L"\theta_2"],
-    xlims=[20,50],title="k=1")   
+ivp = ODEProblem(couple, u₀, tspan, [γ, L, k])
+sol = solve(ivp, Tsit5())
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", title="k=1", limits=((20, 50), nothing))
+lines!(ax, sol.t, [u[1] for u in sol.u], label="θ1")
+lines!(ax, sol.t, [u[2] for u in sol.u], label="θ2"); axislegend(ax); fig   
     
 ```
 
@@ -323,7 +328,7 @@ for n in n
     push!( err_RK4, maximum( @.abs(u_ref(t)-u) ) )
 end
 
-pretty_table([n err_IE2 err_RK4],header=["n","IE2 erro","RK4 erro"])
+foreach(r -> println(join(r, "	")), zip(n, err_IE2, err_RK4))
 ```
 
 == Métodos de múltiplos passos
@@ -382,7 +387,7 @@ for n in n
     push!( err_AB4, maximum( @.abs(u_ref(t)-u) ) )
 end
 
-pretty_table([n err_IE2 err_RK4 err_AB4],["n","IE2 erro","RK4 erro","AB4 erro"])
+foreach(r -> println(join(r, "	")), zip(n, err_IE2, err_RK4, err_AB4))
 ```
 
 Os métodos de Adams-Moulton são métodos implícitos e, portanto, não podem ser resolvidos como fazemos no caso dos métodos de Adams-Bashforth.  Portanto, para obter o valor aproximado de $u_(i + 1)$, podemos usar um método de dois passos chamado método preditor-corretor.
@@ -553,7 +558,7 @@ A equação do calor é a equação diferencial típica para a classe conhecida 
 Agora vamos resolver a equação de difusão em$[- 1, 1]$ usando diferenças finitas para aproximar a derivada em $x$. As condições de contorno são $u(- 1, t) = 0, u(1, t) = 2$ e a condição inicial é  $1 + sin(π x \/ 2) + 3(1 - x^2) e^(-4 x^2)$.
 
 ```julia
-using DifferentialEquations,LaTeXStrings,Plots
+using DifferentialEquations, CairoMakie
 
 n=100
  x,dx,dxx=diffmat(n,[-1,1])
@@ -565,19 +570,20 @@ tspan=(0,0.75)
 ivp = ODEProblem(f,u0,tspan,[dxx,0,2])
 sol = solve(ivp,Tsit5());
 
-plt = plot(xlabel=L"x",ylabel=L"u(x,t)",legend=:topleft,
-          title="Solução da equação de calor")
-for t in 0:0.1:0.7
-    plot!(x[1:end-1],sol(t)[1:end-1],label="t=$t")
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="Solução da equação de calor")
+for tt in 0:0.1:0.7
+    lines!(ax, x[1:end-1], sol(tt)[1:end-1], label="t=$tt")
 end
-plt
+axislegend(ax, position=:lt); fig
 
-anim = @animate for t in range(0,0.75,length=201) 
-    plot(x[1:end-1],sol(t)[1:end-1],label="t=$t",
-        xaxis=(L"x"), yaxis=(L"u(x,t)",(0,4.2)), 
-        title="Difusão",leg=:topleft,dpi=100)
+fig = Figure(size=(600, 400))
+ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="Difusão", limits=(nothing, (0, 4.2)))
+record(fig, "calor.mp4", range(0, 0.75; length=201); framerate=30) do tt
+    empty!(ax)
+    lines!(ax, x[1:end-1], sol(tt)[1:end-1])
+    ax.title = "Difusão t=$(round(tt; digits=3))"
 end
-mp4(anim,"calor.mp4",fps=30)
 ```
 
 #link("../assets/videos/boundaries-heat.mp4")[Vídeo: boundaries-heat.mp4]
@@ -617,19 +623,20 @@ c=2
 ivp = ODEProblem(f,u0,tspan,[[zeros(n+1,n+1) I;c^2*dxx zeros(n+1,n+1)],0,0,n+1])
 sol = solve(ivp,Tsit5());
 
-plt = plot(xlabel=L"x",ylabel=L"u(x,t)",legend=:topleft,
-          title="Solução da equação da onda")
-for t in 0:0.2:2
-    plot!(x[1:n-1],sol(t)[1:n-1],label="t=$t")
+using CairoMakie
+fig = Figure(); ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="Solução da equação da onda")
+for tt in 0:0.2:2
+    lines!(ax, x[1:n-1], sol(tt)[1:n-1], label="t=$tt")
 end
-plt
+axislegend(ax, position=:lt); fig
 
-anim = @animate for t in range(0,2,length=201) 
-    plot(x[1:n-1],sol(t)[1:n-1],label="t=$t",
-        xaxis=(L"x"), yaxis=(L"u(x,t)",(-1.1,1.1)), 
-        title="onda",leg=:topleft,dpi=100)
+fig = Figure(size=(600, 400))
+ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="onda", limits=(nothing, (-1.1, 1.1)))
+record(fig, "onda.mp4", range(0, 2; length=201); framerate=30) do tt
+    empty!(ax)
+    lines!(ax, x[1:n-1], sol(tt)[1:n-1])
+    ax.title = "onda t=$(round(tt; digits=3))"
 end
-mp4(anim,"onda.mp4",fps=30)
 ```
 
 #link("../assets/videos/onda.mp4")[Vídeo: onda.mp4]

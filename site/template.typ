@@ -5,14 +5,17 @@
 #let pages = (
   (id: "index", title: "Início", file: "index.html"),
   (id: "apresentacao", title: "Apresentação", file: "apresentacao.html"),
+  (id: "glossario", title: "Glossário", file: "glossario.html"),
   (id: "interpolacao", title: "Interpolação", file: "interpolacao.html"),
   (id: "equacoes-diferenciais", title: "Equações diferenciais", file: "equacoes-diferenciais.html"),
-  (id: "viga-euler", title: "Viga de Euler", file: "viga-euler.html"),
   (id: "indo-para-2d", title: "Indo para 2D", file: "indo-para-2d.html"),
+  (id: "gmsh", title: "Gmsh e malhas", file: "gmsh.html"),
   (id: "laplace-2d", title: "Laplace 2D", file: "laplace-2d.html"),
   (id: "poisson-2d", title: "Poisson 2D", file: "poisson-2d.html"),
   (id: "elasticidade-2d", title: "Elasticidade 2D", file: "elasticidade-2d.html"),
   (id: "propgeo-3d", title: "Propgeo 3D", file: "propgeo-3d.html"),
+  (id: "trabalhos-finais", title: "Trabalhos finais", file: "trabalhos-finais.html"),
+  (id: "viga-euler", title: "Viga de Euler (extra)", file: "viga-euler.html"),
   (id: "extra", title: "Extra", file: "extra.html"),
 )
 

@@ -4,6 +4,9 @@
 = Elasticidade 2D
 <elasticidade-2d>
 
+Notação (ver glossário): deslocamentos $u_i$, trações $t_i$, Poisson do material $nu$ (não confundir com a função peso $v$ da formulação integral).
+
+
 = Equações importantes
 
 A relação de equilíbrio de tensão pode ser escrita como:
@@ -64,6 +67,39 @@ $ S_(k i j) (p, Q) &= mu/(2 pi(1 - nu)) (1/(r^2)) n_i [2 nu (partial r)/(partial
 
 $ D_(k i j) (p, Q) = 1/(4 pi(1 - nu)) (1/r) [(1 - 2 nu)(delta_(j k) (partial r)/(partial x_i) + delta_(i k) (partial r)/(partial x_j) - delta_(i j) (partial r)/(partial x_k)) \ + 2 (partial r)/(partial x_i) (partial r)/(partial x_j) (partial r)/(partial x_k)] $
 
+== Código (`BEM_gmsh`)
+
+```julia
+using DrWatson
+@quickactivate :BEM
+include(datadir("Laplace", "Laplace_dad.jl"))
+
+# --- verificação: patch de Dirichlet (ε_xx = 0.01) ---
+msh = quadrado_elasticity(ndiv=15, show=false)
+dad = format2d(msh, Elasticity(1.0, 0.3, 1.0); pontointerno=false)
+
+ana = ana_elasticity_patch(; E=1.0, ν=0.3, εxx=0.01)
+apply_analytical_bc!(dad, ana)   # impõe u = ε · x em todo o contorno
+
+H_G_full_direct(dad, 16)
+solve(dad)
+@show rel_error(dad)
+plot_geo(dad)
+```
+
+Problemas clássicos com malha pronta em `data/elastico/iso/`:
+
+```julia
+include(datadir("elastico", "iso", "pressurized_tube.jl"))
+msh = mesh_pressurized_tube(; ndiv=16, show=false)
+dad = format2d(msh, Elasticity(E, ν, 1.0); pontointerno=true)
+H_G_full_direct(dad, 16)
+solve(dad)
+# compare com ur_tube / σr_tube / σθ_tube no mesmo arquivo
+```
+
+Convenção de CDC nos grupos físicos: `"tx;ux;ty;uy"` (ver capítulo *Gmsh e malhas*).
+
 == Exercícios
 
 === Cilindro pressurizado
@@ -94,7 +130,7 @@ Poisson   $nu = 0.25$
 
 Pressão $P = 1 N \/ m m$
 
-Esse problema é de estado plano de tensão. Para ser tratado pelas soluções fundamentais de estado plano de deformação as propriedades tem de ser ajustadas:
+Esse problema é de estado plano de tensão. Para ser tratado pelas soluções fundamentais de estado plano de deformação as propriedades deve ser ajustadas:
 
 #image("../assets/elasticidade-2d/placa-furo.png", width: 80%)
 
@@ -125,5 +161,7 @@ $ u_1 (x, y) = - (P y)/(6 E I) [(6 L - 3 x) x + (2 + v)(y^2 - (D^2)/4)] $
 $ u_2 (x, y) = P/(6 E I) [(3 v) y^2 (L - x) + (4 + 5 v) (D^2 x)/4 + (3 L - x) x^2] $
 
 $ sigma_(x x) (x, y) = - (P(L - x) y)/I \ tau_(x y) (x, y) = - P/(2 I) ((D^2)/4 - y^2) $
+
+Resolva os três exercícios com o `BEM_gmsh` (malhas em `data/elastico/iso/` ou gerador próprio via Gmsh). Reporte erros em deslocamentos e tensões para pelo menos três refinamentos.
 
 #link("https://youtu.be/R6-_ECEQXRk")[gravação]

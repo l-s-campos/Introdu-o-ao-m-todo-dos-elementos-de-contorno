@@ -1,199 +1,475 @@
-// Apresentação
-// markdown2typst + tex2typst
+// Apresentação (versão didática para quem não conhece o BEM)
+// Aula 1 — sem BEM_gmsh; gráficos com Plots.jl
 
 = Apresentação
 <apresentacao>
 
-== Método dos elementos de contorno
+== Objetivos desta aula
 
-O método dos elementos de contorno é bem conhecido entre engenheiros e cientistas. Ele tem demonstrado sua superioridade em relação a outros métodos numéricos, especialmente quando usado para modelar uma aplicação apropriada. Apesar da popularidade do método dos elementos de contorno, ele não é tão comum entre os engenheiros quanto o método dos elementos finitos. As razões para isso podem ser resumidas da seguinte forma:
+Ao final, você deve ser capaz de:
 
-1- A complexidade da formulação matemática.
-2- A falta de códigos simples.
-3- A falta de  cursos de elementos de contorno entre estudantes de graduação.
-4- A dificuldade no tratamento de alguns modelos numéricos, como singularidade.
-5- A dificuldade em modificar programas de elementos de contorno em relação aos desenvolvidos usando elementos finitos.
-6- A falta de versatilidade dos códigos de elementos de contorno.
-7- A mudança de estratégia de modelagem de elementos finitos para elementos de contorno.
++ Explicar, em uma frase, o que o método dos elementos de contorno (BEM / MEC) faz de diferente em relação a métodos de domínio (diferenças finitas, elementos finitos).
++ Citar duas situações em que o BEM costuma ser atrativo e duas em que ele é desconfortável.
++ Partir de $T'' = 0$ em um intervalo, chegar ao sistema $H T = G Q$ nas pontas e aplicar condições de contorno.
++ Calcular $T$ em pontos *internos* a partir só dos dados de contorno já resolvidos.
++ Resolver no Julia (com `Plots`) os dois casos-modelo e o exercício de convecção.
 
-== Vantagens e desvantagens
+Não é necessário, nesta aula, clonar repositório de produção nem gerar malha com Gmsh: o laboratório é o BEM *em uma dimensão*, onde o “contorno” são só dois pontos.
 
-O Método dos Elementos de Contorno (BEM), como qualquer outro método numérico, tem suas vantagens e desvantagens. As vantagens do método dos elementos de contorno são as seguintes:
+== Gancho: um problema que só “mora” nas pontas
 
-1-  Apenas o contorno do problema precisa ser discretizado, o que leva a uma fácil preparação de dados e menores requisitos de computação.
-2- O tratamento exato de domínios infinitos e semi-infinitos.
-3- As incógnitas em locais internos são calculadas na fase de pós-processamento, o que simplifica qualquer procedimento de otimização.
-4- Resultados precisos no caso de concentrações de tensões devido a fissuras ou cargas concentradas.
+Considere uma barra (ou a espessura de uma grande placa) no intervalo
 
-Por outro lado, as desvantagens do método dos elementos de contorno são as seguintes:
-1- As matrizes do sistema são não simétricas e totalmente preenchidas.
-2- As soluções fundamentais nem sempre são fáceis de obter.
-3- A dificuldade em tratar estruturas delgadas.
-4- A discretização do domínio necessária no caso de aplicações não lineares.
+$ Omega = (x_0, x_f), quad Gamma = {x_0, x_f}. $
 
-Desafios que precisam ser enfrentados para que o método tenha uma maior adesão:
+Em regime permanente, sem geração de calor, a temperatura $T(x)$ obedece à equação de Laplace 1D
 
-1- Uma visão mais profunda dos aspectos matemáticos e numéricos do método.
-2- Um método sistemático para a derivação das soluções fundamentais e particulares.
-3- Fórmula de integração estável.
-4- Programas de uso geral e pequenos programas disponíveis para engenheiros.
-5- Acoplamento entre elementos de contorno e elementos finitos.
+$ (d^2 T)/(d x^2) = 0, $
 
-#image("../assets/apresentacao/bem-overview.jpeg", width: 80%)
+com *duas* condições de contorno escolhidas entre temperatura e fluxo
 
-== Por que JULIA?
+$ Q(x) := (d T)/(d x) $
 
-A escolha da linguagem JULIA é justificada por várias razões. JULIA é uma linguagem de programação de alto desempenho, projetada especificamente para computação científica e análise numérica. Suas bibliotecas e funcionalidades são otimizadas para realizar cálculos complexos de forma eficiente, o que é crucial para a implementação de métodos como o Método dos Elementos de Contorno (BEM). Além disso, JULIA possui uma sintaxe simples e intuitiva, o que facilita a escrita e a leitura de códigos, tornando o processo de desenvolvimento mais ágil.
+nas extremidades. Exemplos:
 
-*Desempenho:* JULIA é projetada para ter um desempenho superior em cálculos numéricos e científicos, superando Python em termos de velocidade. Isso se deve à sua capacidade de compilar código em tempo de execução, o que resulta em execução mais rápida. Python, por outro lado, pode ser mais lento devido à sua natureza interpretada, embora existam bibliotecas como Cython que ajudam a melhorar o desempenho.
+- Dirichlet: $T(x_0)$ e $T(x_f)$ dados;
+- Neumann / mista: uma temperatura e um fluxo, ou dois fluxos compatíveis com o balanço.
 
-Normalmente, uma linguagem é utilizada para o desenvolvimento rápido e prototipagem, enquanto a outra é usada para obter desempenho otimizado. Por exemplo, um cientista pode usar Python para escrever a lógica do código devido à sua simplicidade e riqueza de bibliotecas, mas precisará reescrever partes críticas em C ou Fortran para alcançar a velocidade necessária.
 
-Essa abordagem tem várias desvantagens:
+Em 1D o contorno $Gamma$ *é* o par de pontas. A pergunta do BEM fica literal:
 
-+ *Complexidade de Manutenção:* Manter código em duas linguagens diferentes pode ser complexo e propenso a erros, especialmente quando as mudanças precisam ser sincronizadas entre as duas versões.
-+ *Curva de Aprendizado:* Exige que os desenvolvedores sejam proficientes em ambas as linguagens, o que pode não ser sempre o caso.
-+ *Integração Difícil:* A integração entre diferentes linguagens pode ser complicada, exigindo ferramentas e técnicas adicionais para gerenciar a comunicação entre elas.
+#align(center)[
+  _Se a física no interior está toda amarrada pelo operador diferencial,
+  será que basta conhecer o que acontece em $Gamma$?_
+]
 
-Uma solução para esse problema é a utilização de linguagens como JULIA, que são projetadas para oferecer tanto facilidade de uso quanto alto desempenho. Isso elimina a necessidade de usar duas linguagens diferentes, simplificando o desenvolvimento, a manutenção e a execução de programas complexos.
+Para Laplace 1D a resposta analítica é óbvia ($T$ é reta). O valor da aula é outro: montar a *mesma* lógica que, em 2D/3D, transforma um problema de domínio em um problema só de contorno.
 
-Para instalar abra o terminal do windows e rode:
+== O BEM em uma figura
 
-```powershell
-winget install julia -s msstore
-julia
-```
+#image("../assets/apresentacao/bem-overview.jpeg", width: 85%)
 
-== Formulação do BEM-1d
+Ideia-chave (guarde esta frase):
 
-Considere $u$ e $v$ como duas funções da variável independente x em um espaço unidimensional. A seguinte fórmula de integração por partes é bem conhecida:
+#align(center)[
+  *Identidade integral + solução fundamental
+  $=>$ equações cujas incógnitas vivem no contorno $Gamma$.*
+]
 
-$ integral_(x = x_1)^(x = x_2) u(x) d v(x) = mat(delim: "[", u(x) v(x))_(x = x_1)^(x = x_2) - integral_(x = x_1)^(x = x_2) v(x) d u(x) $
+Comparação rápida com métodos de domínio:
 
-ela pode ser rescrita de maneira simplificada como:
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Aspecto*], [*FEM / diferenças (domínio)*], [*BEM (contorno)*],
+  [O que se malha], [todo o $Omega$], [só $Gamma = partial Omega$],
+  [Incógnitas primárias], [nos nós do volume/área], [nos nós do contorno],
+  [Interior], [obtido junto com a solução], [pós-processamento (avaliar a identidade num ponto interno)],
+  [Matriz típica], [esparsa (interação local)], [cheia e, em geral, não simétrica],
+  [Ingrediente extra], [funções de forma no domínio], [*solução fundamental* do operador],
+)
 
-$ integral_(x = x_1)^(x = x_2) u(x) v' (x) d x = [u(x) v(x)]_(x = x_1)^(x = x_2) - integral_(x = x_1)^(x = x_2) v(x) u' (x) d x $
+#image("../assets/image.png", width: 85%)
 
-onde $'$ representa a derivada. O primeiro termo do lado direito pode ser rescrito levando em conta o *contorno*. No caso unidimensional isso consiste exatamente nos pontos $x_1$ e $x_2$.
+Em 2D, malhar só a curva que cerca a peça reduz uma dimensão da discretização. Em troca, cada ponto de contorno “enxerga” todos os outros: a matriz deixa de ser esparsa. Não existe almoço grátis — só um trade-off diferente.
 
-#image("../assets/apresentacao/contorno-1d.png", width: 80%)
+== Quando o BEM costuma valer a pena
 
-$ [u(x) v(x)]_(x = x_1)^(x = x_2) &= [u(x) v(x) n(x)]_(x = x_2) + [u(x) v(x) n(x)]_(x = x_1) \ &=> sum_(x = x_1 , x_2) u(x) v(x) n(x) => integral_Gamma u(x) v(x) n(x) d Gamma $
+*Vantagens típicas*
 
-Os demais termos tratam de uma integral no domínio e pode ser escritas como:
++ Só o contorno é discretizado: menos geometria para preparar quando $Omega$ é grande e a física é linear e homogênea.
++ Domínios infinitos ou semi-infinitos (solo, escoamento externo, espaço aberto) entram com naturalidade via solução fundamental adequada — sem “truncar caixas” enormes.
++ Valores internos são calculados *depois*, só onde interessam (útil em laços de otimização).
++ Boa resolução de concentrações de tensão / gradientes em bordas, fendas e cargas concentradas, quando a formulação está bem posta.
 
-$ integral_Omega u(x) v' (x) d Omega = integral_Gamma u(x) v(x) n(x) d Gamma - integral_Omega v(x) u' (x) d Omega $
+*Limitações típicas*
 
-É importante notar:
-1- A ideia principal da integração por partes, é trocar o operador diferencial da função $v$ para a função $u$.
-2- Ao fazer essa troca, alguns termos de contorno aparecem.
-3- A integração por partes foi feita apenas uma vez. No entanto, no BEM a integração por partes pode ser realizada uma, duas ou até quatro vezes dependendo da ordem da derivada.
-4- Esse processo pode ser facilmente estendido para 2 ou 3 dimensões.
++ Matrizes cheias e não simétricas: custo e memória crescem rápido se a implementação for ingênua.
++ É preciso conhecer (ou saber derivar) a *solução fundamental* do operador. Nem todo material / não-linearidade tem SF simples.
++ Estruturas muito delgadas e alguns acoplamentos são chatas de tratar só com BEM clássico.
++ Não-linearidade ou heterogeneidade no *domínio* em geral reintroduz integrais de volume (ou truques equivalentes).
 
-== Equação de Laplace
+*Por que ainda se ensina pouco na graduação*
 
-A formulação diferencial da equação de Laplace é dada por:
++ Formulação matemática mais densa na entrada (integrais, SF, singularidades).
++ Menos códigos didáticos curtos do que no universo do FEM.
++ Singularidades nas integrais exigem cuidado numérico.
++ Mudar a ideia padrão dos métodos de domínio tem um custo envolvido.
 
-$ (d^2 T(x))/(d x^2) = 0 $
+Este curso  ataca sobretudo formulação passo a passo, integração de termos delicados e a passagem 1D $->$ 2D.
 
-Usando integração por partes duas vezes na expressão dos resíduos ponderados:
+== Notação mínima (aula 1)
 
-$ integral_(x_0)^(x_f) T^* (d^2 T)/(d x^2) d x = (T^* (d T)/(d x))_(x_0)^(x_f) - integral_(x_0)^(x_f) (d T^*)/(d x) (d T)/(d x) d x = (T^* (d T)/(d x) - T (d T^*)/(d x))_(x_0)^(x_f) - integral_(x_0)^(x_f) (d^2 T^*)/(d x^2) T d x . $
+Alinhada ao glossário do curso, com um atalho só para o 1D:
 
-Reescrevendo em termos do fluxo $Q = (d T)/(d x)$:
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Símbolo*], [*Significado aqui*],
+  [$Omega = (x_0, x_f)$], [domínio 1D],
+  [$Gamma = {x_0, x_f}$], [contorno],
+  [$n$], [normal *exterior* a $Omega$: $n(x_0) = -1$, $n(x_f) = +1$],
+  [$T$], [temperatura / potencial],
+  [$Q = d T \/ d x$], [derivada espacial (atalho 1D)],
+  [$x_d$], [ponto fonte (onde “colocamos” a SF)],
+  [$T^* (x, x_d)$, $Q^* = partial T^* \/ partial x$], [solução fundamental e sua derivada],
+  [$H$, $G$], [matrizes de influência: $H T = G Q$],
+)
 
-$ integral_(x_0)^(x_f) T^* (d^2 T)/(d x^2) d x = - (T Q^* - T^* Q)_(x_0)^(x_f) - integral_(x_0)^(x_f) (d^2 T^*)/(d x^2) T d x . $
+*Armadilha de notação.* No restante do curso o fluxo de contorno do código é
 
-Considerando que $T^*$ é a solução fundamental do problema, ou seja:
+$ q := - k (partial T)/(partial n). $
 
-$ -(d^2 T^* (x, x_d))/(d x^2) = delta(x - x_d) . $
+Em 1D, $partial T \/ partial n = n \, Q$. Com $k = 1$, $q = - n Q$. Nesta aula trabalhamos com $Q$ para a álgebra ficar transparente; quando formos ao 2D, a incógnita de contorno volta a ser $q$.
 
-onde $delta$ é a função delta de Dirac.  Pode-se observar que $T^* = - 1/2 | x - x_d |$ e $Q^* = (d T^*)/(d x) = - 1/2 "sign" (x - x_d)$. Substituindo essas funções na equação integral obtém-se:
+== Da integração por partes ao contorno
 
-$ -T(x_d) = T(x_f) Q^* (x_f , x_d) - T^* (x_f , x_d) Q(x_f) - T(x_0) Q^* (x_0 , x_d) + T^* (x_0 , x_d) Q(x_0) . $
+Sejam $u$ e $v$ funções regulares em $[x_1, x_2]$. Integração por partes:
 
-Quando $x_d$ é $x_0$ tem-se:
+$
+  integral_(x_1)^(x_2) u(x) v'(x) dif x
+  = [u(x) v(x)]_(x_1)^(x_2)
+  - integral_(x_1)^(x_2) v(x) u'(x) dif x.
+$
 
-$ T^* (x_0 , x_0) = 0 \ T^* (x_f , x_0) = - (x_f - x_0)/2 \ Q^* (x_0 , x_0) = 1/2 \ Q^* (x_f , x_0) = - 1/2 $
+O termo avaliado nas pontas *é* o contorno 1D. Com a normal exterior $n(x_1)=-1$, $n(x_2)=+1$,
 
-Quando $x_d$ é $x_f$ tem-se:
+$
+  [u v]_(x_1)^(x_2)
+  = u(x_2) v(x_2) n(x_2) + u(x_1) v(x_1) n(x_1)
+  = sum_(x in Gamma) u(x) v(x) n(x),
+$
 
-$ T^* (x_0 , x_f) = - (x_f - x_0)/2 \ T^* (x_f , x_f) = 0 \ Q^* (x_0 , x_f) = 1/2 \ Q^* (x_f , x_f) = - 1/2 $
+que em dimensão maior se escreve $integral_Gamma u v n dif Gamma$ (ou $integral_Gamma u v upright(bold(n)) · dif upright(bold(Gamma))$).
 
-Logo, para o ponto $x_d = x_0$ a equação se torna:
+#image("../assets/apresentacao/contorno-1d.png", width: 60%)
 
-$ -T(x_0) = - T(x_f) 1/2 + (x_f - x_0)/2 Q(x_f) - T(x_0) 1/2 + 0 Q(x_0) $
 
-e para o ponto $x_d = x_f$
+Leitura operacional:
 
-$ -T(x_f) = - T(x_f) 1/2 - 0 Q(x_f) - T(x_0) 1/2 - (x_f - x_0)/2 Q(0) $
++ Integração por partes *transfere* derivadas de uma função para a outra.
++ Cada transferência produz termos de contorno.
++ No BEM repetimos o processo até o operador diferencial cair inteiro sobre a função peso (a SF). O número de integrações acompanha a ordem do operador (Laplace: 2; biarmônico/viga: 4; …).
 
-Escrevendo as duas equações em forma matricial, tem-se:
+== Laplace 1D, em camadas
 
-$ [mat(delim: #none, 0.5, -0.5; -0.5, 0.5)] [mat(delim: #none, T(0); T(1))] = (x_f - x_0) [mat(delim: #none, 0, -0.5; 0.5, 0)] [mat(delim: #none, Q(0); Q(1))] . $
+=== Camada 0 — problema forte
 
-=== Exemplos
+$ (d^2 T)/(d x^2) = 0 quad "em" quad (x_0, x_f), $
 
-Caso 1: Condição de Dirichlet
-$T(0) = 100, T(1) = 0 quad T(x) = 100 - 100 x$
+mais duas CDC entre ${T(x_0), T(x_f), Q(x_0), Q(x_f)}$.
 
-Caso 2: Condição mista
-$T(0) = 100, Q(0) = 0 quad T(x) = 100$
+=== Camada 1 — resíduo ponderado (ainda sem escolher o peso)
+
+Para uma função peso $T^*$ suficientemente regular,
+
+$ integral_(x_0)^(x_f) T^* (d^2 T)/(d x^2) dif x = 0. $
+
+Duas integrações por partes levam a
+
+$
+  integral_(x_0)^(x_f) T^* T'' dif x
+  = [T^* Q - T Q^*]_(x_0)^(x_f)
+  - integral_(x_0)^(x_f) T (T^*)'' dif x.
+$
+
+
+=== Camada 2 — escolha da função peso: solução fundamental
+
+Em vez de um peso polinomial arbitrário, o BEM escolhe $T^*$ especial:
+
+$ - (d^2 T^* (x, x_d))/(d x^2) = delta(x - x_d). $
+
+Aqui $delta$ é a delta de Dirac: a integral de $f(x) delta(x-x_d)$ devolve $f(x_d)$ se o intervalo cobre $x_d$, e $0$ caso contrário. Intuição: $T^*(·, x_d)$ é a resposta em todo o eixo de uma fonte unitária em $x_d$, para o operador $-d^2\/dif x^2$.
+
+*Por que isso ajuda?* O termo de domínio vira amostragem do campo:
+
+$
+  integral_(x_0)^(x_f) T (T^*)'' dif x
+  = - integral_(x_0)^(x_f) T(x) delta(x - x_d) dif x
+  = - T(x_d) quad ("se" x_d in (x_0, x_f)).
+$
+
+Com $T'' = 0$, a identidade colapsa para uma relação *só com valores de contorno* e com o valor $T(x_d)$.
+
+=== Camada 3 — SF explícita em 1D
+
+Uma SF conveniente é
+
+$
+  T^*(x, x_d) = - 1/2 |x - x_d|,
+  quad
+  Q^*(x, x_d) = (partial T^*)/(partial x) = - 1/2 "sign"(x - x_d).
+$
+
+Confira: longe de $x_d$, $T^*$ é linear por partes, logo $(T^*)'' = 0$; o “salto” da derivada em $x_d$ produz a delta. Em 1D, $T^*(x_d, x_d) = 0$ — a singularidade é branda. Em 2D a SF de Laplace envolve $log r$ e a integração exige mais cuidado (aulas seguintes).
+
+Substituindo e reorganizando, para $x_d$ no intervalo obtém-se a equação integral de contorno
+
+$
+  - T(x_d)
+  = T(x_f) Q^*(x_f, x_d) - T^*(x_f, x_d) Q(x_f)
+  - T(x_0) Q^*(x_0, x_d) + T^*(x_0, x_d) Q(x_0).
+$
+
+=== Camada 4 — colocação no contorno ($H T = G Q$)
+
+O contorno só tem dois pontos. Colocamos a fonte em cada um deles: $x_d = x_0$ e $x_d = x_f$.
+
+Valores da SF:
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Quantidade*], [*$x_d = x_0$*], [*$x_d = x_f$*],
+  [$T^*(x_0, x_d)$], [$0$], [$-(x_f-x_0)/2$],
+  [$T^*(x_f, x_d)$], [$-(x_f-x_0)/2$], [$0$],
+  [$Q^*(x_0, x_d)$], [$+1\/2$], [$+1\/2$],
+  [$Q^*(x_f, x_d)$], [$-1\/2$], [$-1\/2$],
+)
+
+Equação em $x_d = x_0$:
+
+$
+  - T(x_0)
+  = - 1/2 T(x_f) + (x_f - x_0)/2 Q(x_f) - 1/2 T(x_0).
+$
+
+Equação em $x_d = x_f$:
+
+$
+  - T(x_f)
+  = - 1/2 T(x_f) - 1/2 T(x_0) - (x_f - x_0)/2 Q(x_0).
+$
+
+Reorganizando em matriz (com $T_0 = T(x_0)$, etc.):
+
+$
+  mat(0.5, -0.5; -0.5, 0.5)
+  mat(T_0; T_f)
+  =
+  (x_f - x_0)
+  mat(0, -0.5; 0.5, 0)
+  mat(Q_0; Q_f).
+$
+
+Ou seja,
+
+$
+  H T = G Q,
+  quad
+  H = mat(0.5, -0.5; -0.5, 0.5),
+  quad
+  G = (x_f - x_0) mat(0, -0.5; 0.5, 0).
+$
+
+Leitura que você vai reencontrar em 2D:
+
+- cada *linha* de $H$ e $G$ corresponde a uma colocação (um $x_d$);
+- cada *coluna* corresponde à influência de um grau de liberdade de contorno ($T$ ou $Q$ naquele nó);
+- $H$ multiplica temperaturas; $G$ multiplica fluxos $Q$.
+
+*Condições de contorno.* Das quatro quantidades $(T_0, T_f, Q_0, Q_f)$, *duas* são dados e duas são incógnitas. Move-se para a esquerda tudo o que é desconhecido e para a direita tudo o que é conhecido, até obter $A x = b$ com $A$ $2 times 2$.
+
+=== Camada 5 — pontos internos (pós-processamento)
+
+Com $T$ e $Q$ já conhecidos *nas pontas*, a mesma identidade com $x_d in (x_0, x_f)$ devolve $T(x_d)$ sem resolver outro sistema. Para a SF deste capítulo:
+
+$
+  T(x_d)
+  = 1/2 (T_0 + T_f)
+  + (x_d - x_0)/2 Q_0
+  + (x_d - x_f)/2 Q_f.
+$
+
+Isso materializa a vantagem “interior sob demanda”: o sistema linear é só de contorno; o campo interno é avaliação.
+
+== Exemplos numéricos (Julia + Plots)
+
+Ambiente mínimo desta aula:
 
 ```julia
-x0=0
-xf=1
-l=xf-x0
-A1=[0.5 -.5 0 l/2
--.5 .5 -l/2 0
-1 0 0 0 
-0 1 0 0]
-b=[0,0,100,0]
-x1=A1\b
-
-A2=[0.5 -.5 0 l/2
--.5 .5 -l/2 0
-1 0 0 0 
-0 0 1 0]
-b=[0,0,100,0]
-x2=A2\b
+using Pkg
+Pkg.add("Plots")   # uma vez por ambiente
+using Plots, LinearAlgebra
 ```
 
-Usando essa equação podemos calcular o valor da temperatura nos pontos internos:
+Matrizes $H$ e $G$ no intervalo $[x_0, x_f]$:
 
 ```julia
-x0=0
-xf=1
-xs=range(x0,xf,length=100)
-T=0.5*(x1[1]+x1[2]).+(xs.-x0)/2*x1[3].+(xs.-xf)/2*x1[4]
-using Plots
-plot(xs,T,legend=false,xlabel="x",ylabel="T",marker=:c)
+function bem1d_matrices(x0, xf)
+    L = xf - x0
+    H = [0.5 -0.5; -0.5 0.5]
+    G = L * [0.0 -0.5; 0.5 0.0]
+    return H, G, L
+end
 ```
+
+Montagem a partir de $H T - G Q = 0$: colunas de incógnitas vão para $A$; termos conhecidos vão para $b$.
+
+```julia
+"""Resolve H*T = G*Q com CDC mistas.
+`T_data` / `Q_data`: valor numérico se conhecido, `NaN` se incógnita.
+Em cada nó, prescreva exatamente uma entre T e Q."""
+function solve_bem1d(H, G, T_data, Q_data)
+    n = 2
+    T_known = .!isnan.(T_data)
+    Q_known = .!isnan.(Q_data)
+    @assert count(T_known) + count(Q_known) == n
+    @assert all(T_known .!= Q_known)
+
+    A = zeros(n, n)
+    b = zeros(n)
+    col_of_T = zeros(Int, n)
+    col_of_Q = zeros(Int, n)
+    col = 0
+
+    for i in 1:n
+        if T_known[i]
+            b .-= H[:, i] * T_data[i]
+        else
+            col += 1
+            col_of_T[i] = col
+            A[:, col] .+= H[:, i]
+        end
+    end
+    for i in 1:n
+        if Q_known[i]
+            b .+= G[:, i] * Q_data[i]
+        else
+            col += 1
+            col_of_Q[i] = col
+            A[:, col] .-= G[:, i]   # -G * Q_desconhecido
+        end
+    end
+
+    x = A \ b
+    T = zeros(n)
+    Q = zeros(n)
+    for i in 1:n
+        T[i] = T_known[i] ? T_data[i] : x[col_of_T[i]]
+        Q[i] = Q_known[i] ? Q_data[i] : x[col_of_Q[i]]
+    end
+    return T, Q, A, b, x
+end
+
+T_interior(xd, x0, xf, T, Q) =
+    0.5 * (T[1] + T[2]) + (xd - x0)/2 * Q[1] + (xd - xf)/2 * Q[2]
+```
+
+=== Caso 1 — Dirichlet
+
+$
+  T(0) = 100, quad T(1) = 0
+  quad => quad T_"exata"(x) = 100 - 100 x, quad Q = -100.
+$
+
+```julia
+x0, xf = 0.0, 1.0
+H, G, L = bem1d_matrices(x0, xf)
+
+T_data = [100.0, 0.0]   # T conhecido nos dois nós
+Q_data = [NaN, NaN]     # Q desconhecido
+T, Q, A, b, x = solve_bem1d(H, G, T_data, Q_data)
+@show T Q               # Q ≈ [-100, -100]
+
+xs = range(x0, xf; length=100)
+T_num   = [T_interior(xd, x0, xf, T, Q) for xd in xs]
+T_exato = @. 100 - 100 * xs
+@show maximum(abs, T_num - T_exato)
+
+plot(xs, T_exato; label="exato", xlabel="x", ylabel="T",
+     title="Caso 1 — Dirichlet", lw=2)
+plot!(xs, T_num; label="BEM (interior)", ls=:dash, lw=2)
+```
+
+=== Caso 2 — mista (um dado em cada ponta)
+
+Pedagogicamente mais limpo do que dois dados no mesmo extremo:
+
+$
+  T(0) = 100, quad Q(1) = 0
+  quad => quad T equiv 100, quad Q equiv 0.
+$
+
+```julia
+T_data = [100.0, NaN]
+Q_data = [NaN, 0.0]
+T, Q, A, b, x = solve_bem1d(H, G, T_data, Q_data)
+@show T Q    # T ≈ [100, 100], Q ≈ [0, 0]
+```
+
+*Caso 2b (variante).* $T(0)=100$, $Q(0)=0$ também fecha algebricamente e devolve $T_f=100$, $Q_f=0$. Serve para ver que bastam *dois dados independentes* entre os quatro slots — não necessariamente um em cada lado.
+
+== Roteiro mental
+
++ Operador no domínio $->$ resíduo ponderado.
++ Integrar por partes até o operador cair na função peso.
++ Escolher o peso = SF ($-L^* T^* = delta$).
++ Domínio vira $T(x_d)$; sobram termos só em $Gamma$.
++ Colocar $x_d$ nos nós de contorno $->$ $H T = G Q$.
++ Aplicar CDC $->$ $A x = b$.
++ Interior: reavaliar a identidade com $x_d in Omega$.
 
 == Exercícios
 
-1- Uma outra possível condição de contorno é a convecção:
++ *Convecção (Robin) à direita.*
+  No extremo direito, $Q_f = h (T_f - T_infinity)$ com $T_infinity = 20$ °C e $h = 3$ (unidades consistentes do modelo 1D). À esquerda, $T_0 = 100$ °C. Como $Q_f$ depende de $T_f$, substitua essa relação *antes* de montar $A x = b$ (a linha correspondente mistura colunas de $H$ e $G$).
+  Resolva analítica e numericamente. Compare $T(x)$ e os fluxos nas pontas.
 
-$ q = h(T - T_infinity) $
++ *Fonte uniforme (Poisson 1D).*
+  Com geração $b$ constante, a identidade ganha um termo de domínio
 
-considere o problema onde o lado direito está exposto a $T_infinity = 20 ° "C"$, no lado esquerdo $T(0) = 100 ° "C"$, e $h = 3 "W/°C"$. Resolva esse problema analicamente e numericamente usando BEM.
+  $
+    - T(x_d)
+    = ..."(termos de contorno)..."
+    + integral_(x_0)^(x_f) T^*(x, x_d) b dif x.
+  $
 
-2- Quando existe uma fonte de calor distribuída $b$ mais um termo aparece na equação integral:
+  Para $b$ constante a integral é analítica. Considere a placa de espessura $L = 2$ cm, $k = 1$ W/(m·K), $b = 1000$ kW/m³, faces a $T_A = 100$ °C e $T_B = 200$ °C. Atente às unidades ($L$ em metros). Compare com
 
-$ -T(x_d) = T(x_f) Q^* (x_f , x_d) - T^* (x_f , x_d) Q(x_f) - T(x_0) Q^* (x_0 , x_d) + T^* (x_0 , x_d) Q(x_0) + integral_(x_0)^(x_f) T^* (x, x_d) b d x . $
+  #image("../assets/apresentacao/placa-calor.png", width: 50%)
 
-Considere uma carga constante(isso torna a integral restante muito fácil de ser integrada analiticamente) e resolva um problema de uma grande placa de espessura L = 2 cm com condutividade térmica constante k = 1 W/m.K e geração uniforme de calor b = 1000 kW/m3. As faces A e B estão a temperaturas de 100C e 200C, respectivamente. Compare com a solução analítica:
+  $
+    T(x)
+    = [(T_B - T_A)/L + b/(2 k) (L - x)] x + T_A.
+  $
 
-#image("../assets/apresentacao/placa-calor.png", width: 80%)
+  *Nota:* a equação forte passa a envolver $b$ e $k$; mantenha a mesma convenção de sinal da SF e do termo de domínio.
 
-$ T = [(T_B - T_A)/L + b/(2 k) (L - x)] x + T_A $
++ *Perguntas de checagem (sem código).*
+  - Por que a matriz do BEM, em geral, é cheia?
+  - O que precisa existir para o BEM “clássico” de um operador linear?
+  - Se só $T_0$ e $T_f$ são dados, o sistema devolve o quê?
 
-=== Extra
+== Preparar o Julia desta aula
 
-Quando dois corpos trocam calor por radiação, o fluxo é proporcional à diferença da quarta potência de suas temperaturas absolutas: $q_n = kappa f_s f_epsilon.alt (u^4 - u_R^4)$ onde u, uR são as temperaturas absolutas dos corpos radiantes, 𝜅 = 5.699 × 10−8 W∕(m2 K4) é a constante de Stefan-Boltzmann, 0 ≤ fs ≤ 1 é o fator de forma da radiação e 0 \< f𝜖 ≤ 1 é a emissividade superficial, definida como o poder emissivo relativo de um corpo em comparação ao de um corpo negro ideal. A emissividade superficial também é igual ao coeficiente de absorção, definido como a fração da energia térmica incidente em um corpo que é absorvida. A radiação pode ser vista como uma condição de contorno convectiva onde o coeficiente de transferência de calor convectivo depende da temperatura dos corpos radiantes. Escrevendo:
+```powershell
+winget install julia -s msstore
+julia --version
+```
 
-$ q_n = kappa f_s f_epsilon.alt (u^4 - u_R^4) = underbrace(kappa f_s f_epsilon.alt (u^2 + u_R^2)(u + u_R), h_r (u)) (u - u_R) $
+```julia
+using Pkg
+Pkg.add("Plots")
+using Plots
+```
 
-Os problemas de radiação devem ser resolvidos por iteração: primeiro, o problema linear é resolvido, então o coeficiente de transferência de calor convectivo é atualizado e a solução é repetida. O critério de parada é baseado no tamanho da variação de temperatura. Normalmente, são necessárias poucas iterações.
+Gráficos desta aula usam *Plots.jl*. Capítulos seguintes reintroduzem malha, Gmsh e o fluxo de trabalho completo quando a geometria deixar de ser um intervalo.
 
-Implemente essa condição de contorno no BEM.
+== Extra (fora da trilha da aula 1) — radiação
+
+Condição não linear de radiação entre superfícies:
+
+$
+  q_n = kappa f_s f_epsilon.alt (u^4 - u_R^4)
+  = underbrace(kappa f_s f_epsilon.alt (u^2 + u_R^2)(u + u_R), h_r (u))
+  (u - u_R),
+$
+
+com $kappa approx 5.699 times 10^(-8)$ W/(m²·K⁴) (Stefan–Boltzmann), $0 <= f_s <= 1$ fator de forma e $0 < f_epsilon.alt <= 1$ emissividade. Parece convecção com $h_r$ dependente da própria temperatura: resolve-se o problema linear, atualiza-se $h_r$, itera-se até a variação de $u$ ficar pequena.
+
+Projeto opcional *depois* de dominar Robin linear — não é pré-requisito da aula 1.

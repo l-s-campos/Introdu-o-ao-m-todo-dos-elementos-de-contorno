@@ -1,10 +1,10 @@
 // Poisson 2D
-// markdown2typst + tex2typst
+// markdown2typst + tex2typst + BEM_gmsh
 
 = Poisson 2D
 <poisson-2d>
 
-= MECID
+= MECID / DIBEM
 
 A equação de Poisson é dada por:
 
@@ -38,7 +38,7 @@ $ mat(delim: "{", upright(s)_(f 1) upright(T)^* (X_1 comma X_1), upright(s)_(f 2
 
 a diagonal dessa matriz não é bem definida devido a singularidade da solução fundamental. Ela será calculada de maneira indireta como feito com a matriz $H$.
 
-Esse procedimento tem de ser capaz de calcular essa integral quando a função $f$ for constante e igual a 1.
+Esse procedimento deve ser capaz de calcular essa integral quando a função $f$ for constante e igual a 1.
 
 $ I_(1 d) = integral_Omega T^* (X_d , X) d Omega $
 
@@ -46,25 +46,39 @@ Igualando as equações:
 
 $ M [1] = [I_1] $
 
-a diagonal da matriz $M$  tem de ser dada por
+a diagonal da matriz $M$  deve ser dada por
 
 $ M_(i i) = I_(1 i) - sum_(j = 1)^N M_(i j) , " com " i != j, " para " i = 1, 2, . . ., N, $
 
-```julia
-Ht, Gt = BEM.calc_HeGt(dad)
-A, b = BEM.aplicaCDC(Ht, Gt, dad)
+No `BEM_gmsh` o termo de domínio é montado por *DIBEM* (funções de base radial) e fica disponível após a montagem de $H$ e $G$:
 
-M = BEM.Monta_M_RIMd(dad, npg)# calc_HeG_potencial linha 310
-f=ones(nc(dad)+ni(dad))*10
-x = A \ (b+M*f)#carga distribuída
-x = A \ (b+M*u̇)#difusão
-T, q = separa(dad, x) #format 479
-Ti=x[nc(dad)+1:end]
+```julia
+using DrWatson
+@quickactivate :BEM
+include(datadir("Laplace", "Laplace_dad.jl"))
+
+props = Laplace(1.0)
+msh   = quadrado(ndiv=24, show=false)
+dad   = format2d(msh, props; pontointerno=true)  # internos entram no DIBEM
+
+H_G_full_direct(dad, 16)
+DIBEM(dad)                 # monta a matriz de domínio (tipo massa) M
+# DIBEM(dad; rbf=PHS(3; poly_deg=0))  # variante de RBF
+
+solve(dad)                 # estacionário sem fonte
+# Transiente (difusão) — o termo M u̇ é tratado pelo integrador:
+# sol = solve_transient(dad, 0.01, 1.0)      # 1ª ordem (calor)
+# solve_Houbolt(dad, 0.05, 2.0)              # 2ª ordem (onda)
+# sol = solve_transient_o2(dad, 0.05, 2.0)   # 2ª ordem via DifferentialEquations
+
+plot_geo(dad)
 ```
+
+Para carga de domínio estacionária, a contribuição $M f$ entra no lado direito do sistema após a aplicação das CDCs (veja `Domain.jl` e os exemplos em `docs/src/pt-br/examples.md`). Os pontos internos da malha Gmsh (`Physical Surface`) são reutilizados como centros das RBFs — não é necessário gerar uma malha volumétrica de elementos finitos.
 
 == Exercícios
 
-Todos os exercícios tem de ser resolvidos com diferentes discretizações.
+Todos os exercícios têm de ser resolvidos com diferentes discretizações.
 
 + Determine a superfície de deflexão de uma membrana elástica em forma de um triângulo equilátero com comprimento lateral a = 5,0 m. A membrana está fixa ao longo de sua borda e é submetida a uma carga distribuída uniformemente f = 10 kN/m² e uma tensão S = 1 kN/m. Os eixos coordenados são tomados como mostrado na figura.
 
@@ -86,7 +100,7 @@ A face aquecida é elevada e mantida a uma temperatura unitária. Supõe-se que 
 
 $ T(Y, t) = 1 - 4/pi sum_(n = 0)^infinity ((- 1)^n)/(2 n + 1) exp {-((2 n + 1)^2 pi^2 kappa t)/(4 L^2)} cos ((2 n + 1) pi Y)/(2 L) $
 
-Usando algum método de análise transiente da aula 2, resolva esse problema e compare com a solução analítica.
+Usando `solve_transient` (ou Houbolt / `solve_transient_o2` quando couber) no `BEM_gmsh`, resolva esse problema e compare com a solução analítica.
 
 + Considere uma elipse que é governada por: $nabla^2 u = 4 - x^2$
 

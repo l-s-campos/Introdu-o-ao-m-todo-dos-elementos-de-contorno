@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trabalhos finais · Introdução ao método dos elementos de contorno</title>
+<meta name="authors" content="Lucas S. Campos">
+<style>/* Alignment */
+mtable.right-align mtd,
+mtable mtd.right-align,
+mtable.left-align mtd.right-align,
+mtable.aligned mtd:nth-child(odd) {
+  justify-items: end;
+  text-align: right;
+}
+mtable.cases mtd,
+mtable.left-align mtd,
+mtable mtd.left-align,
+mtable.aligned mtd:nth-child(even),
+math:is(:not([display])) > mtable.multiline-equation mtd {
+  justify-items: start;
+  text-align: left;
+}
+mtable.cases mtd,
+mtable.aligned mtd,
+mtable mtd.flushed,
+mtable mtd.left-flush {
+  padding-left: 0;
+}
+mtable.cases mtd,
+mtable.aligned mtd,
+mtable mtd.flushed,
+mtable mtd.right-flush {
+  padding-right: 0;
+}
+
+/* Tables */
+mtable {
+  math-style: inherit;
+}
+mtd {
+  math-depth: auto-add;
+  math-style: compact;
+  math-shift: compact;
+}
+
+/* Equations */
+mtable.multiline-equation mtd {
+  math-depth: inherit;
+  math-style: inherit;
+  math-shift: inherit;
+  padding: 0;
+}
+math > mtable.multiline-equation mtr:not(:last-child) mtd {
+  padding-bottom: 0.5em;
+}
+
+/* Fractions */
+mfrac {
+  padding-inline: 0;
+  margin-inline: 0.1em;
+}
+
+/* Accents */
+mover[accent="true" i] > :first-child {
+  font-feature-settings: "dtls";
+}
+mover.dotted[accent="true" i] > :first-child {
+  font-feature-settings: "dtls" 0;
+}
+
+/* Other rules for scriptlevel, displaystyle and math-shift */
+munder > :nth-child(2),
+munderover > :nth-child(2) {
+  math-shift: compact
+}
+munder[accentunder="true" i] > :not(:first-child),
+mover[accent="true" i] > :not(:first-child) {
+  math-depth: inherit;
+  math-style: inherit;
+  math-shift: inherit;
+}</style>
+<style>/* site chrome */
+:root {
+  --bg: #f7f4ef;
+  --surface: #ffffff;
+  --ink: #1c1917;
+  --muted: #57534e;
+  --accent: #0f766e;
+  --accent-soft: #ccfbf1;
+  --line: #e7e5e4;
+  --code-bg: #f5f5f4;
+  --nav-w: 280px;
+  --shadow: 0 10px 30px rgba(28, 25, 23, 0.06);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, #ecfeff 0, transparent 28%),
+    radial-gradient(circle at top right, #fff7ed 0, transparent 24%),
+    var(--bg);
+  line-height: 1.65;
+}
+a { color: var(--accent); }
+a:hover { color: #115e59; }
+.layout {
+  display: grid;
+  grid-template-columns: var(--nav-w) 1fr;
+  min-height: 100vh;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+  padding: 1.5rem 1rem 2rem;
+  background: rgba(28, 25, 23, 0.94);
+  color: #fafaf9;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.brand {
+  display: block;
+  color: #fff !important;
+  text-decoration: none !important;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  margin-bottom: 0.35rem;
+}
+.brand-sub {
+  color: #a8a29e;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+.nav-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: #a8a29e;
+  margin: 1rem 0 0.5rem 0.55rem;
+}
+.nav a {
+  display: block;
+  color: #e7e5e4 !important;
+  text-decoration: none !important;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.95rem;
+}
+.nav a:hover { background: rgba(255,255,255,0.06); color: #fff !important; }
+.nav a.active {
+  background: var(--accent);
+  color: #fff !important;
+  font-weight: 600;
+}
+.content-wrap {
+  padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
+}
+.topbar {
+  display: none;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.menu-btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+.article {
+  max-width: 920px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  box-shadow: var(--shadow);
+  padding: clamp(1.25rem, 3vw, 2.4rem);
+}
+.article h1, .article h2, .article h3, .article h4 {
+  line-height: 1.25;
+  color: #0c0a09;
+}
+.article h1 { font-size: 2rem; margin-top: 0; }
+.article h2 {
+  margin-top: 2rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+.article pre {
+  background: var(--code-bg) !important;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 0;
+  padding: 0.9rem 1rem;
+}
+.code-block {
+  position: relative;
+  margin: 1.1rem 0;
+}
+.code-block pre {
+  padding-right: 4.2rem;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.92);
+  color: var(--muted);
+  border-radius: 0.5rem;
+  padding: 0.28rem 0.55rem;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.copy-btn:hover {
+  background: #fff;
+  color: var(--ink);
+  border-color: #a8a29e;
+}
+.copy-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.copy-btn.copied {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: #99f6e4;
+}
+.copy-btn svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+.article img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.6rem;
+}
+.article figure { margin: 1.4rem auto; text-align: center; }
+.pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.pager a {
+  text-decoration: none !important;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  padding: 0.75rem 1rem;
+  background: #fafaf9;
+  color: var(--ink) !important;
+  min-width: min(100%, 220px);
+}
+.pager a:hover { border-color: var(--accent); background: var(--accent-soft); }
+.pager .label { display:block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.15rem; }
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+  margin: 1.5rem 0 0.5rem;
+}
+.card {
+  display: block;
+  text-decoration: none !important;
+  color: inherit !important;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 1rem 1.05rem;
+  background: linear-gradient(180deg, #fff, #fafaf9);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.card:hover {
+  transform: translateY(-2px);
+  border-color: #99f6e4;
+  box-shadow: var(--shadow);
+}
+.card .num {
+  display: inline-flex;
+  width: 1.7rem;
+  height: 1.7rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.55rem;
+}
+.card strong { display: block; font-size: 1.02rem; margin-bottom: 0.2rem; }
+.card span { color: var(--muted); font-size: 0.9rem; }
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin: 1.2rem 0 0.2rem;
+}
+.links a {
+  text-decoration: none !important;
+  background: var(--accent);
+  color: white !important;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+}
+.backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 20;
+}
+/* soften typst default full-page styles inside article */
+.article > style { display: none; }
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; }
+  .topbar { display: flex; }
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: min(86vw, 320px);
+    z-index: 30;
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .backdrop.show { display: block; }
+}
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="index.html">Introdução ao método dos elementos de contorno</a>
+    <div class="brand-sub">Notas de aula · Lucas S. Campos</div>
+    <div class="nav-label">Capítulos</div>
+    <nav class="nav">
+      <a href="index.html">Início</a>
+<a href="apresentacao.html">Apresentação</a>
+<a href="glossario.html">Glossário</a>
+<a href="interpolacao.html">Interpolação</a>
+<a href="equacoes-diferenciais.html">Equações diferenciais</a>
+<a href="indo-para-2d.html">Indo para 2D</a>
+<a href="gmsh.html">Gmsh e malhas</a>
+<a href="laplace-2d.html">Laplace 2D</a>
+<a href="poisson-2d.html">Poisson 2D</a>
+<a href="elasticidade-2d.html">Elasticidade 2D</a>
+<a href="propgeo-3d.html">Propgeo 3D</a>
+<a href="trabalhos-finais.html" class="active">Trabalhos finais</a>
+<a href="viga-euler.html">Viga de Euler (extra)</a>
+<a href="extra.html">Extra</a>
+    </nav>
+  </aside>
+  <div class="content-wrap">
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" type="button">Menu</button>
+      <strong>Trabalhos finais</strong>
+    </div>
+    <main class="article">
+      <h2>1 Trabalhos finais</h2><p>Curso de <strong>30 horas</strong> — Introdução ao Método dos Elementos de Contorno.<br>Código: <span style="text-decoration: underline"><a href="https://github.com/l-s-campos/BEM_gmsh"><code>BEM_gmsh</code></a></span>.</p><p>Estas propostas <strong>não</strong> são exercícios de “rodar o exemplo e plotar”. Cada uma exige <strong>leitura de formulação</strong>, <strong>extensão de malha/CDC</strong>, <strong>estudo quantitativo</strong> e <strong>discussão crítica</strong> no nível de uma monografia curta. O núcleo do BEM já está no repositório — o trabalho é <strong>usar a biblioteca como plataforma de pesquisa</strong>, não como caixa-preta.</p><h3>1.1 Regras gerais</h3><p><strong>Equipes:</strong> 1–2 alunos. <strong>Uma</strong> proposta por equipe (combinar com o docente se quiser fusão parcial).</p><p><strong>Carga esperada:</strong> 20–40 h extraclasse depois do núcleo Laplace/elasticidade. Começar cedo.</p><p><strong>Entregáveis obrigatórios (todas as propostas):</strong></p><ol><li value="1"><p><strong>Relatório</strong> (12–20 páginas, PDF) com:</p><ul><li>formulação matemática do problema <strong>no formalismo BEM</strong> (não só a PDE);</li><li>estado da arte curto (3–8 referências relevantes, não genéricas);</li><li>descrição da malha Gmsh e das CDCs (tipos físicos);</li><li>o que foi herdado do <code>BEM_gmsh</code> vs. o que a equipe implementou/adaptou;</li><li>resultados com <strong>números</strong>, tabelas e figuras;</li><li>análise de erro / convergência / custo;</li><li>limitações e trabalho futuro.</li></ul></li><li value="2"><strong>Repositório ou pasta reproduzível:</strong> scripts Julia, <code>.geo</code>/geradores, <code>README</code> com comandos exatos (<code>julia --project=... script.jl</code>), seeds e versões.</li><li value="3"><p><strong>Contribuição própria</strong> (pelo menos <strong>dois</strong> itens da lista):</p><ul><li>gerador de malha <strong>novo</strong> (geometria que não está pronta em <code>data/</code>);</li><li>CDC ou pós-processamento não trivial (export Gmsh, sensor em linha, SIF, …);</li><li>comparação sistemática entre <strong>dois</strong> métodos/solvers/discretizações;</li><li>estudo de parâmetro físico com curva e interpretação;</li><li>implementação auxiliar (RBF alternativa, critério de parada, remalhagem simples, …).</li></ul></li><li value="4"><strong>Defesa oral</strong> de 10–15 min (perguntas sobre formulação e sobre o código).</li></ol><p><strong>O que</strong>não<strong>conta como trabalho final:</strong> copiar <code>scripts/intro.jl</code>, mudar <code>ndiv</code> e entregar um gráfico de <math><mi>𝑇</mi><mo>=</mo><mi>𝑥</mi></math>.</p><p><strong>Rubrica sugerida:</strong></p><table><tr><td><strong>Critério</strong></td><td><strong>Peso</strong></td></tr><tr><td>Formulação e domínio do BEM no problema escolhido</td><td>20 %</td></tr><tr><td>Originalidade / contribuição além dos scripts prontos</td><td>25 %</td></tr><tr><td>Rigor numérico (convergência, verificação, analítico/literatura)</td><td>25 %</td></tr><tr><td>Discussão crítica (limites, custo, o que falhou)</td><td>15 %</td></tr><tr><td>Reprodutibilidade e clareza do relatório/código</td><td>15 %</td></tr></table><h3>1.2 Proposta A — Mecânica da fratura com Dual BEM (trinca + <math><msub><mi>𝐾</mi><mi>𝐼</mi></msub></math> + propagação)</h3><p><strong>Nível.</strong> Avançado.<br><strong>Âncoras no código.</strong> <code>src/Crack/</code>, <code>data/elastico/iso/center_crack.jl</code>, <code>scripts/crack_central.jl</code>, <code>data/examples/crack_feddersen.jl</code>, grupos físicos tipo <code>"5;…"</code> (faces duais).</p><h4>1.2.1 Problema científico</h4><p>Placa finita com trinca central (ou trinca de borda / geometria <strong>nova</strong> proposta pela equipe) sob tração remota. Calcular fatores de intensidade de tensão (<math><msub><mi>𝐾</mi><mi>𝐼</mi></msub></math>, e <math><msub><mi>𝐾</mi><mrow><mi>𝐼</mi><mi>𝐼</mi></mrow></msub></math> se houver modo misto) pelo <strong>Dual BEM</strong> (BIE de deslocamento em uma face + BIE de tração na face coincidente) e confrontar com solução de referência (Feddersen / Tada / handbook).</p><p>Em seguida, dar <strong>pelo menos um passo de propagação</strong> com critério MTS (e, se couber, estimativa de vida via Paris já esboçada no script) — discutindo o que o código faz e o que ainda é simplificado.</p><h4>1.2.2 O que deve ir além do script pronto</h4><p>Escolha <strong>no mínimo duas</strong> frentes:</p><ul><li>Variar <math><mfrac><mi>𝑎</mi><mi>𝑊</mi></mfrac></math> em uma curva <math><mfrac><msub><mi>𝐾</mi><mrow><mi>𝐼</mi><mrow><mo>(</mo><mfrac><mi>𝑎</mi><mi>𝑊</mi></mfrac><mo>)</mo></mrow></mrow></msub><msubsup><mi>𝐾</mi><mi>𝐼</mi><mi>∞</mi></msubsup></mfrac></math> e comparar com a correção de Feddersen (ou outra da literatura) em <strong>vários</strong> pontos — não um único <math><mi>𝑎</mi></math>.</li><li>Estudo de convergência em <math><msub><mi>𝑛</mi><mtext>crack</mtext></msub></math>, ordem do elemento e <code>npg</code>; extrair taxa observada e discutir singularidade <math><msup><mi>𝑟</mi><mrow><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow></msup></math> na ponta.</li><li>Geometria alternativa: trinca de borda, trinca inclinada (modo misto), ou dois furos + trinca — malha Gmsh <strong>da equipe</strong>.</li><li>Pós-processamento: perfil de COD (abertura) ao longo da trinca; estimativa de <math><msub><mi>𝐾</mi><mi>𝐼</mi></msub></math> por extrapolação de COD vs. por tensão; comparar.</li><li>Um experimento numérico de <strong>caminho</strong>: vários passos MTS com remalhagem manual ou semi-automática (mesmo que tosca), documentando falhas.</li></ul><h4>1.2.3 Entregas específicas</h4><ul><li>Tabela <math><msubsup><mi>𝐾</mi><mi>𝐼</mi><mtext>num</mtext></msubsup></math> vs. <math><msubsup><mi>𝐾</mi><mi>𝐼</mi><mtext>ref</mtext></msubsup></math> com erro relativo para ≥ 4 razões <math><mfrac><mi>𝑎</mi><mi>𝑊</mi></mfrac></math> ou ≥ 4 malhas.</li><li>Figura da malha com faces duais destacadas e normais opostas.</li><li>Discussão: por que o BEM dual evita a degeneração de faces coincidentes; o que acontece se a face B for mal orientada.</li><li>Seção “o que o Dual BEM ainda não faz neste trabalho” (contato entre faces, 3D, plástico, …).</li></ul><h4>1.2.4 Pontos de partida (não são o trabalho)</h4><pre><code data-lang="julia"><span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span>
+<span style="color: #d73948">using</span> .Crack
+include(datadir(<span style="color: #198810">"</span><span style="color: #198810">elastico</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">iso</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">center_crack.jl</span><span style="color: #198810">"</span>))
+<span style="color: #74747c">#</span><span style="color: #74747c"> ver scripts/crack_central.jl e a API CrackTip / propagate!</span></code></pre><h3>1.3 Proposta B — Multirregião, interfaces e materiais contrastantes</h3><p><strong>Nível.</strong> Avançado.<br><strong>Âncoras no código.</strong> <code>src/MultiRegion/</code>, <code>data/Laplace/two_regions.jl</code>, <code>scripts/two_regions_interface.jl</code>; elasticidade anisotrópica em <code>data/elastico/aniso/</code> (Lekhnitskii); DIBEM se houver fonte por região.</p><h4>1.3.1 Problema científico</h4><p>Sistemas em que <strong>um único</strong> contorno exterior não basta: duas ou mais sub-regiões com condutividades (ou módulos) diferentes, acopladas por condições de interface (continuidade de <math><mi>𝑇</mi></math> e equilíbrio de <math><mi>𝑞</mi></math>, ou analogamente em elasticidade).</p><p>A equipe formula o bloco do sistema global, implementa/adapta um caso com <strong>contraste forte</strong> de propriedades e quantifica:</p><ul><li>salto numérico na interface (<math><mo stretchy="false">|</mo><msub><mi>𝑇</mi><mi>𝑎</mi></msub><mo>−</mo><msub><mi>𝑇</mi><mi>𝑏</mi></msub><mo stretchy="false">|</mo></math>, <math><mo stretchy="false">|</mo><msub><mi>𝑞</mi><mi>𝑎</mi></msub><mo>+</mo><msub><mi>𝑞</mi><mi>𝑏</mi></msub><mo stretchy="false">|</mo></math>);</li><li>erro vs. solução analítica <strong>por região</strong> (quando existir) ou vs. solução de referência monodomínio equivalente;</li><li>sensibilidade ao contraste <math><mfrac><msub><mi>𝑘</mi><mn>1</mn></msub><msub><mi>𝑘</mi><mn>2</mn></msub></mfrac></math> (ou <math><mfrac><msub><mi>𝐸</mi><mn>1</mn></msub><msub><mi>𝐸</mi><mn>2</mn></msub></mfrac></math>) em vários logaritmos de razão.</li></ul><h4>1.3.2 O que deve ir além do script pronto</h4><p>Pelo menos duas frentes:</p><ul><li>Geometria <strong>não</strong> retângulo-retângulo: inclusão circular/elíptica, parede compostas, ou três regiões; malha Gmsh própria com grupos por região.</li><li>Caso com solução analítica clássica (ex.: cilindro composto sob pressão / condução radial em coroas concêntricas com <math><mi>𝑘</mi></math> diferentes) <strong>ou</strong> verificação por refino cruzado + conservação de fluxo global.</li><li>Comparar montagem multirregião vs. “truque” de um só domínio quando o contraste → 1 (regressão).</li><li>Extensão: interface com resistência de contato térmico (<math><mi>𝑞</mi><mo>=</mo><mi>ℎ</mi><mrow><mo>(</mo><mrow><msub><mi>𝑇</mi><mi>𝑎</mi></msub><mo>−</mo><msub><mi>𝑇</mi><mi>𝑏</mi></msub></mrow><mo>)</mo></mrow></math>) — mesmo que implementada de forma simplificada no sistema de interface — <strong>ou</strong> um caso elástico anisotrópico (<code>AnisotropicElasticity</code> / Lekhnitskii) com verificação de patch ou furo.</li><li>Perfil de <math><mi>𝑞</mi></math> normal ao longo da interface e balanço integral <math><msub><mo lspace="0em">∫</mo><msub><mi mathvariant="normal">Γ</mi><mtext>ext</mtext></msub></msub><mi>𝑞</mi><mspace width="0.1667em"/><mo form="prefix" lspace="0em" rspace="0em">d</mo><mi>𝑠</mi><mo>≈</mo><mn>0</mn></math> (estacionário sem fonte).</li></ul><h4>1.3.3 Entregas específicas</h4><ul><li>Diagrama de blocos do sistema algébrico multirregião (incógnitas por região + multiplicadores/condições de interface).</li><li>Curva erro e/ou fluxo residual vs. contraste e vs. <math><mi>𝑁</mi></math>.</li><li>Discussão de condicionamento: o que acontece com <math><mfrac><msub><mi>𝑘</mi><mn>1</mn></msub><msub><mi>𝑘</mi><mn>2</mn></msub></mfrac><mo>=</mo><msup><mn>10</mn><mn>3</mn></msup></math> ou <math><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></math>.</li></ul><h4>1.3.4 Pontos de partida</h4><pre><code data-lang="julia"><span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span>
+include(datadir(<span style="color: #198810">"</span><span style="color: #198810">Laplace</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">two_regions.jl</span><span style="color: #198810">"</span>))
+<span style="color: #74747c">#</span><span style="color: #74747c"> scripts/two_regions_interface.jl</span>
+<span style="color: #74747c">#</span><span style="color: #74747c"> data/elastico/aniso/*.jl  para a variante mecânica</span></code></pre><h3>1.4 Proposta C — Dinâmica no contorno: ondas / calor transiente com análise de esquema</h3><p><strong>Nível.</strong> Avançado.<br><strong>Âncoras no código.</strong> <code>DIBEM</code>, <code>solve_transient</code>, <code>solve_transient_o2</code>, <code>solve_Houbolt</code>, <code>data/Laplace/wave_propagation.jl</code>, <code>scripts/wave_propagation.jl</code>, catálogo <code>:bar_sudden</code>, <code>:annulus</code>, <code>:membrane_v0</code>, <code>:membrane_forced</code>, <code>:ricker</code>, …</p><h4>1.4.1 Problema científico</h4><p>Acoplar as matrizes de contorno <math><mi>𝐻</mi><mo>,</mo><mi>𝐺</mi></math> a uma matriz de domínio tipo massa <math><mi>𝑀</mi></math> (DIBEM) e integrar no tempo um problema <strong>hiperbólico</strong> (onda escalar) <strong>ou</strong> <strong>parabólico</strong> (difusão) com solução de referência (série de Fourier/Bessel ou d’Alembert em barra).</p><p>O foco <strong>não</strong> é “gerar um vídeo”. É responder com números:</p><ul><li>qual a relação entre <math><mi mathvariant="normal">Δ</mi><mi>𝑡</mi></math>, <math><msub><mi>ℎ</mi><mtext>elem</mtext></msub></math>, velocidade <math><mi>𝑐</mi></math> (ou difusividade) e estabilidade/precisão;</li><li>como Houbolt, integrador de 2ª ordem (<code>solve_transient_o2</code>) e, se aplicável, 1ª ordem se comportam em <strong>dispersão</strong>, <strong>dissipação numérica</strong> e custo;</li><li>se a escolha de RBF / densidade de pontos internos domina o erro espacial.</li></ul><h4>1.4.2 O que deve ir além do script pronto</h4><p>Pelo menos duas frentes:</p><ul><li>Comparação <strong>head-to-head</strong> Houbolt vs. <code>solve_transient_o2</code> (e/ou vs. referência modal) na <strong>mesma</strong> malha, com tabelas de erro em sensores e tempo de CPU.</li><li>Estudo de CFL prático: malha fixa, varrer <math><mi mathvariant="normal">Δ</mi><mi>𝑡</mi></math>; depois <math><mi mathvariant="normal">Δ</mi><mi>𝑡</mi></math> fixo, varrer <math><msub><mi>𝑛</mi><mtext>div</mtext></msub></math> e <math><msub><mi>𝑛</mi><mtext>int</mtext></msub></math>.</li><li>Caso forçado ou com pulso Ricker: espectro ou tempos de chegada vs. teoria.</li><li>Um caso <strong>novo</strong> de domínio (L-shape, coroa, membrana com obstáculo) com malha própria + condição inicial/no contorno documentada.</li><li>Extra de peso: acoplar exportação temporal para views Gmsh / animação reprodutível + métrica <math><msub><mi>𝐿</mi><mn>2</mn></msub><mrow><mo>(</mo><mi mathvariant="normal">Ω</mi><mo>)</mo></mrow></math> aproximada via pontos internos ao longo do tempo.</li></ul><h4>1.4.3 Entregas específicas</h4><ul><li>Formulação discreta: de <math><mi>𝐻</mi><mi>𝑇</mi><mo>=</mo><mi>𝐺</mi><mi>𝑞</mi><mo>+</mo><mi>𝑀</mi><mi>𝑓</mi></math> (ou <math><mi>𝑀</mi><mover accent="true"><mi>𝑢</mi><mo>̈</mo></mover></math>) ao marchador usado.</li><li>Gráficos espaço-tempo ou snapshots em instantes teóricos de reflexão.</li><li>Tabela de erros vs. <math><mi mathvariant="normal">Δ</mi><mi>𝑡</mi></math> e vs. <math><mi>𝑁</mi></math> com ordem observada.</li><li>Discussão honesta: onde o DIBEM polui a solução em relação ao erro de tempo.</li></ul><h4>1.4.4 Pontos de partida</h4><pre><code data-lang="julia"><span style="color: #d73948">using</span> DrWatson
+@quickactivate <span style="color: #b60157">:</span><span style="color: #b60157">BEM</span>
+include(datadir(<span style="color: #198810">"</span><span style="color: #198810">Laplace</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">Laplace_dad.jl</span><span style="color: #198810">"</span>))
+include(datadir(<span style="color: #198810">"</span><span style="color: #198810">Laplace</span><span style="color: #198810">"</span>, <span style="color: #198810">"</span><span style="color: #198810">wave_propagation.jl</span><span style="color: #198810">"</span>))
+dad, meta <span style="color: #d73948">=</span> wave_problem(<span style="color: #b60157">:</span><span style="color: #b60157">bar_sudden</span>; ndiv<span style="color: #d73948">=</span><span style="color: #b60157">12</span>, n_int<span style="color: #d73948">=</span><span style="color: #b60157">6</span>)
+<span style="color: #74747c">#</span><span style="color: #74747c"> scripts/wave_propagation.jl  (WAVE_CASE, WAVE_SOLVER=houbolt|diffeq|both)</span></code></pre><h3>1.5 Proposta D — H-matrizes, custo e fidelidade em malhas grandes</h3><p><strong>Nível.</strong> Avançado.<br><strong>Âncoras no código.</strong> <code>H_G_Hmat</code>, <code>src/Hmat/</code>, <code>scripts/compare_hbs_hss.jl</code>, <code>scripts/profile_assembly.jl</code>, <code>scripts/plate_large.jl</code>, docs de performance.</p><h4>1.5.1 Problema científico</h4><p>Para um problema <strong>verificável</strong> (Laplace <math><mi>𝑇</mi><mo>=</mo><mi>𝑥</mi></math> ou elasticidade patch / placa com furo com solução de Kirsch), construir a <strong>fronteira de Pareto</strong> precisão × custo. Não basta um run com H-matriz: o trabalho é <strong>instrumentar</strong>, varrer <math><mi>𝑁</mi></math> e responder com dados <strong>quando</strong> comprimir vale a pena.</p><h4>1.5.2 O que deve ir além do script pronto</h4><p>Pelo menos duas frentes:</p><ul><li>Montagem densa vs. H-matriz (e, se possível, mais de um formato: HODLR / HSS / parâmetros <code>atol</code>, <code>nmax</code>) na <strong>mesma</strong> geometria.</li><li>Curvas de <code>rel_error</code> (ou erro em sensores) vs. <math><mi>𝑁</mi></math>; tempo de montagem, tempo de solve, memória / <code>compression_ratio</code>; <math><mi>𝑁</mi></math> em que o denso se torna inviável na máquina usada.</li><li>Geometria não trivial com <math><mi>𝑁</mi></math> alto (malha própria) <strong>ou</strong> script de benchmark automatizado com tabela/CSV reprodutível.</li><li>Estudo de threads e/ou falha controlada (afrouxar <code>atol</code> até o erro saturar) com interpretação; perfil (<code>@time</code>, <code>TimerOutputs</code>) e gargalo (integração vs. álgebra).</li></ul><h4>1.5.3 Entregas específicas</h4><ul><li>Gráfico único “erro × tempo” com famílias densa / H-matriz.</li><li>Tabela <math><mi>𝑁</mi></math>, memória, <code>compression_ratio</code>, tempos, erro.</li><li>Texto explícito: <strong>em que regime</strong> a equipe recomenda H-matriz neste hardware.</li></ul><h4>1.5.4 Pontos de partida</h4><pre><code data-lang="bash"><span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/compare_hbs_hss.jl
+<span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/profile_assembly.jl
+<span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/plate_large.jl</code></pre><h3>1.6 Proposta E — Contato elástico por BEM de semi-espaço / semi-plano</h3><p><strong>Nível.</strong> Avançado.<br><strong>Âncoras no código.</strong> <code>src/Contact/</code>, <code>scripts/hertz_line_2d.jl</code>, <code>scripts/contact_pohrt_li.jl</code>, <code>scripts/compare_contact_acceleration.jl</code>, dados de fretting / Cattaneo–Mindlin em <code>data/elastico/iso/</code>.</p><h4>1.6.1 Problema científico</h4><p>Reproduzir e <strong>estender</strong> um contato clássico (Hertz linha 2D ou Cattaneo–Mindlin / fretting) no formalismo de semi-espaço ou semi-plano do <code>BEM_gmsh</code>. O centro é a física do contato (zona ativa, pressão, deslizamento), não só chamar um script.</p><h4>1.6.2 O que deve ir além do script pronto</h4><p>Pelo menos duas frentes:</p><ul><li>Pressão de contato vs. solução analítica de Hertz (erro em <math><msub><mi>𝑝</mi><mn>0</mn></msub></math>, <math><msub><mi>𝑎</mi><mtext>contato</mtext></msub></math>) e convergência com refino da malha de potencial contato.</li><li>Estudo paramétrico (carga, raio, módulo efetivo) colapsado na forma adimensional de Hertz.</li><li>Discussão do algoritmo de região de contato (ativo/inativo) e comparação de <strong>duas</strong> estratégias de aceleração do repositório, se aplicável.</li><li>Extensão: superfície com rugosidade simples ou indentador não circular; <strong>ou</strong> carga em “ciclo” com análise de deslizamento parcial; <strong>ou</strong> visualização da zona de contato evolutiva + comparação de CPU entre variantes.</li></ul><h4>1.6.3 Entregas específicas</h4><ul><li>Figura <math><mfrac><mrow><mi>𝑝</mi><mrow><mo>(</mo><mi>𝑥</mi><mo>)</mo></mrow></mrow><msub><mi>𝑝</mi><mn>0</mn></msub></mfrac></math> vs. <math><mfrac><mi>𝑥</mi><mi>𝑎</mi></mfrac></math> sobreposta à elipse de Hertz.</li><li>Tabela de erros (<math><msub><mi>𝑝</mi><mn>0</mn></msub></math>, semi-largura, força resultante) vs. malha.</li><li>Seção sobre limites do modelo de semi-espaço / semi-plano.</li></ul><h4>1.6.4 Pontos de partida</h4><pre><code data-lang="bash"><span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/hertz_line_2d.jl
+<span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/contact_pohrt_li.jl
+<span style="color: #4b69c6">julia</span> --project<span style="color: #d73948">=</span>. scripts/compare_contact_acceleration.jl</code></pre><h3>1.7 Cronograma sugerido (a partir da 2ª metade do curso)</h3><table><tr><td><strong>Semana</strong></td><td><strong>Marco</strong></td></tr><tr><td>W1</td><td>Escolha da proposta + leitura da API/scripts âncora + 1 página de plano</td></tr><tr><td>W2</td><td>Malha/CDC mínimas rodando; primeiro número comparável à referência</td></tr><tr><td>W3</td><td>Estudo paramétrico ou de convergência a meio caminho; texto da formulação</td></tr><tr><td>W4</td><td>Congelar resultados; relatório + README; ensaio da defesa</td></tr></table><h3>1.8 Integridade e uso de IA</h3><ul><li>Cite o <code>BEM_gmsh</code>, as notas e <strong>todas</strong> as soluções analíticas/handbooks.</li><li>Podem usar assistentes de código, mas a equipe deve explicar <strong>qualquer</strong> trecho na defesa. Código que a equipe não entende = trecho inválido na nota.</li><li>Não entregue resultados que não conseguiu reproduzir do zero no ambiente da disciplina.</li></ul><h3>1.9 Escolha orientada</h3><table><tr><td><strong>Se você curte…</strong></td><td><strong>Prefira</strong></td><td><strong>Cuidado com</strong></td></tr><tr><td>Mecânica dos sólidos / <math><msub><mi>𝐾</mi><mi>𝐼</mi></msub></math></td><td>A — fratura dual</td><td>Singularidade na ponta; malha dual</td></tr><tr><td>Materiais / interfaces</td><td>B — multirregião</td><td>Condicionamento com contraste alto</td></tr><tr><td>Dinâmica / sinais</td><td>C — ondas/transiente</td><td>CFL escondido; erro do DIBEM</td></tr><tr><td>HPC / algoritmos</td><td>D — H-matrizes</td><td>Medir mal tempo/memória</td></tr><tr><td>Tribologia / contato</td><td>E — Hertz / fretting</td><td>Algoritmo de zona ativa</td></tr></table><p>Em dúvida, fale com o docente <strong>antes</strong> de W2: trocar de proposta depois do primeiro marco custa caro.</p>
+      <div class="pager">
+        <a href="propgeo-3d.html"><span class="label">Anterior</span><strong>Propgeo 3D</strong></a><a href="viga-euler.html" style="text-align:right"><span class="label">Próximo</span><strong>Viga de Euler (extra)</strong></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script>
+const btn = document.getElementById('menuBtn');
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeMenu(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+function openMenu(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+btn?.addEventListener('click', () => {
+  if (sidebar.classList.contains('open')) closeMenu(); else openMenu();
+});
+backdrop?.addEventListener('click', closeMenu);
+
+(function enhanceCodeBlocks() {
+  const iconCopy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  const iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
+
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('main.article pre').forEach((pre) => {
+    if (pre.closest('.code-block')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-block';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy-btn';
+    button.setAttribute('aria-label', 'Copiar código');
+    button.innerHTML = iconCopy + '<span>Copiar</span>';
+    wrap.appendChild(button);
+
+    let resetTimer;
+    button.addEventListener('click', async () => {
+      const code = pre.innerText.replace(/
+$/, '');
+      try {
+        await copyText(code);
+        button.classList.add('copied');
+        button.innerHTML = iconCheck + '<span>Copiado</span>';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          button.classList.remove('copied');
+          button.innerHTML = iconCopy + '<span>Copiar</span>';
+        }, 1600);
+      } catch (err) {
+        button.innerHTML = iconCopy + '<span>Erro</span>';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          button.innerHTML = iconCopy + '<span>Copiar</span>';
+        }, 1600);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

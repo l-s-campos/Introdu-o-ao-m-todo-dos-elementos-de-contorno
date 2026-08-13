@@ -4,27 +4,121 @@
 = Laplace 2D
 <laplace-2d>
 
-- Código
-  #link("https://github.com/l-s-campos/BEM")[https://github.com/l-s-campos/BEM]
-  faça o download  e rode de dentro da pasta:
+- Código de referência: #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`]
+
+  Clone o repositório, abra Julia *na pasta do projeto* e prepare o ambiente:
+
   ```julia
   using Pkg
-  
-  Pkg.activate(pwd())
-  
+  Pkg.activate(".")
   Pkg.instantiate()
+
+  using DrWatson
+  @quickactivate :BEM
+  include(datadir("Laplace", "Laplace_dad.jl"))
   ```
-  \@which
+
+  Fluxo mínimo (quadrado unitário, solução exata $T = x$):
+
+  ```julia
+  props = Laplace(1.0)
+  msh   = quadrado(ndiv=20, show=false)
+  dad   = format2d(msh, props)
+
+  attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
+  H_G_full_direct(dad, 20)   # montagem densa; use H_G_Hmat(dad) se N for grande
+  solve(dad)
+
+  @show rel_error(dad)
+  plot_geo(dad)
+  # export_results_to_gmsh(dad, msh, :T; viewer=false)
+  ```
+
+  Os grupos físicos da malha já carregam as CDCs (`"0;T"` Dirichlet, `"1;q"` Neumann com $q = -k partial T / partial n$). Detalhes no capítulo *Gmsh e malhas*.
+
+= Mapa do BEM (leia isto antes da álgebra)
+
+Antes das fórmulas, fixe o *pipeline* inteiro. Cada bloco das seções seguintes preenche *um* passo desta cadeia — inclusive o cálculo da diagonal de $H$, que é só um detalhe técnico do passo 4.
+
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 12pt,
+  radius: 6pt,
+  stroke: 0.6pt + luma(200),
+)[
+  #set par(justify: false)
+  #set text(size: 10.5pt)
+  *1. PDE* $quad nabla^2 T = 0$ em $Omega$, com CDCs em $Gamma = partial Omega$
+
+  $arrow.b.double$
+
+  *2. Resíduos ponderados + integração por partes (Green)* $quad$
+  o operador sai de $T$ e vai para a função peso $v$
+
+  $arrow.b.double$
+
+  *3. Solução fundamental (SF)* $quad$
+  escolhe-se $v = T^*$ tal que $-nabla^2 T^* = delta(x - x_d)$;
+  o domínio some e sobra uma *equação integral só no contorno*
+
+  $arrow.b.double$
+
+  *4. Discretização* $quad$
+  $T$ e $q$ ≈ funções de forma nos elementos; integrais → matrizes $H$ e $G$
+  (aqui entram quadratura, singularidades e a *diagonal de* $H$)
+
+  $arrow.b.double$
+
+  *5. Condições de contorno (CDC)* $quad$
+  em cada nó, $T$ *ou* $q$ é conhecido → reorganiza-se $H T = G q$ em $A x = b$
+
+  $arrow.b.double$
+
+  *6. Solve* $quad x = A^(-1) b$ $arrow.r$ contorno completo $(T, q)$ em todos os nós
+
+  $arrow.b.double$
+
+  *7. Pontos internos (pós-processamento)* $quad$
+  com $(T, q)$ no contorno já conhecidos, $T(x_d)$ no interior é só uma integral
+  — *sem* novo sistema linear
+]
+
+Correspondência com o `BEM_gmsh`:
+
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Passo*], [*No código*],
+  [1–3 formulação], [já embutida em `fundamental` / montagem],
+  [4 $H, G$], [`H_G_full_direct(dad, npg)` ou `H_G_Hmat(dad)`],
+  [5 CDC], [grupos físicos Gmsh + `format2d` / `attach_analytical!`],
+  [6 solve], [`solve(dad)`],
+  [7 internos], [automático se `pontointerno=true`; ver também `plot_geo`],
+)
+
+#block(
+  width: 100%,
+  fill: rgb("#ecfdf5"),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + rgb("#99f6e4"),
+)[
+  *Ideia-chave.* No MEF montamos “rigidez” no *volume*. No BEM montamos $H$ e $G$ no *contorno*; o preço é que essas matrizes são cheias e as integrais podem ser singulares quando o ponto fonte $x_d$ cai no elemento que está sendo integrado.
+]
 
 = Formulação
+
+== Passos 1–3: da PDE à equação integral
 
 A equação de Laplace é dada por:
 
 $ nabla^2 T = 0, $
 
-usando o método dos resíduos ponderados e aplicando a segunda identidade de Green:
+usando o método dos resíduos ponderados e aplicando a segunda identidade de Green (com $u = T$ e peso $v$):
 
-$ integral_Omega (v nabla^2 u - u nabla^2 v) d Omega = integral_Gamma (v (partial u)/(partial n) - u (partial v)/(partial n)) d s $
+$ integral_Omega (v nabla^2 T - T nabla^2 v) d Omega = integral_Gamma (v (partial T)/(partial n) - T (partial v)/(partial n)) d s $
 
 obtém-se a equação integral de contorno:
 
@@ -35,6 +129,10 @@ onde $T^*$ e $q^*$ são as soluções fundamentais:
 $ T^* = (-1)/(2 pi k) ln r $
 
 $ q^* = 1/(2 pi r^2) [(x - x_d) n_x + (y - y_d) n_y] . $
+
+O coeficiente $0.5$ à esquerda vale para ponto fonte $x_d$ *sobre* um contorno liso. É o termo de corpo rígido / ângulo sólido: geometricamente, metade do “salto” da solução fundamental fica de cada lado do contorno. (Em cantos o fator não é $1/2$; por isso o código prefere elementos *descontínuos* ou calcula a diagonal de $H$ de forma indireta — passo 4.)
+
+== Passo 4: discretização → matrizes $H$ e $G$
 
 Podemos representar a temperatura e fluxo em um elemento descontinuo com  $m$  nós como:
 $T = N_1 T_1 + N_2 T_2 + N_3 T_3 + ... + N_m T_m$
@@ -50,23 +148,55 @@ Usando a representação de   $T$ e $q$  na equação acima temos:
 $ 0.5 T(x_d , y_d) = sum_(j = 1)^(n_(e l e m)) {integral_(Gamma_j) [mat(delim: #none, N_1, N_2, N_3, dots.c, N_m)] [mat(delim: #none, T_1; T_2; T_3; dots.v; T_m)]_j q^* d Gamma} \ -
 sum_(j = 1)^(n_(e l e m)) {integral_(Gamma_j) T^* [mat(delim: #none, N_1, N_2, N_3, dots.c, N_m)] [mat(delim: #none, q_1; q_2; q_3; dots.v; q_m)]_j d Gamma} $
 
-Repetindo essa equação para cada diferente nó podemos montar um sistema matricial:
+Repetindo essa equação para cada diferente nó-fonte $x_d = x_i$ montamos um sistema matricial:
 
 $ H T = G q $
 
-== Método indireto para o cálculo da diagonal da matriz $H$
+- Coluna ligada a $T$: integrais de $q^* N_k$ → entradas de $H$ (núcleo *mais* singular).
+- Coluna ligada a $q$: integrais de $T^* N_k$ → entradas de $G$ (singularidade fraca, integrável).
+- A linha $i$ é a equação integral escrita com ponto fonte no nó $i$.
 
-A diagonal da matriz $H$ contém uma singularidade forte que dificulta o cálculo numérico desses termos. Uma alternativa não faz a integração de maneira explícita mas usa uma propriedade da matriz $H$ decorrente da modelagem de um corpo sob temperatura constante. Sem perder a generalidade, considere que todos os nós de um corpo encontre-se com a temperatura $T = 1$. Neste caso, o fluxo será nulo em todos os nós, ou seja, $q = 0$  em todos os nós. Desta forma, a equação matricial é reescrita como $H {1} = G {0}$.
+=== Diagonal de $H$: por que é especial?
 
-Daí, os termos da diagonal da matriz $[H]$ pode ser calculado da seguinte forma:
+Quando o ponto fonte $x_i$ está *no mesmo elemento* que o ponto de integração, $r -> 0$ e $q^* ~ 1/r$ (em 2D) deixa de ser uma integral comum. Integrar $H_(i i)$ “na marra” é possível, mas delicado (transformações, partes finitas, etc.).
 
-$H_(i i) = - sum_(j = 1)^N H_(i j) , " com " i != j, " para " i = 1, 2, . . ., N,$
+=== Método indireto (corpo a temperatura constante)
 
-uma vez que todos os termos de fora da diagonal são integrais regulares e já foram previamente calculados.
+Em vez de atacar a singularidade forte de frente, usamos uma solução *exata* trivial do problema de Laplace:
 
-Um procedimento parecido, usando uma outra distribuição de temperatura, pode ser feito com a diagonal da matriz $G$ mas isso normalmente não é necessário por se tratar de uma singularidade fraca
+$ T(x) equiv 1, quad q(x) equiv 0 . $
 
-== Exemplo
+Ela satisfaz $nabla^2 T = 0$ e a equação integral. No sistema discreto isso vira
+
+$ H {1} = G {0} = {0} $.
+
+Ou seja, *cada linha de* $H$ *soma zero*. Como os termos fora da diagonal $H_(i j)$ ($i != j$) são integrais regulares (já calculadas por Gauss), a diagonal sai de graça:
+
+$ H_(i i) = - sum_(j = 1, j != i)^N H_(i j) , quad i = 1, ..., N . $
+
+Isso *já inclui* o fator de ângulo sólido (o “$0.5$” no contorno liso, ou outro valor em cantos).
+
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(200),
+)[
+  *Ordem prática na montagem (passo 4):*
+  1. zere $H$ e $G$;
+  2. para cada par (nó-fonte $i$, elemento $j$), integre e *some* nas colunas certas de $H$ e $G$ — *pule* ou trate à parte o caso singular $i in$ elemento $j$ em $H$;
+  3. corrija a diagonal: $H_(i i) = -sum_(j != i) H_(i j)$;
+  4. (opcional) a diagonal de $G$ tem só singularidade fraca e em geral *é* integrada com quadratura adequada — o truque indireto raramente é necessário.
+]
+
+No `BEM_gmsh`, os passos 2–3 estão dentro de `H_G_full_direct`.
+
+== Passos 5–6: CDCs e o sistema $A x = b$
+
+Depois de montar $H T = G q$, *ainda não se resolve nada*: em cada nó falta uma informação. A CDC diz qual coluna vai para o lado esquerdo (incógnita) e qual contribui para o lado direito (dado).
+
+=== Exemplo (1 elemento por lado)
 
 A fim de ilustrar como se aplica as condições de contorno e se calcula as variáveis desconhecidas será analisado um problema de condução de calor unidirecional com uma discretização de um elemento por lado.
 
@@ -80,47 +210,138 @@ $ (mat(delim: #none, H_11, H_12, H_13, H_14; H_21, H_22, H_23, H_24; H_31, H_32,
 (mat(delim: #none, G_11, G_12, G_13, G_14; G_21, G_22, G_23, G_24; G_31, G_32, G_33, G_34; G_41, G_42, G_43, G_44; ))
 (mat(delim: #none, q_1; macron(q_2); q_3; macron(q_4))) $
 
-onde $macron(T)$ e $macron(q)$ são termos conhecidos.
+onde $macron(T)$ e $macron(q)$ são termos *conhecidos* (CDC).
 
 Separando os termos conhecidos dos desconhecidos:
 
 $ (mat(delim: #none, -G_11, H_12, -G_13, H_14; -G_21, H_22, -G_23, H_24; -G_31, H_32, -G_33, H_34; -G_41, H_42, -G_43, H_44; ))(mat(delim: #none, q_1; T_2; q_3; T_4)) = (mat(delim: #none, -H_11, G_12, -H_13, G_14; -H_21, G_22, -H_23, G_24; -H_31, G_32, -H_33, G_34; -H_41, G_42, -H_43, G_44; ))(mat(delim: #none, macron(T_1); macron(q_2); macron(T_3); macron(q_4))) $
 
-Assim, pode-se escrever $A x = b$ e resolvendo o sistema linear calcula-se os valores das variáveis desconhecidas.
+Assim, pode-se escrever $A x = b$. Resolvendo o sistema linear obtém-se as variáveis que faltavam no contorno. No `BEM_gmsh` isso é o `solve(dad)`.
 
-== Pontos internos
+Regra prática por nó $i$:
+- se $T_i$ é preescrito (Dirichlet): a incógnita é $q_i$ → coluna $i$ de $-G$ entra em $A$, e $H_(: i) T_i$ vai para $b$;
+- se $q_i$ é preescrito (Neumann): a incógnita é $T_i$ → coluna $i$ de $H$ entra em $A$, e $G_(: i) q_i$ vai para $b$.
 
-A equação integral para pontos internos é ligeiramente modificada:
+== Passo 7: pontos internos
+
+A equação integral para pontos *interiores* ($x_d in Omega$, fora de $Gamma$) é ligeiramente modificada — o coeficiente à esquerda vira $1$, não $0.5$:
 
 $ T(x_d , y_d) = integral_Gamma T q^* d s - integral_Gamma T^* q d s $
 
-Aqui temos um detalhe importante, uma vez conhecida $T$ e $q$  no contorno a temperatura pode ser calculada em qualquer ponto interno sem ser necessário resolver algum sistema linear.
+Detalhe importante: com $T$ e $q$ *já conhecidos em todo o contorno* (passos 5–6), a temperatura em qualquer ponto interno é só avaliar essas integrais. *Não* se monta nem se resolve um novo $A x = b$.
+
+= Exemplo resolvido ponta a ponta (`BEM_gmsh`)
+
+Problema: quadrado unitário, $k = 1$, CDCs tais que a solução exata é $T(x,y) = x$ (e portanto $q = - partial T / partial n$). Malha Gmsh com `ndiv=16`, montagem densa, impressão de números e gráfico.
+
+```julia
+using DrWatson
+@quickactivate :BEM
+using LinearAlgebra, Printf
+include(datadir("Laplace", "Laplace_dad.jl"))
+
+# --- 1. Física e malha ---
+props = Laplace(1.0)                       # k = 1
+msh   = quadrado(ndiv=16, show=false)      # grava .msh e devolve o caminho
+dad   = format2d(msh, props; pontointerno=true)
+
+println("Arquivo de malha: ", msh)
+println("Nós de contorno N = ", dad.n)
+println("Pontos internos   = ", length(dad.internalNodes))
+
+# --- 2. Campo analítico T = x  (bate com as CDCs padrão do quadrado) ---
+ana = ana_laplace_linear(; direction=SA[1.0, 0.0])
+attach_analytical!(dad, ana)
+
+# --- 3. Montagem H, G (densa) e solução ---
+H_G_full_direct(dad, 16)                   # npg = 16
+solve(dad)
+
+# --- 4. Números na tela ---
+err = rel_error(dad)
+@printf "Erro relativo (rel_error) = %.6e\n" err
+
+println("\nPrimeiros nós do contorno:")
+println(" i |      x |      y |    T_num |  T_exato |     q_num")
+for i in 1:min(8, dad.n)
+    x, y = dad.Nodes[i]
+    T_ex = x                               # T = x
+    @printf "%2d | %6.3f | %6.3f | %8.5f | %8.5f | %9.5f\n" i x y dad.T[i] T_ex dad.q[i]
+end
+
+# Erro pontual máximo em T no contorno
+eT = maximum(abs(dad.T[i] - dad.Nodes[i][1]) for i in 1:dad.n)
+@printf "\nmax |T_num - x| no contorno = %.6e\n" eT
+
+# --- 5. Gráfico ---
+fig = plot_geo(dad)                        # Makie / CairoMakie no ecossistema BEM
+# save("laplace_quadrado.png", fig)        # descomente para gravar PNG
+fig
+```
+
+O que você deve observar:
+- `rel_error` cai ao aumentar `ndiv` (faça `ndiv = 8, 16, 32` e anote numa tabela);
+- nos lados verticais, $T approx x$ (constante em cada lado); nos horizontais, $q approx 0$;
+- pontos internos, se houver, seguem $T approx x$ sem novo sistema linear.
+
+= Montagem densa vs. H-matriz
+
+Até $N tilde.eq 3 dot.op 10^3$–$5 dot.op 10^3$ nós, a montagem *densa* (`H_G_full_direct`) costuma ser a escolha didática e prática: implementação simples, fatoração LU direta, ótima para estudos de convergência.
+
+Limitações do BEM denso:
+- memória $O(N^2)$ para armazenar $H$ e $G$;
+- tempo de montagem e de fatoração também $O(N^2)$–$O(N^3)$;
+- em malhas finas (furos, camadas limite geométricas, 3D) o custo explode antes da física ficar interessante.
+
+Quando $N$ cresce, o `BEM_gmsh` oferece montagem *hierárquica*:
+
+```julia
+msh = quadrado(ndiv=80, show=false, nome="quad_fine")
+dad = format2d(msh, Laplace(1.0); pontointerno=false)
+attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
+
+H_G_Hmat(dad; atol=1e-6, nmax=32)   # blocos comprimidos
+@show compression_ratio(dad.H)
+solve(dad)                          # GMRES sobre operador misto
+@show rel_error(dad)
+```
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Critério*], [*Densa* `H_G_full_direct`], [*H-matriz* `H_G_Hmat`],
+  [Memória], [$O(N^2)$], [tipicamente $O(N log N)$],
+  [Uso no curso], [padrão; $N tilde.eq 10^2$–$10^3$], [malhas grandes; projeto avançado],
+  [Solver], [LU direta], [iterativo (GMRES)],
+  [Controle], [`npg`], [`atol`, `nmax`, …],
+)
+
+Regra prática: comece *sempre* denso e com malha grossa; só mude para H-matriz quando o denso não couber na RAM ou demorar demais. Detalhes extras no capítulo *Gmsh e malhas* e em `docs/src/pt-br/performance.md` do repositório.
 
 == Exercícios
 
-erros
+Use as medidas de erro do capítulo *Medidas de erro* (e/ou `rel_error(dad)` do `BEM_gmsh`). Notação: potencial $T$, fluxo $q = -k partial T / partial n$.
 
-+ Resolva esse problema com elementos lineares, quadráticos e cúbicos e calcule o erro médio, erro máximo e a norma l2 do erro no contorno para diferentes discretizações. Faça um gráfico comparando a convergência dos dos 3 tipos de elementos. A solução analítica é dada por:
++ Resolva esse problema com elementos lineares, quadráticos e cúbicos e calcule o erro médio, o erro máximo e a norma $L_2$ do erro no contorno para diferentes discretizações. Faça um gráfico (CairoMakie) comparando a convergência dos três tipos de elementos. A solução analítica é dada por:
 
-$ u(theta) &= theta/pi \ q(x) &= - 1/(pi x) quad "em" quad y = 0 $
+$ T(theta) &= theta/pi \ q(x) &= - 1/(pi x) quad "em" quad y = 0 $
 
 #image("../assets/laplace-2d/setor-circular.png", width: 80%)
 
-+ Analise o seguinte problema:
-
-Analise uma placa com as seguintes condições de contorno:
++ Analise o seguinte problema de placa com condições de contorno mistas:
 
 - $T(x = 0) = 0$
 - $T(x = 1) = cos(pi y)$
-- $q(y = 0) = q(y = 1) = - k (partial u)/(partial n) = 0$
+- $q(y = 0) = q(y = 1) = 0$
 
 #image("../assets/laplace-2d/placa-mista.png", width: 80%)
 
-A solução analítica para este problema é dada por:
+A solução analítica é:
 
-$T^(a n) = sinh(pi x) cos(pi y) \/ sinh(pi)$
+$ T^"an" = sinh(pi x) cos(pi y) / sinh(pi) $
 
-Analise o problema usando diferentes números de elementos e faça uma tabela mostrando o erro percentual em um ponto interno de coordenadas $(x, y) = (sqrt(2) \/ 2, sqrt(2) \/ 2)$  para os diversos casos analisados.
+Varie o número de elementos e faça uma tabela com o erro percentual no ponto interno $(x, y) = (sqrt(2) / 2, sqrt(2) / 2)$.
 
 + Faça um mapa de cor da distribuição de temperatura em uma placa com dimensões e condições de contorno mostradas na figura.
 
