@@ -331,6 +331,48 @@ A partir do grau 16, o erro está dentro da precisão de máquina e ele permanec
 (c)  $f(x) = cosh(sin x)$
 (d)  $f(x) = sin(cosh x)$
 
++ *Equidistante vs Chebyshev (lado a lado).* Considere
+  $ f(x) = 1/(1 + 25 x^2) $ em $[-1, 1]$.
+  Para $n = 8, 16, 32$:
+  - (a) monte o interpolante polinomial com *nós equidistantes*;
+  - (b) monte o interpolante com *nós de Chebyshev do segundo tipo* $t_k = - cos(k pi \/ n)$.
+
+  Em cada $n$, estime $\| f - p \|_infinity$ em pelo menos 2000 pontos de teste.
+  Entregue:
+  1. um gráfico de $f$, $p_"eq"$ e $p_"Cheb"$ para $n = 16$;
+  2. um gráfico (eixo $y$ em escala log) de $\| f - p \|_infinity$ vs $n$ para as duas famílias de nós;
+  3. uma frase respondendo: *em que regime o nó equidistante ainda é aceitável?*
+
+```julia
+using Plots, Polynomials
+f = x -> 1/(1 + 25x^2)
+x_test = range(-1, 1; length=2501)
+ns = [8, 16, 32]
+err_eq = Float64[]
+err_ch = Float64[]
+for n in ns
+    t_eq = range(-1, 1; length=n+1)
+    t_ch = [-cos(pi * k / n) for k in 0:n]
+    p_eq = fit(collect(t_eq), f.(t_eq))
+    p_ch = fit(t_ch, f.(t_ch))
+    push!(err_eq, maximum(abs, f.(x_test) .- p_eq.(x_test)))
+    push!(err_ch, maximum(abs, f.(x_test) .- p_ch.(x_test)))
+end
+# exemplo de figura para n = 16
+n = 16
+t_eq = range(-1, 1; length=n+1)
+t_ch = [-cos(pi * k / n) for k in 0:n]
+p_eq = fit(collect(t_eq), f.(t_eq))
+p_ch = fit(t_ch, f.(t_ch))
+xx = range(-1, 1; length=800)
+plot(xx, f.(xx); label="f", lw=2, title="n = 16")
+plot!(xx, p_eq.(xx); label="equidistante", ls=:dash, lw=2)
+plot!(xx, p_ch.(xx); label="Chebyshev", ls=:dot, lw=2)
+plot(ns, err_eq; yscale=:log10, marker=:circle, label="equidistante",
+     xlabel="n", ylabel="‖f-p‖∞", lw=2)
+plot!(ns, err_ch; marker=:square, label="Chebyshev", lw=2)
+```
+
 == Integração numérica
 
 A primitiva de $e^x$ é simples, isso torna a avaliação de $integral_(-1)^1 e^x d x$  pelo teorema fundamental trivial.
@@ -604,6 +646,39 @@ n = 8
  xt,J= sinhtrans(x, 0, 1/4)
  errG = abs(exato - dot(w, f.(x)))
  errGt = abs(exato - dot(w, J.*f.(xt)))
+```
+
++ *Quase-singular + `sinhtrans` (tabela $b arrow.b$).* Considere
+  $ I(b) = integral_(-1)^1 1/(xi^2 + b^2) dif xi ,
+    quad a = 0 , $
+  com valor exato
+  $ I(b) = (1/b) [ arctan((1)/b) + arctan((1)/b) ] = (2/b) arctan(1/b) . $
+  Para $b in {10^(-1), 10^(-2), 10^(-3)}$ e Gauss–Legendre com $n in {8, 16, 32}$:
+  1. calcule o erro absoluto *sem* transformação (integrando amostrado direto em $xi$);
+  2. calcule o erro *com* `sinhtrans(s, 0, b)`, usando o integrando $f(xi(s)) |J(s)|$;
+  3. monte uma tabela $(b, n, e_"cru", e_"sinh")$;
+  4. para o menor $b$, gere `plot_quasising_sinh(0, b)` e comente o achatamento do pico.
+
+  *Ponte BEM:* $b$ pequeno imita fonte *perto* do elemento (integral quase-singular na montagem de $H$ e $G$).
+
+```julia
+using FastGaussQuadrature, LinearAlgebra, Plots
+Iex(b) = (2/b) * atan(1/b)
+f(ξ, b) = 1/(ξ^2 + b^2)
+
+bs = (1e-1, 1e-2, 1e-3)
+ns = (8, 16, 32)
+println("b\tn\terr_cru\terr_sinh")
+for b in bs, n in ns
+    s, w = gausslegendre(n)
+    # sem transformação
+    e_cru = abs(Iex(b) - dot(w, f.(s, b)))
+    # com sinhtrans (a = 0)
+    ξ, J = sinhtrans(s, 0.0, b)
+    e_sinh = abs(Iex(b) - dot(w, f.(ξ, b) .* abs.(J)))
+    println("$b\t$n\t$e_cru\t$e_sinh")
+end
+plot_quasising_sinh(0.0, 1e-3)
 ```
 
 === Exercício
