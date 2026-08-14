@@ -512,7 +512,7 @@ Essa transformação anula (ou reduz) o Jacobiano perto da singularidade, suaviz
   stroke: 0.5pt + luma(180),
   fill: luma(248),
 )[
-  *Ponte com o BEM.* Soluções fundamentais geram núcleos $log r$, $1\/r$, etc. no contorno. Transformações do tipo $sinh$ / Monegato (ou métodos equivalentes) são o dia a dia da montagem de $H$ e $G$.
+  *Ponte com o BEM.* Soluções fundamentais geram núcleos $log r$, $1\/r$, etc. no contorno. Transformações do tipo $sinh$ / Monegato–Sloan (interior) / Sato (extremo) são o dia a dia da montagem de $H$ e $G$.
 ]
 
 ```julia
@@ -552,19 +552,50 @@ n = 8
 
 === Exercício
 
-+ Integre, outra vez , numericamente a  função  $f(x) = - x log(| x - 1 \/ 2 |)$ no intervalo $[0, 1 \/ 2]$ usando  a quadratura de Gauss mas agora usando a transformada de Monegato com graus 3, 4 e 5. Use 5, 10, 15 e 20 pontos de Gauss e compare com os resultados.
++ Integre de novo $f(x) = - x log(| x - 1 \/ 2 |)$ em $[0, 1 \/ 2]$ com Gauss, agora usando a transformação abaixo. A singularidade está no *extremo* $x = 1\/2$: mapeie o intervalo para $[-1,1]$ (afim) e chame `Monegato` com `s0 = 1` (ramo Sato). Compare graus $m = 3,4,5$ e $n = 5,10,15,20$ pontos de Gauss com o valor $I_a$ do exercício anterior. (Opcional: repita com uma singularidade *interior* artificial, p.ex. estendendo o intervalo, e graus *ímpares* $q = 3,5$.)
 
 ```julia
 """
-transformada de Monegato de grau q
-singularidade em s0
+    Monegato(t, s0, q=5)
+
+Transformação em `t ∈ [-1,1]` → `s ∈ [-1,1]`, com Jacobiano `ds/dt`.
+
+- `|s0| < 1` (interior): Monegato–Sloan de grau *ímpar* `q ≥ 3`.
+- `s0 ≈ ±1` (extremo): Sato de grau `q ≥ 2` (par ou ímpar).
+
+Retorna `(s, ds)`.
 """
-function Monegato(t, s0, q=5.0)
-    δ = 2^(-q) * ((1 + s0)^(1 / q) + (1 - s0)^(1 / q))^q
-    t0 = ((1 + s0)^(1 / q) - (1 - s0)^(1 / q)) / ((1 + s0)^(1 / q) + (1 - s0)^(1 / q))
-    s = s0 .+ δ * (t .- t0) .^ q
-    ds = q * δ * (t .- t0) .^ (q - 1)
-    s, ds
+function Monegato(t, s0, q::Integer=5; atol=1e-14)
+    t = float.(t)
+    s0 = float(s0)
+    # --- extremo: Sato ---
+    if isapprox(s0, 1; atol=atol)
+        q ≥ 2 || throw(ArgumentError("Sato no extremo +1 exige q ≥ 2"))
+        # Φ(t) = 1 - (1-t)^q / 2^(q-1)   (suaviza s = +1)
+        u = @. 1 - t
+        s = @. 1 - u^q / 2^(q - 1)
+        ds = @. q * u^(q - 1) / 2^(q - 1)
+        return s, ds
+    elseif isapprox(s0, -1; atol=atol)
+        q ≥ 2 || throw(ArgumentError("Sato no extremo -1 exige q ≥ 2"))
+        # espelho: suaviza s = -1
+        u = @. 1 + t
+        s = @. -1 + u^q / 2^(q - 1)
+        ds = @. q * u^(q - 1) / 2^(q - 1)
+        return s, ds
+    end
+    # --- interior: Monegato–Sloan ---
+    (-1 < s0 < 1) || throw(ArgumentError("s0 deve estar em (-1,1) ou ±1"))
+    (q ≥ 3 && isodd(q)) || throw(ArgumentError(
+        "Monegato–Sloan interior exige grau ímpar q = 3,5,7,… (recebeu q=$q)"))
+    aq = (1 + s0)^(1 / q)
+    bq = (1 - s0)^(1 / q)
+    δ  = (1 / 2)^q * (aq + bq)^q
+    t0 = (aq - bq) / (aq + bq)
+    u  = @. t - t0
+    s  = @. s0 + δ * u^q
+    ds = @. q * δ * u^(q - 1)
+    return s, ds
 end
 ```
 
