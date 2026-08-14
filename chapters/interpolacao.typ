@@ -529,11 +529,55 @@ end
 
 ```julia
 using Plots
+
+"""
+    plot_quasising_sinh(a=0.0, b=0.05; g=nothing, n=800)
+
+Mostra o integrando quase-singular em ξ ∈ [-1,1]
+
+    f(ξ) = g(ξ) / ((ξ - a)^2 + b^2)
+
+e o integrando *transformado* na variável s ∈ [-1,1]
+
+    f(ξ(s)) · |dξ/ds|
+
+com a transformação `sinhtrans`. O pico alto e estreito vira uma curva bem mais regular (o Jacobiano anula-se perto da quase-singularidade).
+"""
+function plot_quasising_sinh(a=0.0, b=0.05; g=nothing, n=800)
+    g === nothing && (g = ξ -> 1.0)
+    f(ξ) = g(ξ) / ((ξ - a)^2 + b^2)
+
+    ξ = range(-1, 1; length=n)
+    s = range(-1, 1; length=n)
+    ξs, J = sinhtrans(collect(s), a, b)
+    before = f.(ξ)
+    after  = @. f(ξs) * abs(J)
+
+    p1 = plot(ξ, before; lw=2, label="f(ξ)",
+              xlabel="ξ", ylabel="integrando",
+              title="Antes (quase-singular)", legend=:topright)
+    vline!(p1, [a]; ls=:dash, color=:gray, label="a = $a")
+
+    p2 = plot(s, after; lw=2, label="f(ξ(s)) · |J|",
+              xlabel="s", ylabel="integrando transformado",
+              title="Depois (× Jacobiano sinh)", legend=:topright)
+    # marca s* tal que ξ(s*) ≈ a  (J mínimo)
+    _, i = findmin(abs.(ξs .- a))
+    vline!(p2, [s[i]]; ls=:dash, color=:gray, label="ξ(s) ≈ a")
+
+    plot(p1, p2; layout=(1, 2), size=(900, 350))
+end
+
+# mapa ξ(s) e Jacobiano
 x = range(-1, 1; length=100)
 xt, jac = sinhtrans(x, 0.5, 0.01)
 p1 = plot(collect(x), xt; xlabel="s", ylabel="ξ", label=false, lw=2)
 p2 = plot(collect(x), jac; xlabel="s", ylabel="dξ/ds", label=false, lw=2)
 plot(p1, p2; layout=(2, 1), size=(700, 500))
+
+# integrando antes × depois
+plot_quasising_sinh(0.0, 0.05)
+plot_quasising_sinh(0.5, 0.02)   # pico deslocado
 ```
 
 aplicando essa técnica para a integral do último exemplo pode-se observar uma redução significativa do erro para a mesma quantidade de pontos.

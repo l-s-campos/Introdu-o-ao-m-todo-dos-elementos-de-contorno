@@ -648,11 +648,55 @@ plot!(collect(n), errG; marker<span style="color: #d73948">=</span><span style="
     J <span style="color: #d73948">=</span> b <span style="color: #d73948">*</span> μ <span style="color: #d73948">*</span> cosh<span style="color: #d73948">.</span>(μ <span style="color: #d73948">*</span> u <span style="color: #d73948">.</span><span style="color: #d73948">-</span> η)
     x, J
 <span style="color: #d73948">end</span></code></pre><pre><code data-lang="julia"><span style="color: #d73948">using</span> Plots
+
+<span style="color: #74747c">"""</span>
+<span style="color: #74747c">    plot_quasising_sinh(a=0.0, b=0.05; g=nothing, n=800)</span>
+
+<span style="color: #74747c">Mostra o integrando quase-singular em ξ ∈ [-1,1]</span>
+
+<span style="color: #74747c">    f(ξ) = g(ξ) / ((ξ - a)^2 + b^2)</span>
+
+<span style="color: #74747c">e o integrando *transformado* na variável s ∈ [-1,1]</span>
+
+<span style="color: #74747c">    f(ξ(s)) · |dξ/ds|</span>
+
+<span style="color: #74747c">com a transformação `sinhtrans`. O pico alto e estreito vira uma curva bem mais regular (o Jacobiano anula-se perto da quase-singularidade).</span>
+<span style="color: #74747c">"""</span>
+<span style="color: #d73948">function</span> <span style="color: #4b69c6">plot_quasising_sinh</span>(a<span style="color: #d73948">=</span><span style="color: #b60157">0.0</span>, b<span style="color: #d73948">=</span><span style="color: #b60157">0.05</span>; g<span style="color: #d73948">=</span><span style="color: #d73948">nothing</span>, n<span style="color: #d73948">=</span><span style="color: #b60157">800</span>)
+    g <span style="color: #d73948">===</span> <span style="color: #d73948">nothing</span> <span style="color: #d73948">&amp;&amp;</span> (g <span style="color: #d73948">=</span> ξ <span style="color: #d73948">-></span> <span style="color: #b60157">1.0</span>)
+    f(ξ) <span style="color: #d73948">=</span> g(ξ) <span style="color: #d73948">/</span> ((ξ <span style="color: #d73948">-</span> a)<span style="color: #d73948">^</span><span style="color: #b60157">2</span> <span style="color: #d73948">+</span> b<span style="color: #d73948">^</span><span style="color: #b60157">2</span>)
+
+    ξ <span style="color: #d73948">=</span> range(<span style="color: #d73948">-</span><span style="color: #b60157">1</span>, <span style="color: #b60157">1</span>; length<span style="color: #d73948">=</span>n)
+    s <span style="color: #d73948">=</span> range(<span style="color: #d73948">-</span><span style="color: #b60157">1</span>, <span style="color: #b60157">1</span>; length<span style="color: #d73948">=</span>n)
+    ξs, J <span style="color: #d73948">=</span> sinhtrans(collect(s), a, b)
+    before <span style="color: #d73948">=</span> f<span style="color: #d73948">.</span>(ξ)
+    after  <span style="color: #d73948">=</span> @<span style="color: #4b69c6">.</span> f(ξs) <span style="color: #d73948">*</span> abs(J)
+
+    p1 <span style="color: #d73948">=</span> plot(ξ, before; lw<span style="color: #d73948">=</span><span style="color: #b60157">2</span>, label<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">f(ξ)</span><span style="color: #198810">"</span>,
+              xlabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">ξ</span><span style="color: #198810">"</span>, ylabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">integrando</span><span style="color: #198810">"</span>,
+              title<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">Antes (quase-singular)</span><span style="color: #198810">"</span>, legend<span style="color: #d73948">=</span><span style="color: #b60157">:</span><span style="color: #b60157">topright</span>)
+    vline!(p1, [a]; ls<span style="color: #d73948">=</span><span style="color: #b60157">:</span><span style="color: #b60157">dash</span>, color<span style="color: #d73948">=</span><span style="color: #b60157">:</span><span style="color: #b60157">gray</span>, label<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">a = </span><span style="color: #d73948">$</span><span style="color: #8b41b1">a</span><span style="color: #198810">"</span>)
+
+    p2 <span style="color: #d73948">=</span> plot(s, after; lw<span style="color: #d73948">=</span><span style="color: #b60157">2</span>, label<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">f(ξ(s)) · |J|</span><span style="color: #198810">"</span>,
+              xlabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">s</span><span style="color: #198810">"</span>, ylabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">integrando transformado</span><span style="color: #198810">"</span>,
+              title<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">Depois (× Jacobiano sinh)</span><span style="color: #198810">"</span>, legend<span style="color: #d73948">=</span><span style="color: #b60157">:</span><span style="color: #b60157">topright</span>)
+    <span style="color: #74747c">#</span><span style="color: #74747c"> marca s* tal que ξ(s*) ≈ a  (J mínimo)</span>
+    _, i <span style="color: #d73948">=</span> findmin(abs<span style="color: #d73948">.</span>(ξs <span style="color: #d73948">.</span><span style="color: #d73948">-</span> a))
+    vline!(p2, [s[i]]; ls<span style="color: #d73948">=</span><span style="color: #b60157">:</span><span style="color: #b60157">dash</span>, color<span style="color: #d73948">=</span><span style="color: #b60157">:</span><span style="color: #b60157">gray</span>, label<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">ξ(s) ≈ a</span><span style="color: #198810">"</span>)
+
+    plot(p1, p2; layout<span style="color: #d73948">=</span>(<span style="color: #b60157">1</span>, <span style="color: #b60157">2</span>), size<span style="color: #d73948">=</span>(<span style="color: #b60157">900</span>, <span style="color: #b60157">350</span>))
+<span style="color: #d73948">end</span>
+
+<span style="color: #74747c">#</span><span style="color: #74747c"> mapa ξ(s) e Jacobiano</span>
 x <span style="color: #d73948">=</span> range(<span style="color: #d73948">-</span><span style="color: #b60157">1</span>, <span style="color: #b60157">1</span>; length<span style="color: #d73948">=</span><span style="color: #b60157">100</span>)
 xt, jac <span style="color: #d73948">=</span> sinhtrans(x, <span style="color: #b60157">0.5</span>, <span style="color: #b60157">0.01</span>)
 p1 <span style="color: #d73948">=</span> plot(collect(x), xt; xlabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">s</span><span style="color: #198810">"</span>, ylabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">ξ</span><span style="color: #198810">"</span>, label<span style="color: #d73948">=</span><span style="color: #d73948">false</span>, lw<span style="color: #d73948">=</span><span style="color: #b60157">2</span>)
 p2 <span style="color: #d73948">=</span> plot(collect(x), jac; xlabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">s</span><span style="color: #198810">"</span>, ylabel<span style="color: #d73948">=</span><span style="color: #198810">"</span><span style="color: #198810">dξ/ds</span><span style="color: #198810">"</span>, label<span style="color: #d73948">=</span><span style="color: #d73948">false</span>, lw<span style="color: #d73948">=</span><span style="color: #b60157">2</span>)
-plot(p1, p2; layout<span style="color: #d73948">=</span>(<span style="color: #b60157">2</span>, <span style="color: #b60157">1</span>), size<span style="color: #d73948">=</span>(<span style="color: #b60157">700</span>, <span style="color: #b60157">500</span>))</code></pre><p>aplicando essa técnica para a integral do último exemplo pode-se observar uma redução significativa do erro para a mesma quantidade de pontos.</p><pre><code data-lang="julia">f <span style="color: #d73948">=</span> x<span style="color: #d73948">-></span><span style="color: #b60157">1</span><span style="color: #d73948">/</span>(<span style="color: #b60157">1</span><span style="color: #d73948">+</span><span style="color: #b60157">16</span><span style="color: #d73948">*</span>x<span style="color: #d73948">^</span><span style="color: #b60157">2</span>);
+plot(p1, p2; layout<span style="color: #d73948">=</span>(<span style="color: #b60157">2</span>, <span style="color: #b60157">1</span>), size<span style="color: #d73948">=</span>(<span style="color: #b60157">700</span>, <span style="color: #b60157">500</span>))
+
+<span style="color: #74747c">#</span><span style="color: #74747c"> integrando antes × depois</span>
+plot_quasising_sinh(<span style="color: #b60157">0.0</span>, <span style="color: #b60157">0.05</span>)
+plot_quasising_sinh(<span style="color: #b60157">0.5</span>, <span style="color: #b60157">0.02</span>)   <span style="color: #74747c">#</span><span style="color: #74747c"> pico deslocado</span></code></pre><p>aplicando essa técnica para a integral do último exemplo pode-se observar uma redução significativa do erro para a mesma quantidade de pontos.</p><pre><code data-lang="julia">f <span style="color: #d73948">=</span> x<span style="color: #d73948">-></span><span style="color: #b60157">1</span><span style="color: #d73948">/</span>(<span style="color: #b60157">1</span><span style="color: #d73948">+</span><span style="color: #b60157">16</span><span style="color: #d73948">*</span>x<span style="color: #d73948">^</span><span style="color: #b60157">2</span>);
 exato <span style="color: #d73948">=</span> atan(<span style="color: #b60157">4</span>)<span style="color: #d73948">/</span><span style="color: #b60157">2</span>;
 
 n <span style="color: #d73948">=</span> <span style="color: #b60157">8</span>
