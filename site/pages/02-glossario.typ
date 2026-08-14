@@ -1,4 +1,4 @@
 #import "../template.typ": chapter-page
 #chapter-page("Glossário")[
-  #include "../../chapters/glossario.typ"
+  #include "../../chapters/02-glossario.typ"
 ]

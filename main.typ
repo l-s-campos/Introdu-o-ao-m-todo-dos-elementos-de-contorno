@@ -45,18 +45,18 @@
 #pagebreak()
 
 // ---- Núcleo do curso (30 h) ----
-#include "chapters/apresentacao.typ"
-#include "chapters/glossario.typ"
-#include "chapters/interpolacao.typ"
-#include "chapters/equacoes-diferenciais.typ"
-#include "chapters/indo-para-2d.typ"
-#include "chapters/gmsh.typ"
-#include "chapters/laplace-2d.typ"
-#include "chapters/erros.typ"
-#include "chapters/poisson-2d.typ"
-#include "chapters/elasticidade-2d.typ"
-#include "chapters/propgeo-3d.typ"
-#include "chapters/trabalhos-finais.typ"
+#include "chapters/01-apresentacao.typ"
+#include "chapters/02-glossario.typ"
+#include "chapters/03-interpolacao.typ"
+#include "chapters/04-equacoes-diferenciais.typ"
+#include "chapters/05-indo-para-2d.typ"
+#include "chapters/06-gmsh.typ"
+#include "chapters/07-laplace-2d.typ"
+#include "chapters/08-erros.typ"
+#include "chapters/09-poisson-2d.typ"
+#include "chapters/10-elasticidade-2d.typ"
+#include "chapters/11-propgeo-3d.typ"
+#include "chapters/12-trabalhos-finais.typ"
 
 // ---- Extra (fora da trilha principal de 30 h) ----
 #pagebreak()
@@ -68,4 +68,4 @@
 ]
 #pagebreak()
 
-#include "chapters/viga-euler.typ"
+#include "chapters/90-viga-euler.typ"

@@ -1,4 +1,4 @@
 #import "../template.typ": chapter-page
 #chapter-page("Interpolação")[
-  #include "../../chapters/interpolacao.typ"
+  #include "../../chapters/03-interpolacao.typ"
 ]

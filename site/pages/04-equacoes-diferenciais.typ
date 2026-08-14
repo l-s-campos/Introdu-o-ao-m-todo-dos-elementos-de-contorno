@@ -1,4 +1,4 @@
 #import "../template.typ": chapter-page
 #chapter-page("Equações diferenciais")[
-  #include "../../chapters/equacoes-diferenciais.typ"
+  #include "../../chapters/04-equacoes-diferenciais.typ"
 ]

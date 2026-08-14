@@ -1,4 +1,4 @@
 #import "../template.typ": chapter-page
 #chapter-page("Gmsh e malhas")[
-  #include "../../chapters/gmsh.typ"
+  #include "../../chapters/06-gmsh.typ"
 ]
