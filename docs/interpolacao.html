@@ -162,7 +162,7 @@ a:hover { color: #115e59; }
   padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
 }
 .topbar {
-  display: none;
+  display: flex;
   gap: 0.75rem;
   align-items: center;
   margin-bottom: 1rem;
@@ -334,9 +334,91 @@ a:hover { color: #115e59; }
 }
 /* soften typst default full-page styles inside article */
 .article > style { display: none; }
+
+/* topbar always available (desktop collapse + mobile drawer) */
+.topbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.menu-btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.menu-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+.topbar .chapter-title {
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar {
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.layout {
+  transition: grid-template-columns .2s ease;
+}
+
+/* chapter TOC */
+.toc {
+  margin: 0 0 1.6rem 0;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #fafaf9, #fff);
+}
+.toc-title {
+  margin: 0 0 0.55rem 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+.toc ol {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+.toc li { margin: 0.28rem 0; }
+.toc a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.toc a:hover { color: var(--accent); text-decoration: underline; }
+.toc .toc-h3 {
+  list-style: disc;
+  margin-left: 0.35rem;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.toc .toc-h3 a { color: var(--muted); }
+.toc .toc-h3 a:hover { color: var(--accent); }
+.article h2, .article h3, .article h4 { scroll-margin-top: 1rem; }
+
+/* desktop: collapsible sidebar */
+@media (min-width: 921px) {
+  body.nav-collapsed .layout {
+    grid-template-columns: 0 1fr;
+  }
+  body.nav-collapsed .sidebar {
+    transform: translateX(-105%);
+    pointer-events: none;
+  }
+  body.nav-collapsed .content-wrap {
+    padding-left: clamp(1rem, 3vw, 2.5rem);
+  }
+}
+
 @media (max-width: 920px) {
   .layout { grid-template-columns: 1fr; }
-  .topbar { display: flex; }
   .sidebar {
     position: fixed;
     left: 0; top: 0; bottom: 0;
@@ -344,9 +426,12 @@ a:hover { color: #115e59; }
     z-index: 30;
     transform: translateX(-105%);
     transition: transform .2s ease;
+    pointer-events: auto;
   }
-  .sidebar.open { transform: translateX(0); }
+  .sidebar.open { transform: translateX(0); pointer-events: auto; }
   .backdrop.show { display: block; }
+  /* mobile ignores desktop collapsed state for grid */
+  body.nav-collapsed .layout { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -376,10 +461,10 @@ a:hover { color: #115e59; }
   </aside>
   <div class="content-wrap">
     <div class="topbar">
-      <button class="menu-btn" id="menuBtn" type="button">Menu</button>
-      <strong>Interpolação</strong>
+      <button class="menu-btn" id="menuBtn" type="button" aria-controls="sidebar" aria-expanded="true">Menu</button>
+      <span class="chapter-title">Interpolação</span>
     </div>
-    <main class="article">
+    <main class="article" id="article" data-page="interpolacao">
       <h2>1 Interpolação</h2><p>Gráficos deste capítulo usam <strong>CairoMakie</strong> (ver glossário).</p><h3>1.1 Interpolação polinomial</h3><p>Suponha que queremos conhecer a população às vezes entre os anos do censo ou estimar populações futuras. Uma técnica é encontrar um polinômio que passa por todos os pontos de dados.</p><p>Dado <math><mi>𝑛</mi></math> pontos <math><mrow><mo>(</mo><mrow><msub><mi>𝑡</mi><mn>1</mn></msub><mo>,</mo><msub><mi>𝑦</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mi>…</mi><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>𝑡</mi><mi>𝑛</mi></msub><mo>,</mo><msub><mi>𝑦</mi><mi>𝑛</mi></msub></mrow><mo>)</mo></mrow></math>, onde os <math><msub><mi>𝑡</mi><mi>𝑖</mi></msub></math> são todos distintos, o problema <strong>de interpolação polinomial</strong> é encontrar um polinomial <math><mi>𝑃</mi></math> de grau menor que n tal que <math><mi>𝑝</mi><mrow><mo>(</mo><msub><mi>𝑡</mi><mi>𝑖</mi></msub><mo>)</mo></mrow><mo>=</mo><msub><mi>𝑦</mi><mi>𝑖</mi></msub></math> para todos <math><mi>𝑖</mi></math>.</p><p>O problema de interpolação polinomial tem uma solução única. Uma vez encontrado o polinômio interpolador, ele pode ser avaliado em qualquer lugar para estimar ou prever valores.</p><h4>1.1.1 <strong>Interpolação como um sistema linear</strong></h4><p>Dados os dados <math><mrow><mo>(</mo><mrow><msub><mi>𝑡</mi><mi>𝑖</mi></msub><mo>,</mo><msub><mi>𝑦</mi><mi>𝑖</mi></msub></mrow><mo>)</mo></mrow></math> por <math><mi>𝑖</mi><mo>=</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>𝑛</mi></math>, buscamos um polinômio</p><math display="block"><mi>𝑝</mi><mrow><mo>(</mo><mi>𝑡</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>𝑐</mi><mn>1</mn></msub><mo>+</mo><msub><mi>𝑐</mi><mn>2</mn></msub><mi>𝑡</mi><mo>+</mo><msub><mi>𝑐</mi><mn>3</mn></msub><msup><mi>𝑡</mi><mn>2</mn></msup><mo>+</mo><mi>⋯</mi><mo>+</mo><msub><mi>𝑐</mi><mi>𝑛</mi></msub><msup><mi>𝑡</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msup><mo rspace="0em">,</mo></math><p>de tal modo que <math><msub><mi>𝑦</mi><mi>𝑖</mi></msub><mo>=</mo><mi>𝑝</mi><mrow><mo>(</mo><msub><mi>𝑡</mi><mi>𝑖</mi></msub><mo>)</mo></mrow></math> para todos <math><mi>𝑖</mi></math>. Essas condições são usadas para determinar os coeficientes <math><msub><mi>𝑐</mi><mn>1</mn></msub><mi>…</mi><mo>,</mo><msub><mi>𝑐</mi><mi>𝑛</mi></msub></math>:</p><math display="block"><mtable class="multiline-equation"><mtr><mtd><msub><mi>𝑐</mi><mn>1</mn></msub><mo>+</mo><msub><mi>𝑐</mi><mn>2</mn></msub><msub><mi>𝑡</mi><mn>1</mn></msub><mo>+</mo><mi>⋯</mi><mo>+</mo><msub><mi>𝑐</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub><msubsup><mi>𝑡</mi><mn>1</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup><mo>+</mo><msub><mi>𝑐</mi><mi>𝑛</mi></msub><msubsup><mi>𝑡</mi><mn>1</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup><mo>=</mo><msub><mi>𝑦</mi><mn>1</mn></msub><mo rspace="0em">,</mo></mtd></mtr><mtr><mtd><msub><mi>𝑐</mi><mn>1</mn></msub><mo>+</mo><msub><mi>𝑐</mi><mn>2</mn></msub><msub><mi>𝑡</mi><mn>2</mn></msub><mo>+</mo><mi>⋯</mi><mo>+</mo><msub><mi>𝑐</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub><msubsup><mi>𝑡</mi><mn>2</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup><mo>+</mo><msub><mi>𝑐</mi><mi>𝑛</mi></msub><msubsup><mi>𝑡</mi><mn>2</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup><mo>=</mo><msub><mi>𝑦</mi><mn>2</mn></msub><mo rspace="0em">,</mo></mtd></mtr><mtr><mtd><msub><mi>𝑐</mi><mn>1</mn></msub><mo>+</mo><msub><mi>𝑐</mi><mn>2</mn></msub><msub><mi>𝑡</mi><mn>3</mn></msub><mo>+</mo><mi>⋯</mi><mo>+</mo><msub><mi>𝑐</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub><msubsup><mi>𝑡</mi><mn>3</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup><mo>+</mo><msub><mi>𝑐</mi><mi>𝑛</mi></msub><msubsup><mi>𝑡</mi><mn>3</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup><mo>=</mo><msub><mi>𝑦</mi><mn>3</mn></msub><mo rspace="0em">,</mo></mtd></mtr><mtr><mtd><mi>⋮</mi><mspace width="2em"/></mtd></mtr><mtr><mtd><msub><mi>𝑐</mi><mn>1</mn></msub><mo>+</mo><msub><mi>𝑐</mi><mn>2</mn></msub><msub><mi>𝑡</mi><mi>𝑛</mi></msub><mo>+</mo><mi>⋯</mi><mo>+</mo><msub><mi>𝑐</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub><msubsup><mi>𝑡</mi><mi>𝑛</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup><mo>+</mo><msub><mi>𝑐</mi><mi>𝑛</mi></msub><msubsup><mi>𝑡</mi><mi>𝑛</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup><mo>=</mo><msub><mi>𝑦</mi><mi>𝑛</mi></msub><mi>.</mi></mtd></mtr></mtable></math><p>Essas equações formam um sistema linear para os coeficientes <math><msub><mi>𝑐</mi><mi>𝑖</mi></msub><mo form="infix" lspace="0.2777777777777778em" rspace="0em">:</mo></math></p><math display="block"><mrow><mo>[</mo><mtable><mtr><mtd><mn>1</mn></mtd><mtd><msub><mi>𝑡</mi><mn>1</mn></msub></mtd><mtd><mi>⋯</mi></mtd><mtd><msubsup><mi>𝑡</mi><mn>1</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup></mtd><mtd><msubsup><mi>𝑡</mi><mn>1</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup></mtd></mtr><mtr><mtd><mn>1</mn></mtd><mtd><msub><mi>𝑡</mi><mn>2</mn></msub></mtd><mtd><mi>⋯</mi></mtd><mtd><msubsup><mi>𝑡</mi><mn>2</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup></mtd><mtd><msubsup><mi>𝑡</mi><mn>2</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup></mtd></mtr><mtr><mtd><mn>1</mn></mtd><mtd><msub><mi>𝑡</mi><mn>3</mn></msub></mtd><mtd><mi>⋯</mi></mtd><mtd><msubsup><mi>𝑡</mi><mn>3</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup></mtd><mtd><msubsup><mi>𝑡</mi><mn>3</mn><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup></mtd></mtr><mtr><mtd><mi>⋮</mi></mtd><mtd><mi>⋮</mi></mtd><mtd></mtd><mtd><mi>⋮</mi></mtd><mtd><mi>⋮</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd><mtd><msub><mi>𝑡</mi><mi>𝑛</mi></msub></mtd><mtd><mi>⋯</mi></mtd><mtd><msubsup><mi>𝑡</mi><mi>𝑛</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msubsup></mtd><mtd><msubsup><mi>𝑡</mi><mi>𝑛</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msubsup></mtd></mtr></mtable><mo>]</mo></mrow><mrow><mo>[</mo><mtable><mtr><mtd><msub><mi>𝑐</mi><mn>1</mn></msub></mtd></mtr><mtr><mtd><msub><mi>𝑐</mi><mn>2</mn></msub></mtd></mtr><mtr><mtd><msub><mi>𝑐</mi><mn>3</mn></msub></mtd></mtr><mtr><mtd><mi>⋮</mi></mtd></mtr><mtr><mtd><msub><mi>𝑐</mi><mi>𝑛</mi></msub></mtd></mtr></mtable><mo>]</mo></mrow><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><msub><mi>𝑦</mi><mn>1</mn></msub></mtd></mtr><mtr><mtd><msub><mi>𝑦</mi><mn>2</mn></msub></mtd></mtr><mtr><mtd><msub><mi>𝑦</mi><mn>3</mn></msub></mtd></mtr><mtr><mtd><mi>⋮</mi></mtd></mtr><mtr><mtd><msub><mi>𝑦</mi><mi>𝑛</mi></msub></mtd></mtr></mtable><mo>]</mo></mrow><mo rspace="0em">,</mo></math><p>ou simplesmente, <math><mi>𝐕</mi><mi>𝐜</mi><mo>=</mo><mi>𝐲</mi></math>. A Matrix <math><mi>𝐕</mi></math> é de um tipo especial chamado de Vandermonde.</p><p>A interpolação polinomial pode, portanto, ser formulada como um sistema linear de equações com uma matriz de Vandermonde. Criamos dois vetores para dados sobre a população da China. O primeiro tem os anos dos dados do censo e o outro tem a população, em milhões de pessoas.</p><pre><code data-lang="julia">year <span style="color: #d73948">=</span> [<span style="color: #b60157">1982</span>,<span style="color: #b60157">2000</span>,<span style="color: #b60157">2010</span>,<span style="color: #b60157">2015</span>];
 pop <span style="color: #d73948">=</span> [<span style="color: #b60157">1008.18</span>, <span style="color: #b60157">1262.64</span>, <span style="color: #b60157">1337.82</span>, <span style="color: #b60157">1374.62</span>];
 t <span style="color: #d73948">=</span> year <span style="color: #d73948">.</span><span style="color: #d73948">-</span> <span style="color: #b60157">1980.0</span>
@@ -627,12 +712,132 @@ n <span style="color: #d73948">=</span> <span style="color: #b60157">8</span>
 const btn = document.getElementById('menuBtn');
 const sidebar = document.getElementById('sidebar');
 const backdrop = document.getElementById('backdrop');
-function closeMenu(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
-function openMenu(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+const MQ_MOBILE = window.matchMedia('(max-width: 920px)');
+const NAV_KEY = 'omp-nav-collapsed';
+
+function isMobile(){ return MQ_MOBILE.matches; }
+
+function setBtnLabel(){
+  if (!btn) return;
+  if (isMobile()) {
+    const open = sidebar.classList.contains('open');
+    btn.textContent = open ? 'Fechar' : 'Menu';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  } else {
+    const collapsed = document.body.classList.contains('nav-collapsed');
+    btn.textContent = collapsed ? 'Mostrar menu' : 'Esconder menu';
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+}
+
+function closeMobileMenu(){
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('show');
+  setBtnLabel();
+}
+function openMobileMenu(){
+  sidebar.classList.add('open');
+  backdrop.classList.add('show');
+  setBtnLabel();
+}
+
+function applyDesktopNav(collapsed, persist){
+  if (collapsed) document.body.classList.add('nav-collapsed');
+  else document.body.classList.remove('nav-collapsed');
+  if (persist) {
+    try { localStorage.setItem(NAV_KEY, collapsed ? '1' : '0'); } catch (e) {}
+  }
+  setBtnLabel();
+}
+
+(function initNav(){
+  let collapsed = false;
+  try { collapsed = localStorage.getItem(NAV_KEY) === '1'; } catch (e) {}
+  if (!isMobile()) applyDesktopNav(collapsed, false);
+  else {
+    document.body.classList.remove('nav-collapsed');
+    closeMobileMenu();
+  }
+  setBtnLabel();
+})();
+
 btn?.addEventListener('click', () => {
-  if (sidebar.classList.contains('open')) closeMenu(); else openMenu();
+  if (isMobile()) {
+    if (sidebar.classList.contains('open')) closeMobileMenu();
+    else openMobileMenu();
+  } else {
+    applyDesktopNav(!document.body.classList.contains('nav-collapsed'), true);
+  }
 });
-backdrop?.addEventListener('click', closeMenu);
+backdrop?.addEventListener('click', closeMobileMenu);
+MQ_MOBILE.addEventListener?.('change', () => {
+  if (isMobile()) {
+    document.body.classList.remove('nav-collapsed');
+    closeMobileMenu();
+  } else {
+    closeMobileMenu();
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(NAV_KEY) === '1'; } catch (e) {}
+    applyDesktopNav(collapsed, false);
+  }
+});
+
+(function buildToc(){
+  const article = document.getElementById('article');
+  if (!article || article.dataset.page === 'index') return;
+  // index page has id only when set; skip if first content is hero-like cards only
+  const heads = [...article.querySelectorAll('h2, h3')].filter((h) => !h.closest('.pager') && !h.closest('.toc'));
+  // skip the very first h2 if it is the chapter title repeating page title? keep all section heads
+  const items = heads.filter((h) => {
+    // ignore empty
+    return (h.textContent || '').trim().length > 0;
+  });
+  if (items.length < 2) return;
+
+  const used = new Set();
+  function slugify(text){
+    return text.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 64) || 'sec';
+  }
+  function ensureId(el){
+    if (el.id) return el.id;
+    let base = slugify(el.textContent || 'sec');
+    let id = base; let n = 2;
+    while (used.has(id) || document.getElementById(id)) { id = base + '-' + n; n++; }
+    used.add(id);
+    el.id = id;
+    return id;
+  }
+
+  const nav = document.createElement('nav');
+  nav.className = 'toc';
+  nav.setAttribute('aria-label', 'Neste capítulo');
+  const title = document.createElement('div');
+  title.className = 'toc-title';
+  title.textContent = 'Neste capítulo';
+  nav.appendChild(title);
+  const ol = document.createElement('ol');
+
+  // Prefer h2 as top-level; include h3 nested visually
+  items.forEach((h) => {
+    const li = document.createElement('li');
+    if (h.tagName === 'H3') li.className = 'toc-h3';
+    const a = document.createElement('a');
+    a.href = '#' + ensureId(h);
+    a.textContent = (h.textContent || '').trim();
+    li.appendChild(a);
+    ol.appendChild(li);
+  });
+  nav.appendChild(ol);
+
+  // insert after first heading (chapter title)
+  const firstH = article.querySelector('h1, h2');
+  if (firstH && firstH.nextSibling) firstH.parentNode.insertBefore(nav, firstH.nextSibling);
+  else article.insertBefore(nav, article.firstChild);
+})();
 
 (function enhanceCodeBlocks() {
   const iconCopy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
