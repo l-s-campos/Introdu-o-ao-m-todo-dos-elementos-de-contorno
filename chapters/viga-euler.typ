@@ -16,7 +16,7 @@
 
   O repositório #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`] concentra-se em *Laplace/Poisson e elasticidade 2D* (malhas Gmsh, DIBEM, H-matrizes, contato, ondas escalares). *Não* há, no núcleo atual, um solver de viga de Euler–Bernoulli pronto como os de `Laplace` / `Elasticity`.
 
-  Os códigos deste capítulo são *pedagógicos e autônomos*: rode-os em um script Julia simples (com `CairoMakie` se for plotar), sem esperar um `Viga(...)` + `format2d` no `BEM_gmsh`. Servem para fixar SF de ordem alta, dualidade deslocamento/rotação e, se desejar, um projeto de monografia.
+  Os códigos deste capítulo são *pedagógicos e autônomos*: rode-os em um script Julia simples (com `Plots` se for plotar), sem esperar um `Viga(...)` + `format2d` no `BEM_gmsh`. Servem para fixar SF de ordem alta, dualidade deslocamento/rotação e, se desejar, um projeto de monografia.
 ]
 
 == Teoria de vigas
@@ -155,7 +155,7 @@ $ theta(xi, t) = & -1/(rho A) {integral_0^t [(partial u^*)/(partial xi) Q - (par
 
 === Exercício
 
-3 - Faça um gráfico 3D de $u^*$ e $partial u^* / partial xi$. Considere $xi$ e $tau$ iguais a zero, tempo de 0 a 10 s e $x$ de $0$ a $L$. Em CairoMakie use `surface` (#link("https://docs.makie.org/stable/")[docs Makie]).
+3 - Faça um gráfico 3D de $u^*$ e $partial u^* / partial xi$. Considere $xi$ e $tau$ iguais a zero, tempo de 0 a 10 s e $x$ de $0$ a $L$. Em Plots use `surface` (#link("https://docs.juliaplots.org/stable/")[docs Plots]).
 
 = Desafio
 

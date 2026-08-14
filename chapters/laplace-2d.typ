@@ -274,7 +274,7 @@ eT = maximum(abs(dad.T[i] - dad.Nodes[i][1]) for i in 1:dad.n)
 @printf "\nmax |T_num - x| no contorno = %.6e\n" eT
 
 # --- 5. Gráfico ---
-fig = plot_geo(dad)                        # Makie / CairoMakie no ecossistema BEM
+fig = plot_geo(dad)                        # visualização do solver (backend do projeto)
 # save("laplace_quadrado.png", fig)        # descomente para gravar PNG
 fig
 ```
@@ -323,7 +323,7 @@ Regra prática: comece *sempre* denso e com malha grossa; só mude para H-matriz
 
 Use as medidas de erro do capítulo *Medidas de erro* (e/ou `rel_error(dad)` do `BEM_gmsh`). Notação: potencial $T$, fluxo $q = -k partial T / partial n$.
 
-+ Resolva esse problema com elementos lineares, quadráticos e cúbicos e calcule o erro médio, o erro máximo e a norma $L_2$ do erro no contorno para diferentes discretizações. Faça um gráfico (CairoMakie) comparando a convergência dos três tipos de elementos. A solução analítica é dada por:
++ Resolva esse problema com elementos lineares, quadráticos e cúbicos e calcule o erro médio, o erro máximo e a norma $L_2$ do erro no contorno para diferentes discretizações. Faça um gráfico (Plots) comparando a convergência dos três tipos de elementos. A solução analítica é dada por:
 
 $ T(theta) &= theta/pi \ q(x) &= - 1/(pi x) quad "em" quad y = 0 $
 

@@ -4,7 +4,7 @@
 = Equações diferenciais
 <equacoes-diferenciais>
 
-Gráficos deste capítulo usam *CairoMakie*.
+Gráficos deste capítulo usam *Plots.jl*.
 
 
 Quantidades que mudam continuamente no tempo ou no espaço são frequentemente modeladas por equações diferenciais.  As equações diferenciais precisam de condições suplementares para definir de maneira única tanto a situação de modelagem quanto as soluções teóricas. O problema de valor inicial (PVI), no qual todas as condições são dadas em um único valor da variável independente, é a situação mais simples. Muitas vezes, a variável independente neste caso representa o tempo.
@@ -31,7 +31,7 @@ Como muitos problemas práticos vêm com parâmetros que são fixos dentro de um
 Para criar um problema de valor inicial para $u(t)$, você deve fornecer uma função que calcula $u'$, um valor inicial para $u$ e os pontos finais do intervalo para $t$. O intervalo $t$ deve ser definido como `(a,b)`, onde pelo menos um dos valores é um float.
 
 ```julia
-using DifferentialEquations, CairoMakie
+using DifferentialEquations, Plots
 f = (u,p,t) -> sin((t+u)^2)     # define du/dt, deve incluir o argumento p
 u₀ = 1.0                       # valor inicial
 tspan = (0.0,4.0)               # intervalo t 
@@ -44,11 +44,11 @@ ivp = ODEProblem(f,u₀,tspan)
 sol = solve(ivp,Tsit5());
 ```
 
-O objeto solução resultante pode ser mostrado com CairoMakie.
+O objeto solução resultante pode ser mostrado com Plots.
 
 ```julia
-fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", ylabel="u(t)", title="solução ODE")
-lines!(ax, sol.t, sol.u, label="solução"); axislegend(ax, position=:b); fig
+plot(sol.t, sol.u; xlabel="t", ylabel="u(t)", title="solução ODE",
+     label="solução", legend=:bottom, lw=2)
 ```
 
 A solução também funciona como qualquer função que pode ser avaliada em diferentes valores de $t$.
@@ -66,7 +66,7 @@ Nos bastidores, o objeto solução contém algumas informações sobre como os v
 O solucionador inicialmente encontra valores aproximados da solução (segunda coluna acima) em alguns tempos escolhidos automaticamente (primeira coluna acima). Para calcular a solução em outros momentos, o objeto realiza uma interpolação nesses valores. Este capítulo trata de como os valores discretos de $t$ e $u$ são calculados. Por enquanto, apenas observe como podemos extraí-los do objeto solução.
 
 ```julia
-scatter!(ax, sol.t, sol.u, label="valores discretos"); fig 
+scatter!(sol.t, sol.u; label="valores discretos")
 ```
 
 === Método de Euler
@@ -127,15 +127,15 @@ u0 = -1.0;
 ivp = ODEProblem(f,u0,tspan)
 t,u = euler(ivp,20)
 
-fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", ylabel="u(t)", title="Solução por Euler")
-scatterlines!(ax, t, u, label="n=20"); axislegend(ax); fig
+plot(t, u; xlabel="t", ylabel="u(t)", title="Solução por Euler",
+     marker=:circle, label="n=20", lw=2)
 ```
 
 Poderíamos definir um interpolador diferente para obter uma imagem mais suave acima, mas a derivação do método de Euler assumiu um interpolador linear por partes. Podemos, em vez disso, solicitar mais passos para fazer o interpolador parecer mais suave.
 
 ```julia
 t,u = euler(ivp,50)
-scatterlines!(ax, t, u, label="n=50"); axislegend(ax); fig
+plot!(t, u; marker=:circle, label="n=50", lw=2)
 ```
 
 Aumentar $n$ mudou a solução de maneira notável. Como sabemos que interpoladores e diferenças finitas se tornam mais precisos à medida que $h -> 0$, devemos antecipar o mesmo comportamento do método de Euler. Não temos uma solução exata para comparar, então usaremos um solucionador `DifferentialEquations` para construir uma solução de referência precisa.
@@ -143,7 +143,7 @@ Aumentar $n$ mudou a solução de maneira notável. Como sabemos que interpolado
 ```julia
 u_exact = solve(ivp,Tsit5(),reltol=1e-14,abstol=1e-14)
 
-lines!(ax, t, u_exact.(t), color=:black, linewidth=2, label="referência"); axislegend(ax); fig
+plot!(t, u_exact.(t); color=:black, lw=2, label="referência")
 ```
 
 Agora podemos realizar um estudo de convergência.
@@ -208,17 +208,16 @@ tspan = (0.,50.);
 γ,L,k = 0,0.5,0
 ivp = ODEProblem(couple,u₀,tspan,[γ,L,k])
 sol = solve(ivp,Tsit5())
-fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", title="k=0", limits=((20, 50), nothing))
-lines!(ax, sol.t, [u[1] for u in sol.u], label="θ1")
-lines!(ax, sol.t, [u[2] for u in sol.u], label="θ2"); axislegend(ax); fig
+plot(sol.t, [u[1] for u in sol.u]; xlabel="t", title="k=0", xlims=(20, 50),
+     label="θ1", lw=2)
+plot!(sol.t, [u[2] for u in sol.u]; label="θ2", lw=2)
 
 k = 1
 ivp = ODEProblem(couple, u₀, tspan, [γ, L, k])
 sol = solve(ivp, Tsit5())
-fig = Figure(); ax = Axis(fig[1, 1], xlabel="t", title="k=1", limits=((20, 50), nothing))
-lines!(ax, sol.t, [u[1] for u in sol.u], label="θ1")
-lines!(ax, sol.t, [u[2] for u in sol.u], label="θ2"); axislegend(ax); fig   
-    
+plot(sol.t, [u[1] for u in sol.u]; xlabel="t", title="k=1", xlims=(20, 50),
+     label="θ1", lw=2)
+plot!(sol.t, [u[2] for u in sol.u]; label="θ2", lw=2)
 ```
 
 == Runge-Kutta
@@ -558,32 +557,31 @@ A equação do calor é a equação diferencial típica para a classe conhecida 
 Agora vamos resolver a equação de difusão em$[- 1, 1]$ usando diferenças finitas para aproximar a derivada em $x$. As condições de contorno são $u(- 1, t) = 0, u(1, t) = 2$ e a condição inicial é  $1 + sin(π x \/ 2) + 3(1 - x^2) e^(-4 x^2)$.
 
 ```julia
-using DifferentialEquations, CairoMakie
+using DifferentialEquations, Plots
 
 n=100
- x,dx,dxx=diffmat(n,[-1,1])
- 
+x, dx, dxx = diffmat(n, [-1, 1])
+
 f = (u,p,t) -> p[1]*[p[2];u[2:end-1];p[3]]
 init = x -> 1 + sin(π*x/2) + 3*(1-x^2)*exp(-4x^2);
-u0=init.(x)
-tspan=(0,0.75)
-ivp = ODEProblem(f,u0,tspan,[dxx,0,2])
-sol = solve(ivp,Tsit5());
+u0 = init.(x)
+tspan = (0, 0.75)
+ivp = ODEProblem(f, u0, tspan, [dxx, 0, 2])
+sol = solve(ivp, Tsit5());
 
-using CairoMakie
-fig = Figure(); ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="Solução da equação de calor")
+plt = plot(xlabel="x", ylabel="u(x,t)", title="Solução da equação de calor", legend=:topleft)
 for tt in 0:0.1:0.7
-    lines!(ax, x[1:end-1], sol(tt)[1:end-1], label="t=$tt")
+    plot!(plt, x[1:end-1], sol(tt)[1:end-1]; label="t=$tt", lw=2)
 end
-axislegend(ax, position=:lt); fig
+plt
 
-fig = Figure(size=(600, 400))
-ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="Difusão", limits=(nothing, (0, 4.2)))
-record(fig, "calor.mp4", range(0, 0.75; length=201); framerate=30) do tt
-    empty!(ax)
-    lines!(ax, x[1:end-1], sol(tt)[1:end-1])
-    ax.title = "Difusão t=$(round(tt; digits=3))"
+# animação opcional (requer backend de GIF)
+anim = @animate for tt in range(0, 0.75; length=60)
+    plot(x[1:end-1], sol(tt)[1:end-1];
+         xlabel="x", ylabel="u(x,t)", ylims=(0, 4.2), legend=false, lw=2,
+         title="Difusão t=$(round(tt; digits=3))")
 end
+gif(anim, "calor.gif"; fps=15)
 ```
 
 #link("../assets/videos/boundaries-heat.mp4")[Vídeo: boundaries-heat.mp4]
@@ -623,20 +621,18 @@ c=2
 ivp = ODEProblem(f,u0,tspan,[[zeros(n+1,n+1) I;c^2*dxx zeros(n+1,n+1)],0,0,n+1])
 sol = solve(ivp,Tsit5());
 
-using CairoMakie
-fig = Figure(); ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="Solução da equação da onda")
+plt = plot(xlabel="x", ylabel="u(x,t)", title="Solução da equação da onda", legend=:topleft)
 for tt in 0:0.2:2
-    lines!(ax, x[1:n-1], sol(tt)[1:n-1], label="t=$tt")
+    plot!(plt, x[1:n-1], sol(tt)[1:n-1]; label="t=$tt", lw=2)
 end
-axislegend(ax, position=:lt); fig
+plt
 
-fig = Figure(size=(600, 400))
-ax = Axis(fig[1, 1], xlabel="x", ylabel="u(x,t)", title="onda", limits=(nothing, (-1.1, 1.1)))
-record(fig, "onda.mp4", range(0, 2; length=201); framerate=30) do tt
-    empty!(ax)
-    lines!(ax, x[1:n-1], sol(tt)[1:n-1])
-    ax.title = "onda t=$(round(tt; digits=3))"
+anim = @animate for tt in range(0, 2; length=60)
+    plot(x[1:n-1], sol(tt)[1:n-1];
+         xlabel="x", ylabel="u(x,t)", ylims=(-1.1, 1.1), legend=false, lw=2,
+         title="onda t=$(round(tt; digits=3))")
 end
+gif(anim, "onda.gif"; fps=15)
 ```
 
 #link("../assets/videos/onda.mp4")[Vídeo: onda.mp4]

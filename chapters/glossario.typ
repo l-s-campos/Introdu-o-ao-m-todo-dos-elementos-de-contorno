@@ -112,15 +112,11 @@ No Gmsh / `BEM_gmsh`: Laplace `"0;T"` ou `"1;q"`; elasticidade `"tx;ux;ty;uy"` (
 
 == Gráficos no curso
 
-Salvo menção em contrário, os scripts usam *CairoMakie* (backend estático, adequado a PDF e relatórios):
+Salvo menção em contrário, os scripts usam *Plots.jl*:
 
 ```julia
-using CairoMakie
-fig = Figure(size=(700, 400))
-ax = Axis(fig[1, 1], xlabel="x", ylabel="T")
-lines!(ax, x, y, label="numérico")
-axislegend(ax)
-fig
+using Plots
+plot(x, y; xlabel="x", ylabel="T", label="numérico", lw=2)
 ```
 
-O `BEM_gmsh` já depende de Makie; `plot_geo(dad)` segue o mesmo ecossistema.
+Funções de visualização do repositório de código (quando usadas) podem ter backend próprio; nestas notas o padrão didático é `Plots`.
