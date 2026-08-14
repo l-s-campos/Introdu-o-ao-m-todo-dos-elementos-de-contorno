@@ -175,14 +175,15 @@ Para manter pequenos graus de polinomial enquanto interpolam grandes conjuntos d
 Geralmente, designamos antecipadamente um grau máximo  para cada parte polinomial de p (x).
 
 ```julia
-using Plots, Dierckx
-p1 = Spline1D(t, y; k=1)
-p2 = Spline1D(t, y; k=2)
-p3 = Spline1D(t, y; k=3)
-xx = range(-1, 1; length=400)
+using Plots, Interpolations
+
+# `t` estritamente crescente (nós). Linear e cúbico bastam para contrastar
+# com o polinômio global; o grau 2 não é first-class em Interpolations.jl.
+p1 = LinearInterpolation(t, y)                 # grau 1 (por partes)
+p3 = CubicSplineInterpolation(t, y)            # grau 3 (spline cúbica)
+xx = range(first(t), last(t); length=400)
 scatter(t, y; label="dados", legend=:topleft)
 plot!(xx, p1.(xx); label="linear por partes", lw=2)
-plot!(xx, p2.(xx); label="quadrático por partes", lw=2)
 plot!(xx, p3.(xx); label="cúbico por partes", lw=2)
 ```
 
@@ -197,11 +198,22 @@ y = [ 0,0.16,0.16,0.43,0.62,0.48,0.19,0.18,0,
       -0.12,-0.12,-0.29,-0.30,-0.15,-0.16,0 ]
 ```
 
-Podemos considerar x e y como funções de um parâmetro s, com os pontos sendo valores dados em  $s = 0, 1, ..., 15$.
+Podemos considerar x e y como funções de um parâmetro s, com os pontos sendo valores dados em  $s = 0, 1, ..., 15$ (grade uniforme).
 
-(a) Interpole os pontos usando Spline1D e plote a imagem.
+(a) Interpole com spline cúbica (`CubicSplineInterpolation` ou `BSpline(Cubic(...))`) em $x(s)$ e $y(s)$ e plote a curva $(x(s), y(s))$.
 
-(b) Uma desvantagem do resultado na parte (a) é o canto perceptível no lado esquerdo, que corresponde a s = 0 de cima e s = 15 de baixo. Teste adicionar a palavra-chave `periodic = true` à chamada de Spline1D e plote o resultado.
+(b) O canto à esquerda corresponde a juntar $s = 0$ com $s = 15$. Use contorno *periódico* no parâmetro (grade uniforme):
+
+```julia
+using Interpolations
+s = 0:15
+itpx = scale(interpolate(x, BSpline(Cubic(Periodic(OnGrid())))), s)
+itpy = scale(interpolate(y, BSpline(Cubic(Periodic(OnGrid())))), s)
+ss = range(0, 15; length=400)
+plot(itpx.(ss), itpy.(ss); label="cúbica periódica", lw=2, aspect_ratio=1)
+```
+
+Compare com a spline *sem* `Periodic` (condição natural).
 
 == Estabilidade da interpolação polinomial
 
