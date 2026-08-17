@@ -34,7 +34,7 @@
   # export_results_to_gmsh(dad, msh, :T; viewer=false)
   ```
 
-  Os grupos físicos da malha já carregam as CDCs (`"0;T"` Dirichlet, `"1;q"` Neumann com $q = -k partial T / partial n$). Detalhes no capítulo *Gmsh e malhas*.
+  Os grupos físicos da malha já carregam as CDCs (`"0;T"` Dirichlet, `"1;q"` Neumann com $q = -k partial T / partial n$). A geometria Gmsh foi preparada no capítulo *Indo para 2D*; a convenção de CDC é desenvolvida *neste* capítulo.
 
 = Mapa do BEM (leia isto antes da álgebra)
 
