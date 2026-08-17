@@ -1,659 +1,1004 @@
 // Equações diferenciais
-// markdown2typst + tex2typst
+// Trilha BEM — Plots.jl
+//
 
 = Equações diferenciais
 <equacoes-diferenciais>
 
 Gráficos deste capítulo usam *Plots.jl*.
+Pacotes: `DifferentialEquations`, `Plots`, `LinearAlgebra`.
 
+== Objetivos
 
-Quantidades que mudam continuamente no tempo ou no espaço são frequentemente modeladas por equações diferenciais.  As equações diferenciais precisam de condições suplementares para definir de maneira única tanto a situação de modelagem quanto as soluções teóricas. O problema de valor inicial (PVI), no qual todas as condições são dadas em um único valor da variável independente, é a situação mais simples. Muitas vezes, a variável independente neste caso representa o tempo.
+Ao final, você deve ser capaz de:
 
-Os métodos para PVIs geralmente começam a partir do valor inicial conhecido e iteram ou "avançam" a partir daí. Há um grande número desses métodos, em parte devido às diferenças em precisão, estabilidade e conveniência.
++ Formular um PVI escalar e resolvê-lo com `DifferentialEquations` e com Euler / RK4 próprios.
++ Medir ordem de convergência em gráfico log–log.
++ Reduzir uma EDO de 2ª ordem a um sistema de 1ª ordem.
++ Montar matrizes de diferenciação $D_x$, $D_(x x)$, impor Dirichlet e resolver um PVC 1D.
++ Integrar no tempo o sistema semi-discreto (método das linhas) para a equação do calor — em MDF e em BEM 1D.
++ Explicar a forma $M dot(T) + H T = G Q$ e extrair um PVI nas incógnitas de contorno.
 
-Um problema de valor inicial escalar de *primeira ordem* (PVI) é
+== Mapa do capítulo
 
-$ u' (t) = f(t, u(t)), wide a <= t <= b, \ \
-u(a) = u_0 . $
++ PVI e o solucionador `Tsit5`
++ Euler (ordem 1) e estudo de erro
++ Runge–Kutta 4
++ Sistemas e redução de ordem
++ Matrizes de diferenças finitas e PVC estacionário
++ Método das linhas: difusão (MDF)
++ Equação da onda (método das linhas)
++ Ponte com o BEM e método das linhas no contorno
++ Exercícios
++ (Extra) multi-passo AB4 e Houbolt
 
-Chamamos t de *variável independente* e $u$ de *variável dependente*. Se $u' = f(t, u) = g(t) + u h(t)$, a equação diferencial é *linear*; caso contrário, é *não linear*.
+== PVI escalar
 
-Uma *solução* de um problema de valor inicial é uma função $u(t)$ que torna ambas as equações $u' (t) = f(t, u(t))$ e $u(a) = u_0$ verdadeiras.
+Quantidades que mudam no tempo (ou ao longo de um parâmetro) são modeladas por equações diferenciais. Condições suplementares fecham o problema: no *problema de valor inicial* (PVI) tudo é prescrito em um único valor da variável independente — em geral o tempo.
 
-Quando $t$ representa o tempo, às vezes escrevemos $dot(u)$ (lê-se "u-ponto") em vez de $u'$.
+PVI escalar de primeira ordem:
 
-=== Soluções numéricas
+$ u' (t) = f(t, u(t)), wide a <= t <= b, \ u(a) = u_0 . $
 
-O pacote `DifferentialEquations` oferece solucionadores para problemas de valor inicial (PVIs). Vamos usá-lo para definir e resolver um problema de valor inicial para $u' = sin [(u + t)^2]$ sobre $t in [0, 4]$, tal que $u(0) = 1$.
+- $t$: variável independente; $u$: dependente.
+- Se $f(t,u) = g(t) + h(t) u$, a EDO é *linear*; caso contrário, *não linear*.
+- Solução: função $u(t)$ que satisfaz a EDO e a condição inicial.
+- Notação no tempo: às vezes $dot(u)$ em vez de $u'$.
 
-Como muitos problemas práticos vêm com parâmetros que são fixos dentro de uma instância, mas variam de uma instância para outra, a sintaxe para PVIs inclui um argumento de entrada `p` que permanece fixo durante toda a solução. Aqui não queremos usar esse argumento, mas ele deve estar na definição para que o solucionador funcione.
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Ideia-chave.* Métodos de PVI *avançam* a partir de $u(a)$: a cada passo usam $f$ (a inclinação) para construir $u$ em tempos futuros. A qualidade depende da *ordem*, da *estabilidade* e do tamanho de passo $h$.
+]
 
-Para criar um problema de valor inicial para $u(t)$, você deve fornecer uma função que calcula $u'$, um valor inicial para $u$ e os pontos finais do intervalo para $t$. O intervalo $t$ deve ser definido como `(a,b)`, onde pelo menos um dos valores é um float.
+=== Com DifferentialEquations.jl
 
-```julia
-using DifferentialEquations, Plots
-f = (u,p,t) -> sin((t+u)^2)     # define du/dt, deve incluir o argumento p
-u₀ = 1.0                       # valor inicial
-tspan = (0.0,4.0)               # intervalo t 
-```
+Exemplo: $u' = sin((u+t)^2)$, $t in [0,4]$, $u(0)=1$.
 
-Com os dados acima, definimos um objeto de problema de PVI e depois o resolvemos. Aqui, informamos ao solucionador para usar o método `Tsit5`, que é uma boa escolha inicial para a maioria dos problemas.
-
-```julia
-ivp = ODEProblem(f,u₀,tspan)
-sol = solve(ivp,Tsit5());
-```
-
-O objeto solução resultante pode ser mostrado com Plots.
-
-```julia
-plot(sol.t, sol.u; xlabel="t", ylabel="u(t)", title="solução ODE",
-     label="solução", legend=:bottom, lw=2)
-```
-
-A solução também funciona como qualquer função que pode ser avaliada em diferentes valores de $t$.
-
-```julia
-@show sol(1.0); 
-```
-
-Nos bastidores, o objeto solução contém algumas informações sobre como os valores e o gráfico são produzidos:
-
-```julia
-[sol.t sol.u]
-```
-
-O solucionador inicialmente encontra valores aproximados da solução (segunda coluna acima) em alguns tempos escolhidos automaticamente (primeira coluna acima). Para calcular a solução em outros momentos, o objeto realiza uma interpolação nesses valores. Este capítulo trata de como os valores discretos de $t$ e $u$ são calculados. Por enquanto, apenas observe como podemos extraí-los do objeto solução.
+A API pede $f(u,p,t)$ — o argumento $p$ carrega parâmetros constantes (mesmo que não usemos).
 
 ```julia
-scatter!(sol.t, sol.u; label="valores discretos")
-```
+using DifferentialEquations, Plots, LinearAlgebra
 
-=== Método de Euler
+f = (u, p, t) -> sin((t + u)^2)
+u0 = 1.0
+tspan = (0.0, 4.0)
 
-Considere um problema de valor inicial de primeira ordem. Representamos uma solução numérica de um PVI por seus valores em uma coleção finita de nós, que por enquanto exigimos que sejam igualmente espaçados:
-
-$ t_i = a + i h, quad h = (b - a)/n , quad i = 0, ..., n . $
-
-$h$ é chamado de *tamanho do passo*.
-
-Como não obtemos valores exatamente corretos da solução nos nós, precisamos ter algum cuidado com a notação. A partir de agora, deixamos $hat(u) (t)$  denotar a solução exata do PVI. O valor aproximado em $t_i$  calculado por nossos métodos numéricos será denotado por $u_i approx hat(u) (t_i)$.
-
-Considere um interpolador linear por partes para os valores (ainda desconhecidos) $u_0 , u_1 , ..., u_n$. Para $t_i < t < t_(i + 1)$, sua inclinação é
-
-$ (u_(i + 1) - u_i)/(t_(i + 1) - t_i) = (u_(i + 1) - u_i)/h . $
-
-Podemos conectar essa derivada à equação diferencial seguindo o modelo de $u' = f(t, u)$:
-
-$ (u_(i + 1) - u_i)/h = f(t_i , u_i), quad i = 0, ..., n - 1 . $
-
-Podemos ver o lado esquerdo como uma aproximação para $u' (t)$ em $t = t_i$. Podemos reorganizar a equação para obter o *método de Euler*, nosso primeiro método para PVIs.
-
-O método de Euler avança em $t$, obtendo a solução em um novo nível de tempo explicitamente em termos do valor mais recente   $u_(i + 1) = u_i + h f(t_i , u_i)$.
-
-```julia
-"""
-    euler(ivp,n)
-
-Aplique o método de Euler para resolver o PVI dado usando `n` passos de tempo.
-Retorna um vetor de tempos e um vetor de valores da solução.
-"""
-function euler(ivp,n)
-    # Discretização do tempo.
-    a,b = ivp.tspan
-    h = (b-a)/n
-    t = [ a + i*h for i in 0:n ]
-
-    # Condição inicial e configuração de saída.
-    u = fill(float(ivp.u0),n+1)
-
-    # A iteração de passos de tempo.
-    for i in 1:n
-        u[i+1] = u[i] + h*ivp.f(u[i],ivp.p,t[i])
-    end
-    return t,u
-end
-```
-
-=== Exemplo
-
-Consideramos o PVI $u' = sin [(u + t)^2]$ sobre $0 <= t <= 4$, com $u(0) = - 1$.
-
-```julia
-f = (u,p,t) -> sin((t+u)^2);
-tspan = (0.0,4.0);
-u0 = -1.0;
-
-ivp = ODEProblem(f,u0,tspan)
-t,u = euler(ivp,20)
-
-plot(t, u; xlabel="t", ylabel="u(t)", title="Solução por Euler",
-     marker=:circle, label="n=20", lw=2)
-```
-
-Poderíamos definir um interpolador diferente para obter uma imagem mais suave acima, mas a derivação do método de Euler assumiu um interpolador linear por partes. Podemos, em vez disso, solicitar mais passos para fazer o interpolador parecer mais suave.
-
-```julia
-t,u = euler(ivp,50)
-plot!(t, u; marker=:circle, label="n=50", lw=2)
-```
-
-Aumentar $n$ mudou a solução de maneira notável. Como sabemos que interpoladores e diferenças finitas se tornam mais precisos à medida que $h -> 0$, devemos antecipar o mesmo comportamento do método de Euler. Não temos uma solução exata para comparar, então usaremos um solucionador `DifferentialEquations` para construir uma solução de referência precisa.
-
-```julia
-u_exact = solve(ivp,Tsit5(),reltol=1e-14,abstol=1e-14)
-
-plot!(t, u_exact.(t); color=:black, lw=2, label="referência")
-```
-
-Agora podemos realizar um estudo de convergência.
-
-```julia
-n = [ round(Int,5*10^k) for k in 0:0.5:3 ]
-err = []
-for n in n
-    t,u = euler(ivp,n)
-    push!( err, norm(u_exact.(t)-u,Inf) )
-end
-
-foreach(((ni, ei),) -> println(ni, "	", ei), zip(n, err))
-```
-
-O erro é aproximadamente reduzido por um fator de 10 para cada aumento em $n$ pelo mesmo fator.
-
-== Sistemas de equações
-
-Poucas aplicações envolvem um problema de valor inicial com apenas uma única variável dependente. Geralmente, existem múltiplas incógnitas e um sistema de equações para defini-las.
-
-A generalização de qualquer solucionador escalar de PVI para lidar com sistemas é direta. Considere o método de Euler, que na forma de sistema se torna
-
-$ upright(bold(u))_(i + 1) = upright(bold(u))_i + h thin upright(bold(f)) (t_i , upright(bold(u))_i), wide i = 0, ..., n - 1 . $
-
-A equação de diferenças vetoriais é apenas a fórmula de Euler aplicada simultaneamente a cada componente do sistema de EDO. Como operações como adição e multiplicação se traduzem facilmente de escalares para vetores, a função que escrevemos para PVIs escalares funciona para sistemas também. Praticamente falando, as únicas mudanças que devem ser feitas são que a condição inicial e a função de EDO têm que ser codificadas para usar vetores.
-
-Felizmente, a capacidade de resolver sistemas de de primeira ordem implica também a capacidade de resolver sistemas de ordem diferencial mais alta. A razão é que existe uma maneira sistemática de transformar um problema de ordem superior em um de primeira ordem de dimensão superior.
-
-Dois pêndulos idênticos suspensos na mesma barra e oscilando em planos paralelos podem ser modelados como o sistema de segunda ordem
-
-#image("../assets/equacoes-diferenciais/pendulos.png", width: 80%)
-
-$ theta_1^(' ') (t) + gamma theta'_1 + g/L sin theta_1 + k(theta_1 - theta_2) = 0, \ theta_2^(' ') (t) + gamma theta'_2 + g/L sin theta_2 + k(theta_2 - theta_1) = 0, $
-
-onde $theta_1$ e $theta_2$  são os ângulos feitos pelos dois pêndulos, $L$  é o comprimento de cada pêndulo, $gamma$ é um parâmetro de fricção, e $k$ é um parâmetro que descreve um torque produzido pela barra quando ela é torcida. Podemos converter este problema em um sistema de primeira ordem usando as substituições
-
-$ u_1 = theta_1 , quad u_2 = theta_2 , quad u_3 = theta'_1 , quad u_4 = theta'_2 $
-
-Com essas definições, o sistema se torna
-
-$ u'_1 = u_3 , \ u'_2 = u_4 , \ u'_3 = - gamma u_3 - g/L sin u_1 + k(u_2 - u_1), \ u'_4 = - gamma u_4 - g/L sin u_2 + k(u_1 - u_2), $
-
-que é um sistema de primeira ordem em quatro dimensões. Para completar a descrição do problema, é necessário especificar valores para $theta_1 (0)$, $theta'_1 (0)$, $theta_2 (0)$ e $theta'_2 (0)$.
-
-O truque ilustrado nos exemplos anteriores está sempre disponível. Para cada variável dependente escalar no sistema, introduza novos componentes até a derivada mais alta que aparece para $y$. As equações do sistema de primeira ordem vêm das relações triviais entre todas as derivadas inferiores e das equações originais de alta ordem. No final, deve haver tantas equações de componentes escalares quanto variáveis desconhecidas de primeira ordem.
-
-=== Exemplo
-
-```julia
-function couple(u,p,t)
-    γ,L,k = p
-    g = 9.8
-    udot = similar(u)
-    udot[1:2] .= u[3:4]
-    udot[3] = - γ*u[3] - (g/L)*sin(u[1]) + k*(u[2]-u[1])
-    udot[4] = - γ*u[4] - (g/L)*sin(u[2]) + k*(u[1]-u[2])
-    return udot 
-end
-u₀ = [1.25,-0.5,0,0]
-tspan = (0.,50.);
-γ,L,k = 0,0.5,0
-ivp = ODEProblem(couple,u₀,tspan,[γ,L,k])
-sol = solve(ivp,Tsit5())
-plot(sol.t, [u[1] for u in sol.u]; xlabel="t", title="k=0", xlims=(20, 50),
-     label="θ1", lw=2)
-plot!(sol.t, [u[2] for u in sol.u]; label="θ2", lw=2)
-
-k = 1
-ivp = ODEProblem(couple, u₀, tspan, [γ, L, k])
+ivp = ODEProblem(f, u0, tspan)
 sol = solve(ivp, Tsit5())
-plot(sol.t, [u[1] for u in sol.u]; xlabel="t", title="k=1", xlims=(20, 50),
-     label="θ1", lw=2)
-plot!(sol.t, [u[2] for u in sol.u]; label="θ2", lw=2)
+
+plot(sol.t, sol.u; xlabel="t", ylabel="u(t)", label="solução", lw=2)
+scatter!(sol.t, sol.u; label="nós adaptativos", ms=3)
 ```
 
-== Runge-Kutta
+O objeto `sol` é avaliável em qualquer $t$ (`sol(1.0)`): por baixo há uma malha adaptativa e interpolação. O restante do capítulo explica *como* se constroem valores discretos $(t_i, u_i)$ — com passo fixo, para controlar ordem.
 
-Chegamos agora a um dos principais e mais utilizados tipos de métodos para problemas de valor inicial: métodos Runge-Kutta. São métodos de uma etapa, embora eles não sejam frequentemente escritos nessa forma. Os métodos RK aumentam a precisão da primeira ordem, avaliando a função da EDO $f(t, u)$ mais de uma vez por etapa do tempo.
+== Método de Euler
 
-- Método de segunda ordem
-  Considere uma expansão em série da solução exata para $u' = f(t, u),$
-  $ hat(u) (t_(i + 1)) = hat(u) (t_i) + h hat(u)' (t_i) + 1/2 h^2 hat(u)^(' ') (t_i) + O(h^3) . $
-  Se substituirmos $hat(u)'$ por $f$ e mantivermos apenas os dois primeiros termos no lado direito, obteremos o método de Euler. Para obter mais precisão, precisaremos calcular ou estimar o terceiro termo também. Observe que
-  $ hat(u)^(' ') = f' = (d f)/(d t) = (partial f)/(partial t) + (partial f)/(partial u) (d u)/(d t) = f_t + f_u f, $
-  onde aplicamos a regra da cadeia multidimensional à derivada, porque ambos os argumentos de $f$ dependem de $t$. Usando essa expressão, obtemos
-  $ hat(u) (t_(i + 1)) = hat(u) (t_i) + h [f(t_i , hat(u) (t_i)) + h/2 f_t (t_i , hat(u) (t_i)) + h/2 f(t_i , hat(u) (t_i)) thin f_u (t_i , hat(u) (t_i))] \ + O(h^3) . $
-  Uma aproximação dessas derivadas parciais de $f$ é necessária. Observe que
-  $ f(t_i + alpha, hat(u) (t_i) + beta) = f(t_i , hat(u) (t_i)) + alpha f_t (t_i , hat(u) (t_i)) + beta f_u (t_i , hat(u) (t_i)) + O(alpha^2 + | alpha beta | + beta^2) . $
-  Correspondendo esta expressão ao termo entre colchetes e selecionando $alpha = h \/ 2$  e $beta = 1/2 h f(t_i , hat(u) (t_i)) .$ Fazendo isso, encontramos
-  $ hat(u) (t_(i + 1)) = hat(u) (t_i) + h [f(t_i + alpha, hat(u) (t_i) + beta)] + O(h alpha^2 + h | alpha beta | + h beta^2 + h^3) . $
-  Truncar a série aqui resulta em um novo método de uma etapa.
+Discretize o tempo em passos iguais:
 
-=== Método de Euler Melhorado
+$ t_i = a + i h, quad h = (b-a)/n, quad i = 0, ..., n. $
 
-O método de Euler melhorado é a fórmula de uma etapa
+Seja $hat(u)(t)$ a solução *exata* e $u_i approx hat(u)(t_i)$ a aproximação numérica.
 
-$ u_(i + 1) = u_i + h f(t_i + frac(1, 2) h, u_i + frac(1, 2) h f(t_i , u_i)) . $
+Ideia: no intervalo $[t_i, t_(i+1)]$, a inclinação do interpolante linear por partes é $(u_(i+1)-u_i)/h$. Iguale a $f(t_i, u_i)$:
 
-Graças às definições acima a ordem de precisão do Euler melhorado é dois. Em um primeiro estágio, o método faz meio passo de Euler $h \/ 2$
+$ u_(i+1) = u_i + h f(t_i, u_i). $
 
-$ k_1 = h f(t_i , u_i), \ v = u_i + frac(1, 2) k_1 . $
-
-e no segundo estágio ele usa o passo inteiro de Euler mas usa o valor obtido no primeiro estágio para a inclinação.
-
-$ k_2 = h f(t_i + frac(1, 2) h, v), \ u_(i + 1) = u_i + k_2 . $
+Isso é o *método de Euler explícito* (ordem 1).
 
 ```julia
 """
-    euler2(ivp,n)
+    euler(ivp, n) -> t, U
 
-Aplique o método de Euler Melhorado para resolver o PVI dado usando `n`
-passos de tempo. Retorna um vetor de tempos e um vetor de valores da solução.
+Euler explícito com n passos. `U[i]` é o estado em t[i]
+(escalar ou vetor, conforme `ivp.u0`).
 """
-function me2(ivp,n)
-    # Discretização do tempo.
-    a,b = ivp.tspan
-    h = (b-a)/n
-    t = [ a + i*h for i in 0:n ]
-
-    # Inicializar saída.
-    u = fill(float(ivp.u0),n+1)
-
-    # Iteração de passos de tempo.
-    for i in 1:n
-        uhalf = u[i] + h/2*ivp.f(u[i],ivp.p,t[i]);
-        u[i+1] = u[i] + h*ivp.f(uhalf,ivp.p,t[i]+h/2);
-    end
-    return t,u
-end
-```
-
-Esse procedimento pode ser feito para ordens mais altas mas a complexidade aumenta rapidamente.
-
-O método de Runge-Kutta mais comumente usado, e talvez o método mais popular de todos, é o de quarta ordem, dado por:
-
-$ k_1 = h f(t_i , u_i), \ k_2 = h f(t_i + h \/ 2, u_i + k_1 \/ 2), \ k_3 = h f(t_i + h \/ 2, u_i + k_2 \/ 2), \ k_4 = h f(t_i + h, u_i + k_3), \ u_(i + 1) = u_i + 1/6 k_1 + 1/3 k_2 + 1/3 k_3 + 1/6 k_4 . $
-
-```julia
-"""
-    rk4(ivp,n)
-
-Aplique o método comum de Runge-Kutta de 4ª ordem para resolver o PVI dado
-usando `n` passos de tempo. Retorna um vetor de tempos e um vetor de
-valores da solução.
-"""
-function rk4(ivp,n)
-    # Discretização do tempo.
-    a,b = ivp.tspan
-    h = (b-a)/n
-    t = [ a + i*h for i in 0:n ]
-
-    # Inicializar saída.
-    u = fill(float(ivp.u0),n+1)
-
-    # Iteração de passos de tempo.
-    for i in 1:n
-        k₁ = h*ivp.f( u[i],      ivp.p, t[i]     )
-        k₂ = h*ivp.f( u[i]+k₁/2, ivp.p, t[i]+h/2 )
-        k₃ = h*ivp.f( u[i]+k₂/2, ivp.p, t[i]+h/2 )
-        k₄ = h*ivp.f( u[i]+k₃,   ivp.p, t[i]+h   )
-        u[i+1] = u[i] + (k₁ + 2(k₂+k₃) + k₄)/6
-    end
-    return t,u
-end
-```
-
-```julia
-f = (u,p,t) -> sin((t+u)^2)
-ivp = ODEProblem(f,u0,tspan)
-tspan = (0.0,4.0)
-u₀ = -1.0
-u_ref = solve(ivp,Tsit5(),reltol=1e-14,abstol=1e-14);
-
-n = [ round(Int,2*10^k) for k in 0:0.5:3 ]
-err_IE2,err_RK4 = [],[]
-for n in n
-    t,u = euler2(ivp,n)
-    push!( err_IE2, maximum( @.abs(u_ref(t)-u) ) )
-    t,u = rk4(ivp,n)
-    push!( err_RK4, maximum( @.abs(u_ref(t)-u) ) )
-end
-
-foreach(r -> println(join(r, "	")), zip(n, err_IE2, err_RK4))
-```
-
-== Métodos de múltiplos passos
-
-Nos métodos de Runge–Kutta, começamos em $u_i$  para encontrar $u_(i + 1)$, realizando múltiplas avaliações de f (estágios) para alcançar alta precisão. Em contraste, os métodos de múltiplos passos aumentam a precisão utilizando mais do histórico da solução, aproveitando informações do passado recente. Para a discussão nesta e nas seções seguintes, introduzimos a notação abreviada $f_i = f(t_i , u_i) .$
-
-Um método de *múltiplos passos* (ou _método linear de múltiplos passos_) de $k$ passos é dado pela equação $u_(i + 1) = a_(k - 1) u_i + dots.c + a_0 u_(i - k + 1) wide \
-wide + h(b_k f_(i + 1) + dots.c + b_0 f_(i - k + 1)),$
-
-onde $a_j$ e $b_j$  são constantes. Se $b_k = 0$, o método é *explícito*; caso contrário, é *implícito*.
-
-As quantidades $u$ e $f$ são mostradas como escalares, mas em geral podem ser vetores.
-
-Para usar como um método numérico, iteramos através de $i = k - 1, ..., n - 1$. O valor $u_0$  é determinado pela condição inicial, mas também precisamos de alguma forma de gerar os *valores iniciais*
-$u_1 = alpha_1 , quad ... quad u_(k - 1) = alpha_(k - 1) .$
-
-A fórmula define $u_(i + 1)$ em termos de valores conhecidos da solução e sua derivada do passado. No caso explícito com $b_k = 0$, a Equação imediatamente fornece uma fórmula para a quantidade desconhecida $u_(i + 1)$ em termos de valores no nível de tempo $t_i$ e anteriores. Assim, apenas uma nova avaliação de f é necessária para fazer um passo de tempo, desde que armazenemos o histórico recente.
-
-Por exemplo a formula do Adams-Bashforth de quarta ordem é dada por:
-
-$upright(bold(u))_(i + 1) = upright(bold(u))_i + h thin(frac(55, 24) upright(bold(f))_i - frac(59, 24) upright(bold(f))_(i - 1) + frac(37, 24) upright(bold(f))_(i - 2) - frac(9, 24) upright(bold(f))_(i - 3)), quad i = 3, ..., n - 1 .$
-
-```julia
-function ab4(ivp,n)
-    # Discretização do tempo.
-    a,b = ivp.tspan
-    h = (b-a)/n
-    t = [ a + i*h for i in 0:n ]
-
-    # Constantes no método AB4.
-    k = 4;   σ = [-9,37,-59,55]/24;
-
-    # Encontrar valores iniciais usando RK4.
-    u = fill(float(ivp.u0),n+1)
-    rkivp = ODEProblem(ivp.f,ivp.u0,(a,a+(k-1)*h),ivp.p)
-    ts,us = rk4(rkivp,k-1)
-    u[1:k] .= us
-
-    # Calcular histórico dos valores de u', do mais recente ao mais antigo.
-    f = [ ivp.f(u[i],ivp.p,t[i]) for i in 1:k ]
-    # Iteração de passos de tempo.
-    for i in k+1:n+1
-        u[i] = u[i-1] + h*dot(f,σ)  # avançar um passo
-        f = [ f[2:k];ivp.f(u[i],ivp.p,t[i]) ]   # novo valor de du/dt
-    end
-    return t,u
-end
-```
-
-Agora fazemos um estudo de convergência:
-
-```julia
-err_AB4 = []
-for n in n
-    t,u = ab4(ivp,n)
-    push!( err_AB4, maximum( @.abs(u_ref(t)-u) ) )
-end
-
-foreach(r -> println(join(r, "	")), zip(n, err_IE2, err_RK4, err_AB4))
-```
-
-Os métodos de Adams-Moulton são métodos implícitos e, portanto, não podem ser resolvidos como fazemos no caso dos métodos de Adams-Bashforth.  Portanto, para obter o valor aproximado de $u_(i + 1)$, podemos usar um método de dois passos chamado método preditor-corretor.
-
-No passo 1, usamos um método explícito, como o método de Adams-Bashforth, chamado preditor, para obter um valor aproximado inicial e no passo 2, chamado corretor, melhoramos a estimativa inicial.
-
-O método Adams-Moulton implícito de quarta ordem é dado por:
-
-$upright(bold(u))_(i + 1)^k = upright(bold(u))_i + h thin(frac(9, 24) upright(bold(f))_(i + 1)^(k - 1) + frac(19, 24) upright(bold(f))_i - frac(5, 24) upright(bold(f))_(i - 1) + frac(1, 24) upright(bold(f))_(i - 2))$
-
-esse passo pode ser repetido até obter  $| u_(i + 1)^((k)) - u_(i + 1)^((k - 1)) | <= epsilon.alt | u_(i + 1)^((k - 1)) |$
-
-```julia
-function am4(ivp, n; tol=1e-8, max_iter=10)
-    # Discretização do tempo.
+function euler(ivp, n)
     a, b = ivp.tspan
     h = (b - a) / n
-    t = [a + i * h for i in 0:n]
-
-    # Constantes do método AM4.
-    k = 4
-    σ = [1, -5, 19,9] / 24
-    σb = [-9,37,-59,55]/24
-
-    # Encontrar valores iniciais usando RK4.
-    u = fill(float(ivp.u0), n + 1)
-    rkivp = ODEProblem(ivp.f, ivp.u0, (a, a + (k - 1) * h), ivp.p)
-    ts, us = rk4(rkivp, k - 1)
-    u[1:k] .= us
-
-    # Calcular histórico dos valores de u', do mais recente ao mais antigo.
-    f = [ ivp.f(u[i],ivp.p,t[i]) for i in 1:k ]
-    # Iteração de passos de tempo.
-    for i in k+1:n+1
-        u[i] = u[i-1] + h*dot(f,σb)  # avançar um passo
-        f = [ f[2:k];ivp.f(u[i],ivp.p,t[i]) ]   # novo valor de du/dt
-
-        # Método de correção.
-        u_corr=0
-        for iter in 1:max_iter
-            u_corr = u[i-1] + h*dot(f,σ)  # avançar um passo
-            # @show iter,abs(u[i] - u_corr) , tol * abs(u_corr)
-            if abs(u[i] - u_corr) <= tol * abs(u_corr)
-                break
-            end
-            f[4] = ivp.f(u_corr,ivp.p,t[i])   # novo valor de du/dt
-            u[i ] = u_corr
-        end
+    t = [a + i*h for i in 0:n]
+    u0 = ivp.u0 isa Number ? float(ivp.u0) : float.(ivp.u0)
+    U = Vector{typeof(u0)}(undef, n + 1)
+    U[1] = u0
+    for i in 1:n
+        U[i+1] = U[i] + h * ivp.f(U[i], ivp.p, t[i])
     end
-
-    return t, u
+    return t, U
 end
 ```
 
-=== Exercícios - Passo no tempo
+=== Exemplo e convergência
 
-1- Escolha 5 PVI, use as funções   `rk4` ,`ab4`  e  `am4` e resolva para $n = 10 dot.op 2^d$ e $d = 1, ..., 10$. Faça um gráfico de convergência log-log para os erros no tempo final $| u_n - hat(u) (t_n) |$ por $n$, e adicione uma linha reta indicando a convergência de quarta ordem. Com $n = 100$, trace a solução e o erro $u - hat(u)$ em gráficos separados.
+Mesma EDO, agora $u(0) = -1$:
 
-$ u' = - 2 t u, \ 0 <= t <= 2, \ u(0) = 2 ; \ hat(u) (t) = 2 e^(-t^2) \
-u' = u + t, \ 0 <= t <= 1, \ u(0) = 2 ; \ hat(u) (t) = 1 - t + e^t
-\ u' = x^2 \/ [u(1 + x^3)], \ 0 <= x <= 3, \ u(0) = 1 ; \ hat(u) (x) = [1 + (2 \/ 3) ln(1 + x^3)]^(1 \/ 2)
-\ u^(' ') + 9 u = 9 t, \ 0 < t < 2 pi, \ u(0) = 1, \ u' (0) = 1 ; \ hat(u) (t) = t + cos(3 t)
-\ u^(' ') + 9 u = sin(2 t), \ 0 < t < 2 pi, \ u(0) = 2, \ u' (0) = 1 ; quad hat(u) (t) = (1 \/ 5) sin(3 t) + 2 cos(3 t) + (1 \/ 5) sin(2 t)
-\ u^(' ') - 9 u = 9 t \ 0 < t < 1, \ u(0) = 2, \ u' (0) = - 1 ; \ hat(u) (t) = e^(3 t) + e^(-3 t) - t
-\ u^(' ') + 4 u' + 4 u = t, \ 0 < t < 4, \ u(0) = 1, \ u' (0) = 3 \/ 4 ; \ hat(u) (t) = (3 t + 5 \/ 4) e^(-2 t) + \ x^2 u^(' ') + 5 x u' + 4 u = 0, \ 1 < x < e^2 , \ u(1) = 1, \ u' (1) = - 1 ; \ hat(u) (x) = x^(-2) (1 + ln x)
-\ 2 x^2 u^(' ') + 3 x u' - u = 0, \ 1 < x < 16, \ u(1) = 4, \ u' (1) = - 1 ; quad hat(u) (x) = 2(x^(1 \/ 2) + x^(-1))
-\ x^2 u^(' ') - x u' + 2 u = 0, \ 1 < x < e^pi , \ u(1) = 3, \ u' (1) = 4 ; quad hat(u) (x) = x [3 cos(ln x) + sin(ln x)] $
+```julia
+f = (u, p, t) -> sin((t + u)^2)
+ivp = ODEProblem(f, -1.0, (0.0, 4.0))
 
-2- O método de Houbolt é comumente usado em problemas de dinâmica estrutural. O método é conhecido por sua estabilidade e é especialmente eficaz em problemas onde é necessário lidar com altas frequências ou amortecimento. Ele descreve as derivadas de ordem 1 e 2 como:
+t20, u20 = euler(ivp, 20)
+t50, u50 = euler(ivp, 50)
+u_ref = solve(ivp, Tsit5(); reltol=1e-14, abstol=1e-14)
 
-$ & u_(n + 1)^(' ') = (2 u_(n + 1) - 5 u_n + 4 u_(n - 1) - u_(n - 2))/(h^2) \ & u'_(n + 1) = (11 u_(n + 1) - 18 u_n + 9 u_(n - 1) - 2 u_(n - 2))/(6 h) $
+plot(t20, u20; marker=:circle, label="Euler n=20", xlabel="t", ylabel="u", lw=2)
+plot!(t50, u50; marker=:circle, label="Euler n=50", lw=2)
+plot!(t50, u_ref.(t50); color=:black, lw=2, label="referência")
+```
 
-implemente esse método e o compare com um dos problemas resolvidos  na questão anterior.
+Estudo de erro em norma do máximo nos nós:
+
+```julia
+ns = [round(Int, 5 * 10^k) for k in 0:0.5:3]
+err_E = Float64[]
+for n in ns
+    t, U = euler(ivp, n)
+    push!(err_E, maximum(abs, u_ref.(t) .- U))
+end
+
+plot(ns, err_E; xscale=:log10, yscale=:log10, marker=:circle,
+     label="Euler", xlabel="n", ylabel="‖e‖∞", lw=2)
+plot!(ns, err_E[1] .* (ns[1] ./ ns); ls=:dash, label="O(1/n)")
+```
+
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Ideia-chave — ordem.* Se o erro global se comporta como $O(h^p) = O(n^(-p))$, no plano $log n$ × $log "erro"$ a reta tem inclinação $-p$. Euler tem $p = 1$: multiplicar $n$ por 10 reduz o erro cerca de 10×.
+]
+
+== Runge–Kutta de 4ª ordem
+
+Euler usa *uma* avaliação de $f$ por passo. Métodos de Runge–Kutta (RK) combinam várias avaliações (*estágios*) no intervalo $[t_i, t_(i+1)]$ para subir a ordem.
+
+O RK clássico de ordem 4:
+
+$
+  k_1 = h f(t_i, u_i), \
+  k_2 = h f(t_i + h/2, u_i + k_1/2), \
+  k_3 = h f(t_i + h/2, u_i + k_2/2), \
+  k_4 = h f(t_i + h, u_i + k_3), \
+  u_(i+1) = u_i + (k_1 + 2 k_2 + 2 k_3 + k_4)/6.
+$
+
+```julia
+"""RK4 clássico, n passos. Aceita estado escalar ou vetorial."""
+function rk4(ivp, n)
+    a, b = ivp.tspan
+    h = (b - a) / n
+    t = [a + i*h for i in 0:n]
+    u0 = ivp.u0 isa Number ? float(ivp.u0) : float.(ivp.u0)
+    U = Vector{typeof(u0)}(undef, n + 1)
+    U[1] = u0
+    for i in 1:n
+        ui, ti = U[i], t[i]
+        k1 = h * ivp.f(ui,          ivp.p, ti)
+        k2 = h * ivp.f(ui + k1/2,   ivp.p, ti + h/2)
+        k3 = h * ivp.f(ui + k2/2,   ivp.p, ti + h/2)
+        k4 = h * ivp.f(ui + k3,     ivp.p, ti + h)
+        U[i+1] = ui + (k1 + 2k2 + 2k3 + k4)/6
+    end
+    return t, U
+end
+```
+
+Compare ordens no mesmo PVI:
+
+```julia
+err_R = Float64[]
+for n in ns
+    t, U = rk4(ivp, n)
+    push!(err_R, maximum(abs, u_ref.(t) .- U))
+end
+
+plot(ns, err_E; xscale=:log10, yscale=:log10, marker=:circle, label="Euler p≈1", lw=2)
+plot!(ns, err_R; marker=:square, label="RK4 p≈4", lw=2)
+plot!(ns, err_E[1] .* (ns[1] ./ ns); ls=:dash, label="O(n⁻¹)")
+plot!(ns, err_R[1] .* (ns[1] ./ ns).^4; ls=:dot, label="O(n⁻⁴)")
+```
+
+*Euler melhorado* (RK de ordem 2, um estágio intermediário em $t_i+h\/2$) fica como leitura opcional; a trilha do curso usa Euler (referência de ordem 1) e RK4 (cavalo de batalha explícito).
+
+== Sistemas e redução de ordem
+
+Poucas aplicações são escalares. O mesmo Euler/RK4 vale para $upright(bold(u)) in RR^d$ se $f$ devolver um vetor:
+
+$ upright(bold(u))_(i+1) = upright(bold(u))_i + h upright(bold(f))(t_i, upright(bold(u))_i) quad "(Euler)" $
+
+EDOs de ordem $m$ viram sistemas de 1ª ordem introduzindo derivadas inferiores como novas incógnitas.
+
+=== Pêndulos acoplados (2ª ordem → 1ª)
+
+#image("../assets/equacoes-diferenciais/pendulos.png", width: 75%)
+
+$
+  theta_1'' + gamma theta_1' + (g\/L) sin theta_1 + k(theta_1 - theta_2) = 0, \
+  theta_2'' + gamma theta_2' + (g\/L) sin theta_2 + k(theta_2 - theta_1) = 0.
+$
+
+Com $u = (theta_1, theta_2, theta_1', theta_2')$:
+
+$
+  u_1' = u_3, quad u_2' = u_4, \
+  u_3' = -gamma u_3 - (g\/L) sin u_1 + k(u_2 - u_1), \
+  u_4' = -gamma u_4 - (g\/L) sin u_2 + k(u_1 - u_2).
+$
+
+```julia
+function couple(u, p, t)
+    γ, L, k = p
+    g = 9.8
+    du = similar(u)
+    du[1] = u[3]
+    du[2] = u[4]
+    du[3] = -γ*u[3] - (g/L)*sin(u[1]) + k*(u[2] - u[1])
+    du[4] = -γ*u[4] - (g/L)*sin(u[2]) + k*(u[1] - u[2])
+    return du
+end
+
+u0 = [1.25, -0.5, 0.0, 0.0]
+tspan = (0.0, 50.0)
+γ, L = 0.0, 0.5
+
+sol0 = solve(ODEProblem(couple, u0, tspan, [γ, L, 0.0]), Tsit5())
+sol1 = solve(ODEProblem(couple, u0, tspan, [γ, L, 1.0]), Tsit5())
+
+plot(sol0.t, [u[1] for u in sol0.u]; label="θ1, k=0", xlims=(20, 50), lw=2)
+plot!(sol0.t, [u[2] for u in sol0.u]; label="θ2, k=0", lw=2)
+plot!(sol1.t, [u[1] for u in sol1.u]; label="θ1, k=1", ls=:dash, lw=2)
+plot!(sol1.t, [u[2] for u in sol1.u]; label="θ2, k=1", ls=:dash, lw=2,
+      xlabel="t", title="Pêndulos acoplados")
+```
+
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Receita.* Para cada variável de ordem máxima $m$, crie $m$ componentes $(y, y', ..., y^((m-1)))$. Relações cinemáticas $y'=v$, etc., + a EDO original fecham o sistema. Dimensão = soma das ordens.
+]
 
 == Matrizes de diferenças finitas
 
-Primeiro discretizamos o intervalo  $x in [a, b]$ em pedaços iguais de comprimento $h = (b - a)/n$, levando aos nós $x_i = a + i h, wide i = 0, ..., n$.
+Até aqui a variável independente era o *tempo*. No espaço, para um PVC ou para semi-discretizar uma EDP, aproximamos $d\/d x$ e $d^2\/d x^2$ por *matrizes de diferenciação*.
 
-Nosso objetivo é encontrar um vetor $upright(bold(g))$  tal que  $g_i approx f' (x_i)$  para  $i = 0, ..., n$. Usando a fórmula de diferenças finitas:
+Nós uniformes em $[a,b]$:
 
-$g_n = (f_n - f_(n - 1))/h$.
+$ x_i = a + i h, quad h = (b-a)/n, quad i = 0, ..., n. $
 
-Podemos resumir todo o conjunto de fórmulas definindo
+Queremos $upright(bold(g)) approx f'(upright(bold(x)))$ com $upright(bold(g)) = D_x upright(bold(f))$.
+Usamos diferenças centradas de ordem 2 no interior e unilaterais de ordem 2 nos extremos:
 
-$upright(bold(f)) =
-mat(delim: "[", f(x_0); f(x_1); dots.v; f(x_(n - 1)); f(x_n))$,
+$
+  D_x = 1/h
+  mat(
+    -3\/2, 2, -1\/2, , ;
+    -1\/2, 0, 1\/2, , ;
+    , dots.down, dots.down, dots.down, ;
+    , , -1\/2, 0, 1\/2;
+    , , 1\/2, -2, 3\/2
+  ).
+$
 
-e então a equação vetorial
+Segunda derivada (ordem 2):
 
-$mat(delim: "[", f' (x_0); [1 m m] f' (x_1); [1 m m] dots.v; [1 m m] f' (x_(n - 1)); [1 m m] f' (x_n)) approx upright(bold(D))_x upright(bold(f)) , wide upright(bold(D))_x = 1/h mat(delim: "[", -1, 1, , , ; [1 m m], -1, 1, , ; [1 m m], , dots.down, dots.down, ; [1 m m], , , -1, 1; [1 m m], , , -1, 1) .$
-
-Aqui, como em outros lugares, os elementos de $upright(bold(D))_x$  que não são mostrados são zero. Chamamos $upright(bold(D))_x$ de *matriz de diferenciação*. Cada linha de $upright(bold(D))_x$  fornece os pesos da fórmula de diferença finita usada em um dos nós.
-
-A matriz de diferenciação não é uma escolha única. Somos livres para usar quaisquer fórmulas de diferença finita que quisermos em cada linha. No entanto, faz sentido escolher linhas que sejam o mais semelhantes possível. Usando diferenças centradas de segunda ordem onde possível e fórmulas unilaterais de segunda ordem nos pontos de fronteira resulta em
-
-$upright(bold(D))_x = 1/h mat(delim: "[", -3/2, 2, -1/2, , , ; [1 m m] - 1/2, 0, 1/2, , , ; [1 m m], -1/2, 0, 1/2, , ; , , dots.down, dots.down, dots.down, ; , , , -1/2, 0, 1/2; [1 m m], , , 1/2, -2, 3/2) .$
-
-As matrizes de diferenciação até agora são matrizes bandadas, ou seja, todos os valores não zero estão ao longo das diagonais próximas à diagonal principal.
-
-=== Segunda derivada
-
-Da mesma forma, podemos definir matrizes de diferenciação para segundas derivadas. Por exemplo,
-
-$mat(delim: "[", f^(' ') (x_0); [1 m m] f^(' ') (x_1); [1 m m] f^(' ') (x_2); [1 m m] dots.v; [1 m m] f^(' ') (x_(n - 1)); [1 m m] f^(' ') (x_n)) approx 1/(h^2) mat(delim: "[", 2, -5, 4, -1, , ; [1 m m] 1, -2, 1, , , ; [1 m m], 1, -2, 1, , ; [1 m m], , dots.down, dots.down, dots.down, ; [1 m m], , , 1, -2, 1; [1 m m], , -1, 4, -5, 2) mat(delim: "[", f(x_0); [1 m m] f(x_1); [1 m m] f(x_2); [1 m m] dots.v; [1 m m] f(x_(n - 1)); [1 m m] f(x_n)) = upright(bold(D))_(x x) upright(bold(f)) .$
+$
+  D_(x x) = 1/(h^2)
+  mat(
+    2, -5, 4, -1, ;
+    1, -2, 1, , ;
+    , dots.down, dots.down, dots.down, ;
+    , , 1, -2, 1;
+    , -1, 4, -5, 2
+  ).
+$
 
 ```julia
 """
-    diff(n, xspan)
+    diffmat(n, xspan) -> x, Dx, Dxx
 
-Construa matrizes de diferenciação de 2ª ordem, usando `n` nós únicos no intervalo
-`xspan`. Retorna um vetor de nós e as matrizes para as primeiras
-e segundas derivadas.
+n = número de *intervalos* (n+1 nós) em xspan = (a,b).
+Diferenças de ordem 2 (centradas no interior).
 """
 function diffmat(n, xspan)
-		a,b = xspan
-    h = (b-a)/n
-    x = [ a + i*h for i in 0:n ]   # nós
-
-    
-		# Define a maior parte de Dₓ por suas diagonais.
-		dp = fill(0.5/h,n)        # superdiagonal
-		dm = fill(-0.5/h,n)       # subdiagonal
-		Dₓ = diagm(-1=>dm,1=>dp)
-		
-		# Corrigir as primeiras e últimas linhas.
-		Dₓ[1,1:3] = [-1.5,2,-0.5]/h
-		Dₓ[n+1,n-1:n+1] = [0.5,-2,1.5]/h
-		
-		# Define a maior parte de Dₓₓ por suas diagonais.
-		d0 =  fill(-2/h^2,n+1)    # diagonal principal
-		dp =  ones(n)/h^2         # super- e subdiagonal
-		Dₓₓ = diagm(-1=>dp,0=>d0,1=>dp)
-		
-		# Corrigir as primeiras e últimas linhas.
-		Dₓₓ[1,1:4] = [2,-5,4,-1]/h^2
-		Dₓₓ[n+1,n-2:n+1] = [-1,4,-5,2]/h^2
-		
-		return x,Dₓ,Dₓₓ
-		
+    a, b = xspan
+    h = (b - a) / n
+    x = [a + i*h for i in 0:n]
+    # Dx
+    dp = fill(0.5/h, n)
+    dm = fill(-0.5/h, n)
+    Dx = diagm(-1 => dm, 1 => dp)
+    Dx[1, 1:3] = [-1.5, 2, -0.5] / h
+    Dx[n+1, n-1:n+1] = [0.5, -2, 1.5] / h
+    # Dxx
+    d0 = fill(-2/h^2, n+1)
+    dp2 = ones(n) / h^2
+    Dxx = diagm(-1 => dp2, 0 => d0, 1 => dp2)
+    Dxx[1, 1:4] = [2, -5, 4, -1] / h^2
+    Dxx[n+1, n-2:n+1] = [-1, 4, -5, 2] / h^2
+    return x, Dx, Dxx
 end
 ```
 
-Usando essas matrizes para resolver o problema com condições de contorno
+=== PVC estacionário (Laplace 1D)
 
-$T(- 1) = 100, T(1) = 0$
+$T''(x) = 0$ em $(-1,1)$, $T(-1)=100$, $T(1)=0$.
+Solução exata: $T(x) = 50(1 - x)$.
+
+Impor Dirichlet *substituindo linhas* de $D_(x x)$:
 
 ```julia
-n=100
- x,dx,dxx=diffmat(n,[-1,1])
- dxx[1,:].=0 
- dxx[end,:].=0
-  dxx[1,1]=1 
-  dxx[end,end]=1
-  b=zeros(n+1)
-  b[1]=100
-  xdf=dxx\b
+n = 40
+x, Dx, Dxx = diffmat(n, (-1.0, 1.0))
+A = copy(Dxx)
+A[1, :] .= 0;  A[1, 1] = 1
+A[end, :] .= 0; A[end, end] = 1
+rhs = zeros(n + 1)
+rhs[1] = 100
+rhs[end] = 0
+T = A \ rhs
+T_ex = @. 50 * (1 - x)
+
+plot(x, T_ex; label="exato", lw=2, xlabel="x", ylabel="T")
+scatter!(x, T; label="MDF", ms=3)
+@show maximum(abs, T - T_ex)
 ```
 
-== A equação de *difusão*
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Ideia-chave.* $D_(x x) upright(bold(T)) = upright(bold(b))$ é um sistema algébrico esparso nos nós do *domínio*. No BEM 1D da apresentação, o sistema vive só nas *pontas* e usa $H T = G Q$. Mesma física, densidades de informação diferentes.
+]
 
-A *equação de difusão* em uma dimensão é
+== Método das linhas: equação do calor
 
-$u_t = k u_(x x) ,$
+EDP parabólica 1D:
 
-onde  $k$ é o _coeficiente de difusão_.
-A equação do calor é a equação diferencial típica para a classe conhecida como *EDPs parabólicas*. Um processo difusivo é aquele em que a velocidade é proporcional ao gradiente da solução. Assim, mudanças rápidas na solução se achatam rapidamente.
+$ u_t = kappa u_(x x), $
 
-Agora vamos resolver a equação de difusão em$[- 1, 1]$ usando diferenças finitas para aproximar a derivada em $x$. As condições de contorno são $u(- 1, t) = 0, u(1, t) = 2$ e a condição inicial é  $1 + sin(π x \/ 2) + 3(1 - x^2) e^(-4 x^2)$.
+com $kappa > 0$. Fixe a malha em $x$, substitua $u_(x x) approx D_(x x) upright(bold(u))(t)$ e obtenha um *PVI grande* no tempo — o *método das linhas*.
+
+Condições: $u(-1,t)=0$, $u(1,t)=2$, e
+
+$ u(x,0) = 1 + sin(pi x \/ 2) + 3(1-x^2) e^(-4 x^2). $
 
 ```julia
-using DifferentialEquations, Plots
+function heat_rhs!(du, u, p, t)
+    Dxx, κ, ua, ub = p
+    u[1] = ua
+    u[end] = ub
+    mul!(du, Dxx, u)
+    du .*= κ
+    du[1] = 0
+    du[end] = 0
+    return nothing
+end
 
-n=100
-x, dx, dxx = diffmat(n, [-1, 1])
+n = 100
+x, Dx, Dxx = diffmat(n, (-1.0, 1.0))
+κ = 1.0
+ua, ub = 0.0, 2.0
+u0 = @. 1 + sin(pi*x/2) + 3*(1 - x^2)*exp(-4*x^2)
+u0[1] = ua; u0[end] = ub
 
-f = (u,p,t) -> p[1]*[p[2];u[2:end-1];p[3]]
-init = x -> 1 + sin(π*x/2) + 3*(1-x^2)*exp(-4x^2);
-u0 = init.(x)
-tspan = (0, 0.75)
-ivp = ODEProblem(f, u0, tspan, [dxx, 0, 2])
-sol = solve(ivp, Tsit5());
+prob = ODEProblem(heat_rhs!, u0, (0.0, 0.75), (Dxx, κ, ua, ub))
+sol = solve(prob, Tsit5())
 
-plt = plot(xlabel="x", ylabel="u(x,t)", title="Solução da equação de calor", legend=:topleft)
+plt = plot(xlabel="x", ylabel="u(x,t)", title="Calor / difusão", legend=:topleft)
 for tt in 0:0.1:0.7
-    plot!(plt, x[1:end-1], sol(tt)[1:end-1]; label="t=$tt", lw=2)
+    plot!(plt, x, sol(tt); label="t=$tt", lw=2)
 end
 plt
+```
 
-# animação opcional (requer backend de GIF)
+Animação opcional (GIF local) ou vídeo do repositório:
+
+```julia
 anim = @animate for tt in range(0, 0.75; length=60)
-    plot(x[1:end-1], sol(tt)[1:end-1];
-         xlabel="x", ylabel="u(x,t)", ylims=(0, 4.2), legend=false, lw=2,
-         title="Difusão t=$(round(tt; digits=3))")
+    plot(x, sol(tt); xlabel="x", ylabel="u", ylims=(0, 4.2),
+         legend=false, lw=2, title="t=$(round(tt; digits=3))")
 end
 gif(anim, "calor.gif"; fps=15)
 ```
 
-#link("../assets/videos/boundaries-heat.mp4")[Vídeo: boundaries-heat.mp4]
+#link("../assets/videos/boundaries-heat.mp4")[Vídeo pronto: boundaries-heat.mp4]
 
-Aqui as estratégias de passo no tempo apresentadas anteriormente também poderiam ser utilizadas.
+Os integradores do início do capítulo (Euler, RK4, `Tsit5`) aplicam-se a esse sistema; a estabilidade explícita exige $Delta t = O(h^2)$ para o calor — por isso solucionadores *adaptativos* ou implícitos ajudam.
 
-== Exercício -BEM x MDF
+== Equação da onda (método das linhas)
 
-1 - Usando o BEM resolva o mesmo problema de *difusão* e compare com o MDF. Como o termo transiente aparece na equação integral? O que precisa ser feito para descrever $u_t$ em termos das matrizes do BEM?
+EDP hiperbólica 1D (corda / acústica unidimensional):
 
-== Equação da onda
+$ u_(t t) = c^2 u_(x x) , $
 
-A equação da onda é dada por     $u_(t t) - c^2 u_(x x) = 0 .$ Usaremos $x in [0, 1]$ e $t > 0$ como o domínio.
+com velocidade de onda $c > 0$. Diferente do calor, a informação propaga com *velocidade finita* $c$ e a energia (em domínio isolado) se conserva no contínuo.
 
-Para reduzir a ordem desse problema podemos definir:
+=== Redução a 1ª ordem no tempo
 
-$u_t = y, \ y_t = c^2 u_(x x) .$
+Como no pêndulo, introduza a velocidade $v = u_t$:
 
-o que resultaria no sistema matricial:
+$ u_t = v , quad v_t = c^2 u_(x x) . $
 
-$mat(delim: "[", upright(bold(u))' (t); [2 m m] upright(bold(y))' (t)) = mat(delim: "[", bold(0), I; [2 m m] c^2 upright(bold(D))_(x x), bold(0)) mat(delim: "[", upright(bold(u)) (t); [2 m m] upright(bold(y)) (t)) .$
+No espaço, $u_(x x) approx D_(x x) upright(bold(u))$. O estado do PVI fica o *par* de vetores
 
-Usaremos velocidade $c = 2$, as condições de Dirichlet $u(0, t) = u(1, t) = 0$ e duas condições iniciais:
+$ upright(bold(y)) = mat(upright(bold(u)); upright(bold(v))) in RR^(2(n+1)) $
 
-$u(x, 0) = e^(-100(x + 0.5)^2
-) , wide 0 <= x <= 1, \ u_t (x, 0) = - u(x, 0), wide 0 <= x <= 1 .$
+(ou só nós interiores, se as BC fixarem $u$ nos extremos). Então
 
-```julia
-n=100
- x,dx,dxx=diffmat(n,[-1,1])
+$ dot(upright(bold(y))) = mat(upright(bold(v)); c^2 D_(x x) upright(bold(u))) $
 
-f = (u,p,t) -> p[1]*[p[2];u[2:p[4]-1];p[3];u[p[4]+1:end]]
-init = x -> exp(-100*(x+0.5)^2);
-u0=[init.(x); -init.(x)]
-tspan=(0,2)
-c=2
-ivp = ODEProblem(f,u0,tspan,[[zeros(n+1,n+1) I;c^2*dxx zeros(n+1,n+1)],0,0,n+1])
-sol = solve(ivp,Tsit5());
+com BC aplicadas em $upright(bold(u))$ (e $dot(u)=v=0$ nos extremos se Dirichlet homogêneo constante).
 
-plt = plot(xlabel="x", ylabel="u(x,t)", title="Solução da equação da onda", legend=:topleft)
-for tt in 0:0.2:2
-    plot!(plt, x[1:n-1], sol(tt)[1:n-1]; label="t=$tt", lw=2)
-end
-plt
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Checklist para implementar.* \
+  1. `x, Dx, Dxx = diffmat(n, (a,b))`. \
+  2. Estado `y = vcat(u, v)` com `length(u)=length(v)=n+1`. \
+  3. No RHS: separar `u = y[1:n+1]`, `v = y[n+2:end]`; impor BC em `u` (e zerar `v` nos nós de Dirichlet fixo); `du = v`, `dv = c^2 * (Dxx*u)`. \
+  4. Integrar com `Tsit5` (ou RK4 próprio). \
+  5. CFL prático: com passo *fixo* explícito, $Delta t <= h\/c$; com `Tsit5` adaptativo o passo se ajusta, mas malha grossa demais ainda dispersa a onda.
+]
 
-anim = @animate for tt in range(0, 2; length=60)
-    plot(x[1:n-1], sol(tt)[1:n-1];
-         xlabel="x", ylabel="u(x,t)", ylims=(-1.1, 1.1), legend=false, lw=2,
-         title="onda t=$(round(tt; digits=3))")
-end
-gif(anim, "onda.gif"; fps=15)
-```
+=== Problema-modelo com solução exata
 
-#link("../assets/videos/onda.mp4")[Vídeo: onda.mp4]
+$
+  u_(t t) = c^2 u_(x x) , quad 0 < x < 1 , quad t > 0 , \
+  u(0,t)=u(1,t)=0 , \
+  u(x,0)=sin(pi x) , quad u_t (x,0)=0 .
+$
 
-== Desafio
+Modo normal: $u_"exata"(x,t) = sin(pi x) cos(c pi t)$ (verifique BC, CI e a EDP).
 
-Usando o BEM resolva o mesmo problema e compare com o MDF.
+Esqueleto MDF:
 
 ```julia
-x0=0
-xf=1
-l=xf-x0
-H=[0.5 -.5
--.5 .5]
-G=-[0 l/2
--l/2 0]
-#T=0.5*(x1[1]+x1[2]).+(xs.-x0)/2*x1[3].+(xs.-xf)/2*x1[4]
+function wave_rhs!(dy, y, p, t)
+    Dxx, c2, nnode = p
+    u = @view y[1:nnode]
+    v = @view y[nnode+1:end]
+    du = @view dy[1:nnode]
+    dv = @view dy[nnode+1:end]
+    # Dirichlet homogêneo
+    u[1] = 0.0
+    u[end] = 0.0
+    v[1] = 0.0
+    v[end] = 0.0
+    du .= v
+    mul!(dv, Dxx, u)
+    dv .*= c2
+    du[1] = 0.0
+    du[end] = 0.0
+    dv[1] = 0.0
+    dv[end] = 0.0
+    return nothing
+end
 
-Hi=[0.5 0.5]
-Gi=[(xs.-x0)/2 (xs.-xf)/2]
-
-Ht=[H zeros(2,2);Hi -I]
-Gt=[G ;Gi ]
+function solve_wave_mdf(; n=100, c=1.0, tspan=(0.0, 2.0))
+    x, Dx, Dxx = diffmat(n, (0.0, 1.0))
+    nnode = length(x)
+    u0 = sin.(pi .* x)
+    v0 = zeros(nnode)
+    y0 = vcat(u0, v0)
+    prob = ODEProblem(wave_rhs!, y0, tspan, (Dxx, c^2, nnode))
+    sol = solve(prob, Tsit5(); reltol=1e-8, abstol=1e-8)
+    return sol, x
+end
 ```
+
+BEM (só a *forma*, para o exercício): no contorno, algo como
+$ M upright(bold(u))'' + H upright(bold(u)) = G upright(bold(q)) $
+com $q$ ligado a $partial_n u$; o método das linhas no contorno seria um sistema de 2ª ordem no tempo (ou 1ª ordem em $(u, dot(u))$ nas faces). No E5 pede-se o MDF completo e apenas o esboço matricial BEM.
+
+== Ponte com o BEM
+
+=== Duas semi-discretizações da mesma física
+
+A equação do calor 1D $T_t = kappa T_(x x)$ pode ser atacada de dois jeitos depois de discretizar o *espaço*:
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Aspecto*], [*MDF (domínio)*], [*BEM (contorno)*],
+  [Incógnitas primárias],
+  [ $T$ em todos os nós de $[x_0,x_f]$ ],
+  [ $T$ e\/ou $Q=partial T\/partial x$ só em $x_0,x_f$ ],
+
+  [Operador espacial], [ $D_(x x)$ esparsa ], [ matrizes cheias $H,G$ da identidade integral ],
+  [Tempo],
+  [ $dot(upright(bold(T))) = kappa D_(x x) upright(bold(T))$ (+ BC) ],
+  [ $M dot(upright(bold(T))) + H upright(bold(T)) = G upright(bold(Q))$ ],
+
+  [Interior], [ já está no vetor de estado ], [ pós-processamento pela fórmula de representação ],
+)
+
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Ideia-chave.* O *método das linhas* é o mesmo em ambos: depois do espaço, sobra um PVI (ou DAE) no tempo. O que muda é *quem* são as incógnitas e *quais* matrizes multiplicam $T$, $Q$ e $dot(T)$.
+]
+
+=== De $H T = G Q$ para o calor
+
+Na aula 1 (estacionário), $H T = G Q$ nas pontas ($n_c=2$). Com $T_t = kappa T''$ vem o domínio
+
+$ integral_(x_0)^(x_f) T^* (x,x_d), (dot(T)(x)\/kappa) dif x . $
+
+=== Cada Gauss é fonte interior: bloco $(n_c+n_i)$
+
+Gauss–Legendre em $[x_0,x_f]$: nós $x^g_j$, pesos $w_j$ ($j=1..n_i$).
+Cada $x^g_j$ tem *dois* papéis:
+
+1. ponto de *campo* na quadratura de $dot(T)$;
+2. ponto *fonte* (colocação interior, $c=1$).
+
+Colocações:
+
+$ x_d = (x_0, x_f, x^g_1, ..., x^g_(n_i)), wide N = n_c + n_i. $
+
+Aproximação nodal por Gauss:
+
+$ integral T^* (dot(T)\/kappa) dif x approx sum_(j=1)^(n_i) (w_j\/kappa) T^* (x^g_j, x_d^{(p)}) thin dot(T)(x^g_j). $
+
+Isso define o bloco retangular $M^g in RR^(N times n_i)$. O sistema *quadrado* $(n_c+n_i) times (n_c+n_i)$ do método das linhas fecha com as incógnitas de contorno livres ($Q$ e\/ou $dot(T)$ nos extremos não prescritos) empilhadas às $dot(T)^g$:
+
+$ z = (Q_0, dot(T)_f, dot(T)(x^g_1), ..., dot(T)(x^g_(n_i))) in RR^N $
+
+no problema misto $T_0$ fixo ($dot(T)_0=0$) e $Q_f=0$. As $N$ colocações fornecem $A z = r$.
+
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Ideia-chave.* Montar $M$ *não* é “somar $T^*$ nos Gauss e jogar numa diagonal”. Cada Gauss gera uma *linha* (fonte interior) e uma *coluna* (amostra de $dot(T)$).
+]
+
+=== Código: `bem1d_M` e RHS $(n_c+n_i)$
+
+```julia
+using LinearAlgebra, Plots, FastGaussQuadrature, DifferentialEquations
+
+Tstar(x, xd) = -0.5 * abs(x - xd)
+Qstar(x, xd) = x == xd ? 0.0 : -0.5 * sign(x - xd)
+
+function bem1d_HG(x0, xf)
+    L = xf - x0
+    H = [0.5 -0.5; -0.5 0.5]
+    G = L * [0.0 -0.5; 0.5 0.0]
+    return H, G, L
+end
+
+"""
+    bem1d_M(x0, xf; κ=1.0, nq=6)
+
+BEM 1D com `nq` Gauss como fontes/interiores.
+N = nc + ni = 2 + nq colocações `xd = [x0, xf, xg...]`.
+
+Retorna:
+- `Mg` : N×ni,  Mg[p,j] = w[j]/κ * T*(xg[j], xd[p])
+- `Hb, Gb` : N×2 (contorno clássico nas linhas 1:2; representação nas interiores)
+"""
+function bem1d_M(x0, xf; κ=1.0, nq=6)
+    nc = 2
+    ξ, ŵ = gausslegendre(nq)
+    jac = (xf - x0) / 2
+    xg = collect(@. (x0 + xf)/2 + jac * ξ)
+    w  = collect(ŵ .* jac)
+    ni = nq
+    xd = vcat([x0, xf], xg)
+    N = nc + ni
+
+    Mg = zeros(N, ni)
+    for p in 1:N, j in 1:ni
+        Mg[p, j] = w[j] / κ * Tstar(xg[j], xd[p])
+    end
+
+    H, G, _ = bem1d_HG(x0, xf)
+    Hb = zeros(N, 2)
+    Gb = zeros(N, 2)
+    Hb[1:2, :] .= H
+    Gb[1:2, :] .= G
+    # interior p: T(xd) + Hb·Tb - Gb·Qb + Mg·Ṫg = 0
+    # partindo de
+    # -T = Tf Q*(xf) - T*(xf) Qf - T0 Q*(x0) + T*(x0) Q0 + ∑ Mg Ṫg
+    for p in 3:N
+        xdp = xd[p]
+        Hb[p, 1] = -Qstar(x0, xdp)
+        Hb[p, 2] =  Qstar(xf, xdp)
+        Gb[p, 1] = -Tstar(x0, xdp)
+        Gb[p, 2] =  Tstar(xf, xdp)
+    end
+    return (; x0, xf, xg, w, xd, Mg, Hb, Gb, nc, ni, N, κ)
+end
+```
+
+Equações em cada colocação $p=1..N$ (vetor $T^b=(T_0,T_f)$, $Q^b=(Q_0,Q_f)$, $T^g$, $dot(T)^g$):
+
+- contorno ($p=1,2$): $(H T^b - G Q^b)_p + (M^g dot(T)^g)_p = 0$;
+- interior ($p=2+i$): $T^g_i + (H^b_(p,:) T^b - G^b_(p,:) Q^b) + (M^g dot(T)^g)_p = 0$.
+
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Incógnitas (BC mista: $T_0$ fixo, $Q_f=0$).*   O sistema *reduzido* de ordem $N-1$ resolve
+  $z = (Q_0, dot(T)^g) in RR^(n_i+1)$
+  com as colocações em $x_0$ e em todos os Gauss (linhas $1$ e $3..N$).   Como o Gauss aberto não coloca massa em $x_f$, define-se
+  $dot(T)_f$ pelo $dot(T)$ no Gauss mais próximo de $x_f$
+  (no código: `argmax(xg)`). Para acoplar $dot(T)_f$ à massa de fato, use Gauss–Lobatto ou DIBEM.
+]
+
+=== Método das linhas (implementação)
+
+Estado $y = (T_f, T^g_1, ..., T^g_(n_i)) in RR^(N-1)$.
+
+A matriz $A$ do sistema em $z = (Q_0, dot(T)^g)$ depende só da malha (`Gb`, `Mg`), *não* de $y$. Fatora-se *uma vez*; a cada RHS só monta o residual $r(y)$ e faz $z = F \\ r$.
+
+```julia
+"""Fator LU de A (constante no tempo). Linhas de colocação: x0 + Gauss."""
+function bem_heat_factor(mesh)
+    (; Gb, Mg, ni, N) = mesh
+    rows = vcat(1, 3:N)                 # N-1 equações
+    nz = 1 + ni
+    A = zeros(nz, nz)
+    for (eq, p) in enumerate(rows)
+        A[eq, 1] = -Gb[p, 1]            # coluna Q0
+        A[eq, 2:end] .= Mg[p, :]        # colunas Ṫg
+    end
+    return lu(A), rows
+end
+
+"""RHS: só r(y); resolve com fator pré-computado F."""
+function bem_heat_rhs!(dy, y, p, t)
+    mesh, TL, F, rows = p
+    (; Hb, nc, ni, xg) = mesh
+    Tf = y[1]
+    Tg = y[2:end]
+    @assert length(Tg) == ni
+
+    r = zeros(1 + ni)
+    for (eq, pidx) in enumerate(rows)
+        r[eq] = -(Hb[pidx, 1] * TL + Hb[pidx, 2] * Tf)
+        if pidx > nc
+            r[eq] -= Tg[pidx - nc]
+        end
+    end
+    z = F \ r
+    Tdotg = z[2:end]
+
+    dy[1] = Tdotg[argmax(xg)]           # Ṫ_f ≈ Ṫ no Gauss mais à direita
+    dy[2:end] .= Tdotg
+    return nothing
+end
+
+function solve_bem_heat(; L=1.0, κ=1.0, TL=0.0, tspan=(0.0, 0.5), nq=8,
+                         T0 = nothing)
+    mesh = bem1d_M(0.0, L; κ=κ, nq=nq)
+    F, rows = bem_heat_factor(mesh)
+    if T0 === nothing
+        T0 = x -> TL + (0.0 - TL) * (x / L)
+    end
+    y0 = vcat(T0(L), T0.(mesh.xg))
+    prob = ODEProblem(bem_heat_rhs!, y0, tspan, (mesh, TL, F, rows))
+    sol = solve(prob, Tsit5(); reltol=1e-8, abstol=1e-8)
+    return sol, mesh
+end
+
+function profile_at(solB, mesh, TL, t)
+    y = solB(t)
+    Tf, Tg = y[1], y[2:end]
+    x = vcat(mesh.x0, mesh.xg, mesh.xf)
+    T = vcat(TL, Tg, Tf)
+    perm = sortperm(x)
+    return x[perm], T[perm]
+end
+```
+
+=== Exemplo com solução analítica
+
+Problema (compatível com as BC mistas do código: Dirichlet à esquerda, Neumann nulo à direita):
+
+$
+  T_t = kappa T_(x x), quad 0 < x < L, quad t > 0, \
+  T(0,t) = 0, quad partial_x T(L,t) = 0, \
+  T(x,0) = sin(lambda_0 x), quad lambda_0 = pi\/(2 L).
+$
+
+Autofunção de $partial_(x x)$ com essas BC: $sin(lambda_n x)$, $lambda_n = (2n+1) pi \/ (2 L)$.
+O modo fundamental ($n=0$) evolui exatamente como
+
+$
+  T_"exata"(x,t) = sin(lambda_0 x)\, e^(- kappa lambda_0^2 t),
+  quad lambda_0 = pi\/(2 L).
+$
+
+Com $L=1$, $kappa=1$: $lambda_0 = pi\/2$, $T(x,t) = sin(pi x\/2)\, e^(-(pi\/2)^2 t)$.
+
+```julia
+L, κ = 1.0, 1.0
+λ0 = π / (2L)
+T_exact(x, t) = sin(λ0 * x) * exp(-κ * λ0^2 * t)
+TL = 0.0
+tspan = (0.0, 0.5)
+
+solB, mesh = solve_bem_heat(; L=L, κ=κ, TL=TL, tspan=tspan, nq=8,
+    T0 = x -> sin(λ0 * x))
+
+# --- T(L,t): BEM × analítico ---
+ts = range(tspan...; length=80)
+TR_bem = [solB(t)[1] for t in ts]
+TR_ex  = [T_exact(L, t) for t in ts]
+
+p1 = plot(ts, TR_ex; lw=2, label="analítico", xlabel="t", ylabel="T(L,t)",
+          title="Ponta direita")
+plot!(p1, ts, TR_bem; lw=2, ls=:dash, label="BEM + linhas (nq=$(mesh.ni))")
+
+# --- perfil em t fixo ---
+t_snap = 0.25
+xp, Tp = profile_at(solB, mesh, TL, t_snap)
+xx = range(0, L; length=200)
+p2 = plot(xx, T_exact.(xx, t_snap); lw=2, label="analítico",
+          xlabel="x", ylabel="T", title="Perfil t = $t_snap")
+plot!(p2, xp, Tp; marker=:circle, lw=2, ls=:dash, label="BEM (nós)")
+
+plot(p1, p2; layout=(1, 2), size=(900, 350))
+
+# --- erros ---
+err_TR = maximum(abs, TR_bem .- TR_ex)
+err_prof = maximum(abs, Tp .- T_exact.(xp, t_snap))
+@show err_TR err_prof
+
+# --- estudo com nq ---
+println("nq\terr_T(L,t)\terr_perfil(t=$t_snap)")
+for nq in (2, 4, 6, 8, 12)
+    soln, mn = solve_bem_heat(; L=L, κ=κ, TL=TL, tspan=tspan, nq=nq,
+        T0 = x -> sin(λ0 * x))
+    eL = maximum(abs, [soln(t)[1] - T_exact(L, t) for t in ts])
+    xq, Tq = profile_at(soln, mn, TL, t_snap)
+    ep = maximum(abs, Tq .- T_exact.(xq, t_snap))
+    println("$nq\t$eL\t$ep")
+end
+```
+
+Leitura esperada: com o modo fundamental nas BC certas, o erro em $T(L,t)$ e no perfil cai ao aumentar $n_q$ (mais fontes interiores = melhor $M^g$), até saturar pelo modelo 1D\/SF estacionária e pela amarração de $dot(T)_f$. Compare sempre com a curva $e^(- (pi\/2)^2 t)$ na ponta ($T(L,0)=1$).
+
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Por que essa CI?* $sin(pi x\/(2L))$ some em $x=0$ e tem derivada nula em $x=L$, logo respeita as BC para todo $t$ na solução exata. Isso isola o erro da *semi-discretização BEM*, não de BC incompatíveis.
+]
+
+#block(
+  width: 100%,
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(180),
+  fill: luma(248),
+)[
+  *Checklist.* \
+  + $N = n_c + n_i$ colocações: 2 extremos + todos os Gauss. \
+  + $M^g$: $N times n_i$, $M^g_(p j)=w_j kappa^(-1) T^* (x^g_j, x_d^p)$ — coluna = fonte de domínio no Gauss $j$. \
+  + $H^b,G^b$: $N times 2$. \
+  + Fator LU de $A$ ($N-1$) *uma vez*; cada RHS só monta $r(y)$ e faz `F \ r` para $(Q_0, dot(T)^g)$. \
+  + 2D: o mesmo papel dos Gauss é o dos pontos interiores DIBEM.
+]
+
+=== Checklist MDF × BEM (linhas)
+
++ Espaço → PVI\/DAE no tempo.
++ BEM: estado = contorno livre + $T$ em cada Gauss (fonte interior).
++ Matriz espacial densa de ordem $~ n_c+n_i$, *fatorada uma vez*; residual a cada passo.
++ Integrador no tempo intercambiável (`Tsit5`, RK4, Houbolt).
++ $n_i arrow.t$ enriquece domínio e tamanho do sistema.
+
+== Exercícios
+
+Entregue para cada item: código Julia (Plots), figuras pedidas e *duas ou três frases* de interpretação. Use os solucionadores e rotinas do capítulo (`euler`, `rk4`, `diffmat`, `bem1d_M`, `solve_bem_heat`, …).
+
++ *E1 — Ordem de Euler e RK4.*
+  Considere o PVI
+  $ u' = - 2 t u , quad u(0) = 2 , quad t in [0, 2] , $
+  com solução exata $hat(u)(t) = 2 e^(-t^2)$.
+
+  (a) Com `euler` e `rk4`, tome $n = 10 · 2^d$ para $d = 1, ..., 8$ e calcule o erro no tempo final
+  $ e(n) = | u_n - hat(u)(t_n) | . $
+
+  (b) Em um único gráfico log–log ($n$ × $e(n)$), plote as duas curvas e sobreponha retas de referência $C_1 n^(-1)$ e $C_4 n^(-4)$ (ajuste $C_1,C_4$ no primeiro $n$ de cada método).
+
+  (c) Com base nas inclinações, confirme as ordens e diga a partir de qual $n$ o RK4 deixa de ganhar (saturação por aritmética ou pela referência).
+
++ *E2 — De 2ª ordem a sistema.*
+  O problema
+  $ u'' + 9 u = 9 t , quad u(0) = 1 , quad u' (0) = 1 , quad t in [0, 2 pi] $
+  tem solução $hat(u)(t) = t + cos(3 t)$.
+
+  (a) Escreva o sistema de 1ª ordem em $upright(bold(y)) = (u, u')$ e a função $f(y,p,t)$ correspondente.
+
+  (b) Integre com `rk4` ($n = 200$) e com `Tsit5` (`DifferentialEquations`). Reporte
+  $ e = | u(2 pi) - hat(u)(2 pi) | $
+  nos dois casos.
+
+  (c) Plote $u(t)$ numérico (RK4) e $hat(u)(t)$ no mesmo eixo. Onde o erro se concentra ao longo de $t$?
+
++ *E3 — PVC 1D com `diffmat`.*
+  Resolva
+  $ - T'' = 1 , quad x in (0,1) , quad T(0) = T(1) = 0 , $
+  cuja solução exata é $T(x) = x(1-x)\/2$.
+
+  (a) Use `diffmat` e imponha Dirichlet por substituição de linhas. Para $n in {10, 20, 40, 80}$ (intervalos), calcule
+  $ e_infinity (h) = max_i | T(x_i) - T_h (x_i) | , quad h = 1\/n . $
+
+  (b) Plote $e_infinity$ vs $h$ em escala log–log e estime a ordem $p$ em $e = O(h^p)$.
+
+  (c) Para $n=40$, plote $T$ exata e $T_h$ juntas. O erro máximo ocorre no centro ou perto das bordas? Por quê, dada a ordem das fórmulas em $D_(x x)$?
+
++ *E4 — MDF × BEM × solução analítica (calor 1D).*
+  Considere o mesmo problema do exemplo do texto:
+  $
+    T_t = T_(x x) , quad 0 < x < 1 , \
+    T(0,t)=0 , quad partial_x T(1,t)=0 , \
+    T(x,0)=sin(pi x \/ 2) ,
+  $
+  com solução exata
+  $ T(x,t)=sin(pi x \/ 2)\, e^(-(pi\/2)^2 t) . $
+
+  *MDF (método das linhas).* Use `diffmat` em $[0,1]$ com $n$ intervalos, imponha $T(0,t)=0$ e a Neumann $partial_x T(1,t)=0$ (substitua a última linha de $D_(x x)$ por a linha correspondente de $D_x$, ou uma condição equivalente de ordem 2). Integre no tempo com `Tsit5` até $t=0.5$.
+
+  *BEM (método das linhas no contorno).* Use `solve_bem_heat` / `bem1d_M` com $n_q$ Gauss como fontes interiores (fator LU pré-computado).
+
+  (a) *Erros em relação ao analítico.* Para MDF com $n in {40, 80, 160}$ e BEM com $n_q in {2, 4, 6, 8, 12}$, reporte
+  $ e_L = max_(t in [0,0.5]) | T(1,t) - T_"exata"(1,t) | $
+  e o erro máximo do perfil em $t=0.25$. Organize em duas tabelas (MDF e BEM).
+
+  (b) *Figuras.* Em $t=0.25$, plote no *mesmo* gráfico: solução exata, perfil MDF (melhor $n$) e perfil BEM (melhor $n_q$). Em outro gráfico: $T(1,t)$ exata, MDF e BEM ao longo do tempo.
+
+  (c) *Comparação MDF × BEM.* Com os números e as figuras:
+  - qual método atinge erro $< 10^(-3)$ em $e_L$ com menos graus de liberdade no *estado* do PVI? (MDF: $~ n-1$ interiores; BEM: $1+n_q$)
+  - o erro do BEM satura ao subir $n_q$? O do MDF satura ao subir $n$?
+  - comente o custo por passo: fator esparso\/aplicação de $D_(x x)$ vs. backsolve denso $(N-1) times (N-1)$ já fatorado.
+
+  (d) *Pergunta teórica:* se $M^g equiv 0$ no BEM, o que resta das equações de colocação? Por que some a dinâmica com a SF estacionária de Laplace?
+
++ *E5 — Propagação de onda (MDF + comparação; esboço BEM).*
+
+  *Teoria mínima (releia a § “Equação da onda”).*
+  A EDP $u_(t t)=c^2 u_(x x)$ é de *segunda ordem no tempo*. Para usar `euler` \/ `rk4` \/ `Tsit5` (feitos para $y'=f(t,y)$), reduza a ordem:
+  $ v = u_t , quad u_t = v , quad v_t = c^2 u_(x x) . $
+  No espaço, troque $u_(x x)$ por $D_(x x) upright(bold(u))$ (`diffmat`). O estado do PVI é
+  $ upright(bold(y)) = (upright(bold(u)), upright(bold(v))) . $
+  Em extremos com Dirichlet *fixo* $u=0$, imponha também $v=u_t=0$ nesses nós.
+
+  *Problema.*
+  $
+    u_(t t) = c^2 u_(x x) , quad 0 < x < 1 , quad 0 < t <= 2 , \
+    u(0,t)=u(1,t)=0 , \
+    u(x,0)=sin(pi x) , quad u_t(x,0)=0 ,
+  $
+  com $c=1$ e solução exata
+  $ u_"exata"(x,t)=sin(pi x)\, cos(pi t) . $
+
+  (a) *Implementação MDF.* Usando o esqueleto `wave_rhs!` \/ `solve_wave_mdf` (ou equivalente seu) com `diffmat` e `Tsit5`, resolva para $n in {50, 100, 200}$ intervalos.
+  Em cada $n$, calcule
+  $ e_infinity (t) = max_i | u_h (x_i,t) - u_"exata"(x_i,t) | $
+  nos instantes $t in {0.5, 1.0, 1.5, 2.0}$. Monte uma tabela $(n,t,e_infinity)$.
+
+  (b) *Figuras.*
+  - Perfis $u(x,t)$ em $t=0, 0.5, 1.0, 1.5$ (MDF com o melhor $n$) sobrepostos à exata (linhas tracejadas).
+  - Série temporal no ponto médio: $u(1\/2,t)$ numérico vs $cos(pi t)$ (exata, pois $sin(pi\/2)=1$).
+
+  (c) *Dispersão e refinamento.* O erro cresce com $t$ mesmo com BC e CI “perfeitas” no modo fundamental? Se sim, atribua a *dispersão numérica* de $D_(x x)$ (a velocidade numérica do modo depende de $h$). Mostre que $e_infinity$ em $t=2$ cai ao aumentar $n$ e estime a ordem aparente em $h$.
+
+  (d) *Comparação qualitativa com o calor (E4).* Em uma frase cada: (i) o que acontece com a “energia” \/ amplitude do modo no calor vs na onda; (ii) restrição de passo no tempo explícito ($Delta t = O(h^2)$ vs $O(h)$).
+
+  (e) *BEM — só estrutura (sem obrigar código).* Escreva a forma matricial esperada no contorno
+  $ M upright(bold(u))'' + H upright(bold(u)) = G upright(bold(q)) $
+  e diga: o que são as incógnitas em cada extremo se $u(0,t)=u(1,t)=0$? O método das linhas no contorno atuaria sobre quais componentes de $z$? Em que o bloco $M$ aqui difere do $M^g$ do calor (segunda derivada temporal vs primeira)?
+
+  (f) *Opcional (Houbolt).* Com o extra do capítulo, integre o oscilador modal equivalente $U'' + (c pi)^2 U = 0$ (amplitude do modo $sin(pi x)$) com Houbolt e compare $U(t)$ a $cos(c pi t)$. Relacione com o item (b) no ponto médio.
+
+== Extra: multi-passo AB4 e Houbolt
+
+RK avalia $f$ várias vezes por passo *sem* histórico. Métodos de *múltiplos passos* reutilizam $f_i = f(t_i, u_i)$ passados. Ficam no fim porque a trilha BEM já está completa com Euler\/RK\/`Tsit5`; use-os quando quiser menos avaliações de $f$ ou integradores da dinâmica estrutural.
+
+=== Adams–Bashforth 4 (explícito)
+
+$
+  u_(i+1) = u_i + h (55/24 f_i - 59/24 f_(i-1) + 37/24 f_(i-2) - 9/24 f_(i-3)).
+$
+
+Precisa de 3 valores iniciais (starter: RK4 num trecho curto).
+
+```julia
+function ab4(ivp, n)
+    a, b = ivp.tspan
+    h = (b - a) / n
+    t = [a + i*h for i in 0:n]
+    u0 = ivp.u0 isa Number ? float(ivp.u0) : float.(ivp.u0)
+    U = Vector{typeof(u0)}(undef, n + 1)
+    _, Us = rk4(ODEProblem(ivp.f, ivp.u0, (a, a + 3h), ivp.p), 3)
+    U[1:4] .= Us
+    σ = [-9, 37, -59, 55] ./ 24
+    F = [ivp.f(U[i], ivp.p, t[i]) for i in 1:4]
+    for i in 4:n
+        U[i+1] = U[i] + h * sum(σ[j] * F[j] for j in 1:4)
+        F = (F[2], F[3], F[4], ivp.f(U[i+1], ivp.p, t[i+1]))
+    end
+    return t, U
+end
+```
+
+=== Houbolt (2ª ordem no tempo)
+
+Comum em dinâmica estrutural e em BEM elástico transiente. Aproxima
+
+$
+  u''_(n+1) = (2 u_(n+1) - 5 u_n + 4 u_(n-1) - u_(n-2))/h^2, \
+  u'_(n+1) = (11 u_(n+1) - 18 u_n + 9 u_(n-1) - 2 u_(n-2))/(6 h).
+$
+
+Implícito: $u_(n+1)$ entra nos dois lados quando a EDO é $u'' = f(t,u,u')$. Amortece altas frequências (rígido).
+
+Esqueleto para o oscilador $u'' + omega^2 u = 0$ (estado escalar; starter com RK4 na forma 1ª ordem):
+
+```julia
+"""Houbolt para u'' + ω² u = 0, n passos em [0, tf]."""
+function houbolt_oscillator(ω, u0, v0, tf, n)
+    h = tf / n
+    t = collect(range(0, tf; length=n+1))
+    u = zeros(n + 1)
+    # starter: RK4 no sistema (u,v)
+    fsys = (y, p, τ) -> [y[2], -ω^2 * y[1]]
+    _, Ys = rk4(ODEProblem(fsys, [u0, v0], (0.0, 2h), nothing), 2)
+    u[1] = u0
+    u[2] = Ys[2][1]
+    u[3] = Ys[3][1]
+    for i in 3:n
+        # (2/h²) u_{i+1} + ω² u_{i+1} = (5 u_i - 4 u_{i-1} + u_{i-2}) / h²
+        rhs = (5u[i] - 4u[i-1] + u[i-2]) / h^2
+        u[i+1] = rhs / (2/h^2 + ω^2)
+    end
+    return t, u
+end
+
+ω = 2π
+tH, uH = houbolt_oscillator(ω, 1.0, 0.0, 10.0, 400)
+tR, UR = rk4(ODEProblem((y,p,τ)->[y[2], -ω^2*y[1]], [1.0, 0.0], (0.0, 10.0), nothing), 400)
+plot(tH, uH; label="Houbolt", lw=2)
+plot!(tR, [y[1] for y in UR]; label="RK4", ls=:dash, lw=2,
+      xlabel="t", ylabel="u", title="u'' + ω²u = 0")
+```
+
+Adams–Moulton \/ preditor–corretor: leitura exterior (não são necessários para a trilha BEM deste capítulo).
+
