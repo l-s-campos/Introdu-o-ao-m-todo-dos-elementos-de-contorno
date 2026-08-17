@@ -231,7 +231,8 @@ No restante deste capítulo usamos a forma canônica
 $ nabla^2 T = 0 $
 
 (com $k$ absorvido na definição de $q$ quando conveniente).
-usando o método dos resíduos ponderados e aplicando a segunda identidade de Green (com $u = T$ e peso $v$):
+
+Usando o método dos resíduos ponderados e aplicando a segunda identidade de Green (com $u = T$ e peso $v$):
 
 $ integral_Omega (v nabla^2 T - T nabla^2 v) d Omega = integral_Gamma (v (partial T)/(partial n) - T (partial v)/(partial n)) d s $
 
