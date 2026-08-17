@@ -159,8 +159,78 @@ Correspondência com o `BEM_gmsh`:
 
 A equação de Laplace é dada por:
 
-$ nabla^2 T = 0, $
+$ nabla^2 T = 0 . $
 
+Com fonte de domínio ($f != 0$) vira Poisson, $nabla^2 T = f$ — o capítulo *Poisson 2D* trata o termo extra.
+A *mesma* PDE descreve vários problemas físicos: só mudam o nome do campo, a lei constitutiva e o significado de $f$ e do fluxo.
+
+=== Aplicações físicas (Laplace \/ Poisson)
+
+#figure(
+  kind: table,
+  caption: [Exemplos de problemas físicos descritos por Laplace ou Poisson (adaptado de tabelas clássicas de MEC\/BEM).],
+)[
+#set text(size: 9.5pt)
+#table(
+  columns: (1.15fr, 1.15fr, 1.35fr, 1.35fr),
+  inset: 6pt,
+  stroke: 0.5pt + luma(200),
+  align: (left, left, left, left),
+  table.header(
+    [*Equação*],
+    [*Problema físico*],
+    [*Grandezas*],
+    [*Lei \/ fluxo*],
+  ),
+  [$nabla^2 phi = 0$],
+  [Torção de Saint-Venant (barras elásticas)],
+  [$phi = phi(x,y)$: função de empenamento],
+  [Hooke; tensões a partir de $phi$ (via $bold(D) = bold(a)^(-1)$)],
+
+  [$nabla · (S nabla u) + f = 0$],
+  [Pequenas deflexões de membranas],
+  [$u$: deflexão; $f$: carga transversal; $S$: tensão por comprimento],
+  [$bold(D) = S bold(I)$ (isotrópico)],
+
+  [$nabla · (bold(D) nabla T) + f = 0$],
+  [Condução de calor],
+  [$T$: temperatura; $bold(D)$: condutividade; $f$: geração interna],
+  [Fourier: $bold(q) = - bold(D) nabla T$],
+
+  [$nabla · (nabla phi) + f = 0$],
+  [Escoamento irrotacional, incompressível e invíscido],
+  [$phi$: potencial de velocidade; $f$: fonte de massa],
+  [$bold(v) = nabla phi$ (cinemática; sem lei constitutiva extra)],
+
+  [$nabla · (bold(D) nabla phi) + f = 0$],
+  [Escoamento em meio poroso],
+  [$phi$: carga piezométrica; $bold(D)$: permeabilidade; $f$: fonte],
+  [Darcy: $bold(q) = - bold(D) nabla phi$],
+
+  [$nabla · (bold(D) nabla V) + f = 0$],
+  [Potencial elétrico em meios condutores],
+  [$V$: potencial; $bold(D)$: condutividade elétrica; $f$: carga],
+  [Ohm: $bold(q) = - bold(D) nabla V$],
+)
+]
+
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(200),
+)[
+  *Leitura para o curso.* No `BEM_gmsh` o protótipo é *potencial* $T$ com $q = -k partial T \/ partial n$ (calor \/ Laplace escalar).
+  Casos com $bold(D)$ anisotrópico ou $f != 0$ mudam a SF ou pedem termo de domínio (Poisson \/ DIBEM).
+  A formulação integral e as matrizes $H,G$ *são as mesmas* em espírito: campo no contorno + fluxo conjugado.
+]
+
+No restante deste capítulo usamos a forma canônica
+
+$ nabla^2 T = 0 $
+
+(com $k$ absorvido na definição de $q$ quando conveniente).
 usando o método dos resíduos ponderados e aplicando a segunda identidade de Green (com $u = T$ e peso $v$):
 
 $ integral_Omega (v nabla^2 T - T nabla^2 v) d Omega = integral_Gamma (v (partial T)/(partial n) - T (partial v)/(partial n)) d s $
