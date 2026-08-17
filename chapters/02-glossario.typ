@@ -77,7 +77,7 @@ Em textos de mecânica dos fluidos o potencial costuma ser $phi$ ou $u$; *nestas
   [Robin / convecção], [$q = h (T - T_infinity)$ — combinação linear],
 )
 
-No Gmsh / `BEM_gmsh`: Laplace `"0;T"` ou `"1;q"`; elasticidade `"tx;ux;ty;uy"` (ver capítulo *Gmsh e malhas*).
+No Gmsh / `BEM_gmsh`: Laplace `"0;T"` ou `"1;q"`; elasticidade `"tx;ux;ty;uy"` (ver capítulo *Laplace 2D*).
 
 == Integração e erro
 

@@ -98,7 +98,7 @@ solve(dad)
 # compare com ur_tube / σr_tube / σθ_tube no mesmo arquivo
 ```
 
-Convenção de CDC nos grupos físicos: `"tx;ux;ty;uy"` (ver capítulo *Gmsh e malhas*).
+Convenção de CDC nos grupos físicos: `"tx;ux;ty;uy"` (ver capítulo *Laplace 2D*).
 
 == Exercícios
 

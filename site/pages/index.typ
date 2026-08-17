@@ -14,12 +14,11 @@
   3. #link("interpolacao.html")[Interpolação]
   4. #link("equacoes-diferenciais.html")[Equações diferenciais]
   5. #link("indo-para-2d.html")[Indo para 2D]
-  6. #link("gmsh.html")[Gmsh e malhas]
-  7. #link("laplace-2d.html")[Laplace 2D]
-  8. #link("poisson-2d.html")[Poisson 2D]
-  9. #link("elasticidade-2d.html")[Elasticidade 2D]
-  10. #link("propgeo-3d.html")[Propgeo 3D]
-  11. #link("trabalhos-finais.html")[Trabalhos finais]
+  6. #link("laplace-2d.html")[Laplace 2D]
+  7. #link("poisson-2d.html")[Poisson 2D]
+  8. #link("elasticidade-2d.html")[Elasticidade 2D]
+  9. #link("propgeo-3d.html")[Propgeo 3D]
+  10. #link("trabalhos-finais.html")[Trabalhos finais]
 
   == Extra
 

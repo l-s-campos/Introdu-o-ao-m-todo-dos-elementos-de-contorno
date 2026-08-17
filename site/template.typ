@@ -9,7 +9,6 @@
   (id: "interpolacao", title: "Interpolação", file: "interpolacao.html"),
   (id: "equacoes-diferenciais", title: "Equações diferenciais", file: "equacoes-diferenciais.html"),
   (id: "indo-para-2d", title: "Indo para 2D", file: "indo-para-2d.html"),
-  (id: "gmsh", title: "Gmsh e malhas", file: "gmsh.html"),
   (id: "laplace-2d", title: "Laplace 2D", file: "laplace-2d.html"),
   (id: "poisson-2d", title: "Poisson 2D", file: "poisson-2d.html"),
   (id: "elasticidade-2d", title: "Elasticidade 2D", file: "elasticidade-2d.html"),

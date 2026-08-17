@@ -1,42 +1,87 @@
-// Laplace 2D
-// markdown2typst + tex2typst
+// Laplace 2D — Gmsh + CDC + BEM_gmsh
+// Geometria de contorno: capítulo "Indo para 2D"
 
 = Laplace 2D
 <laplace-2d>
 
-- Código de referência: #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`]
+Geometria, $N_k$, $J$ e $upright(bold(n))$ já vieram de *Indo para 2D*.
+Aqui o Gmsh deixa de ser só malha e passa a carregar *CDC*; montamos $H,G$ e resolvemos o primeiro BEM 2D completo.
 
-  Clone o repositório, abra Julia *na pasta do projeto* e prepare o ambiente:
+== Objetivos
 
-  ```julia
-  using Pkg
-  Pkg.activate(".")
-  Pkg.instantiate()
++ Ativar o `BEM_gmsh` e rodar o fluxo mínimo do quadrado ($T = x$).
++ Ler CDCs nos *grupos físicos* do `.geo` \/ `.msh` (`"0;T"`, `"1;q"`).
++ Seguir o pipeline PDE $arrow.r$ equação integral $arrow.r$ $H T = G q$ $arrow.r$ $A x = b$ $arrow.r$ internos.
++ Entender a diagonal de $H$ (corpo rígido) e quando usar H-matriz.
 
-  using DrWatson
-  @quickactivate :BEM
-  include(datadir("Laplace", "Laplace_dad.jl"))
-  ```
+== Setup
 
-  Fluxo mínimo (quadrado unitário, solução exata $T = x$):
+Código: #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`].
+Clone, abra Julia *na pasta do projeto* e prepare o ambiente:
 
-  ```julia
-  props = Laplace(1.0)
-  msh   = quadrado(ndiv=20, show=false)
-  dad   = format2d(msh, props)
+```julia
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
 
-  attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
-  H_G_full_direct(dad, 20)   # montagem densa; use H_G_Hmat(dad) se N for grande
-  solve(dad)
+using DrWatson
+@quickactivate :BEM
+include(datadir("Laplace", "Laplace_dad.jl"))
+```
 
-  @show rel_error(dad)
-  plot_geo(dad)
-  # export_results_to_gmsh(dad, msh, :T; viewer=false)
-  ```
+GUI do sistema (opcional): #link("https://gmsh.info/#Download")[gmsh.info].
 
-  Os grupos físicos da malha já carregam as CDCs (`"0;T"` Dirichlet, `"1;q"` Neumann com $q = -k partial T / partial n$). A geometria Gmsh foi preparada no capítulo *Indo para 2D*; a convenção de CDC é desenvolvida *neste* capítulo.
+== Fluxo mínimo (quadrado unitário, $T = x$)
 
-= Mapa do BEM (leia isto antes da álgebra)
+```julia
+props = Laplace(1.0)
+msh   = quadrado(ndiv=20, show=false)
+dad   = format2d(msh, props)
+
+attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
+H_G_full_direct(dad, 20)   # densa; H_G_Hmat(dad) se N for grande
+solve(dad)
+
+@show rel_error(dad)
+plot_geo(dad)
+# export_results_to_gmsh(dad, msh, :T; viewer=false)
+gp = geometric_props(dad)
+@show gp.perimeter gp.area gp.centroid
+```
+
+Os grupos físicos da malha já carregam as CDCs. A geometria foi preparada em *Indo para 2D*; a convenção de CDC é desenvolvida *neste* capítulo.
+
+== Grupos físicos $arrow.r$ CDC
+
+No `BEM_gmsh`, o *nome* da curva física no Gmsh carrega tipo e valor da condição de contorno.
+
+#table(
+  columns: (auto, auto),
+  inset: 8pt,
+  stroke: 0.5pt + luma(200),
+  [*Nome*], [*Significado (Laplace)*],
+  [`"0;T"`], [Dirichlet: potencial \/ temperatura $T$ prescrita],
+  [`"1;q"`], [Neumann: fluxo $q = -k partial T \/ partial n$ prescrito],
+)
+
+Exemplos: `"0;100"`, `"1;0"` (isolado). Elasticidade usa `"tx;ux;ty;uy"` (capítulo de elasticidade).
+
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Onde*], [*Papel do Gmsh \/ `BEM_gmsh`*],
+  [*Indo para 2D*], [malha, $N_k$, $J$, $upright(bold(n))$, perímetro \/ área \/ centróide],
+  [*Este capítulo*], [CDC nos grupos, montagem $H,G$, `solve`, erro],
+)
+
+Boas práticas (repete o essencial da geometria):
+1. Contorno externo anti-horário; furos horários.
+2. Elementos descontínuos no campo (`format2d`) — cantos sem nó compartilhado de CDC.
+3. `ordem` da malha alinhada a `tipo`.
+4. Convergência: variar `ndiv` e medir erro (`rel_error` \/ capítulo de erros).
+
+== Mapa do BEM (leia isto antes da álgebra)
 
 Antes das fórmulas, fixe o *pipeline* inteiro. Cada bloco das seções seguintes preenche *um* passo desta cadeia — inclusive o cálculo da diagonal de $H$, que é só um detalhe técnico do passo 4.
 
@@ -108,9 +153,9 @@ Correspondência com o `BEM_gmsh`:
   *Ideia-chave.* No MEF montamos “rigidez” no *volume*. No BEM montamos $H$ e $G$ no *contorno*; o preço é que essas matrizes são cheias e as integrais podem ser singulares quando o ponto fonte $x_d$ cai no elemento que está sendo integrado.
 ]
 
-= Formulação
+== Formulação
 
-== Passos 1–3: da PDE à equação integral
+=== Passos 1–3: da PDE à equação integral
 
 A equação de Laplace é dada por:
 
@@ -132,7 +177,7 @@ $ q^* = 1/(2 pi r^2) [(x - x_d) n_x + (y - y_d) n_y] . $
 
 O coeficiente $0.5$ à esquerda vale para ponto fonte $x_d$ *sobre* um contorno liso. É o termo de corpo rígido / ângulo sólido: geometricamente, metade do “salto” da solução fundamental fica de cada lado do contorno. (Em cantos o fator não é $1/2$; por isso o código prefere elementos *descontínuos* ou calcula a diagonal de $H$ de forma indireta — passo 4.)
 
-== Passo 4: discretização → matrizes $H$ e $G$
+=== Passo 4: discretização → matrizes $H$ e $G$
 
 Podemos representar a temperatura e fluxo em um elemento descontinuo com  $m$  nós como:
 $T = N_1 T_1 + N_2 T_2 + N_3 T_3 + ... + N_m T_m$
@@ -156,11 +201,11 @@ $ H T = G q $
 - Coluna ligada a $q$: integrais de $T^* N_k$ → entradas de $G$ (singularidade fraca, integrável).
 - A linha $i$ é a equação integral escrita com ponto fonte no nó $i$.
 
-=== Diagonal de $H$: por que é especial?
+==== Diagonal de $H$: por que é especial?
 
 Quando o ponto fonte $x_i$ está *no mesmo elemento* que o ponto de integração, $r -> 0$ e $q^* ~ 1/r$ (em 2D) deixa de ser uma integral comum. Integrar $H_(i i)$ “na marra” é possível, mas delicado (transformações, partes finitas, etc.).
 
-=== Método indireto (corpo a temperatura constante)
+==== Método indireto (corpo a temperatura constante)
 
 Em vez de atacar a singularidade forte de frente, usamos uma solução *exata* trivial do problema de Laplace:
 
@@ -192,11 +237,11 @@ Isso *já inclui* o fator de ângulo sólido (o “$0.5$” no contorno liso, ou
 
 No `BEM_gmsh`, os passos 2–3 estão dentro de `H_G_full_direct`.
 
-== Passos 5–6: CDCs e o sistema $A x = b$
+=== Passos 5–6: CDCs e o sistema $A x = b$
 
 Depois de montar $H T = G q$, *ainda não se resolve nada*: em cada nó falta uma informação. A CDC diz qual coluna vai para o lado esquerdo (incógnita) e qual contribui para o lado direito (dado).
 
-=== Exemplo (1 elemento por lado)
+==== Exemplo (1 elemento por lado)
 
 A fim de ilustrar como se aplica as condições de contorno e se calcula as variáveis desconhecidas será analisado um problema de condução de calor unidirecional com uma discretização de um elemento por lado.
 
@@ -222,7 +267,7 @@ Regra prática por nó $i$:
 - se $T_i$ é preescrito (Dirichlet): a incógnita é $q_i$ → coluna $i$ de $-G$ entra em $A$, e $H_(: i) T_i$ vai para $b$;
 - se $q_i$ é preescrito (Neumann): a incógnita é $T_i$ → coluna $i$ de $H$ entra em $A$, e $G_(: i) q_i$ vai para $b$.
 
-== Passo 7: pontos internos
+=== Passo 7: pontos internos
 
 A equação integral para pontos *interiores* ($x_d in Omega$, fora de $Gamma$) é ligeiramente modificada — o coeficiente à esquerda vira $1$, não $0.5$:
 
@@ -230,7 +275,7 @@ $ T(x_d , y_d) = integral_Gamma T q^* d s - integral_Gamma T^* q d s $
 
 Detalhe importante: com $T$ e $q$ *já conhecidos em todo o contorno* (passos 5–6), a temperatura em qualquer ponto interno é só avaliar essas integrais. *Não* se monta nem se resolve um novo $A x = b$.
 
-= Exemplo resolvido ponta a ponta (`BEM_gmsh`)
+== Exemplo resolvido ponta a ponta (`BEM_gmsh`)
 
 Problema: quadrado unitário, $k = 1$, CDCs tais que a solução exata é $T(x,y) = x$ (e portanto $q = - partial T / partial n$). Malha Gmsh com `ndiv=16`, montagem densa, impressão de números e gráfico.
 
@@ -284,7 +329,7 @@ O que você deve observar:
 - nos lados verticais, $T approx x$ (constante em cada lado); nos horizontais, $q approx 0$;
 - pontos internos, se houver, seguem $T approx x$ sem novo sistema linear.
 
-= Montagem densa vs. H-matriz
+== Montagem densa vs. H-matriz
 
 Até $N tilde.eq 3 dot.op 10^3$–$5 dot.op 10^3$ nós, a montagem *densa* (`H_G_full_direct`) costuma ser a escolha didática e prática: implementação simples, fatoração LU direta, ótima para estudos de convergência.
 
@@ -317,11 +362,17 @@ solve(dad)                          # GMRES sobre operador misto
   [Controle], [`npg`], [`atol`, `nmax`, …],
 )
 
-Regra prática: comece *sempre* denso e com malha grossa; só mude para H-matriz quando o denso não couber na RAM ou demorar demais. Detalhes extras no capítulo *Gmsh e malhas* e em `docs/src/pt-br/performance.md` do repositório.
+Regra prática: comece *sempre* denso e com malha grossa; só mude para H-matriz quando o denso não couber na RAM ou demorar demais. Detalhes em `docs/src/pt-br/performance.md` do repositório.
 
 == Exercícios
 
 Use as medidas de erro do capítulo *Medidas de erro* (e/ou `rel_error(dad)` do `BEM_gmsh`). Notação: potencial $T$, fluxo $q = -k partial T / partial n$.
+
+*Malha e CDC*
+1. Rode `data/examples/geo_unit_square.jl` e confira `geometric_props`.
+2. Abra um `.geo` de `data/Laplace/` e separe geometria de CDC (`"0;..."` \/ `"1;..."`).
+
+*Problemas de Laplace*
 
 + Resolva esse problema com elementos lineares, quadráticos e cúbicos e calcule o erro médio, o erro máximo e a norma $L_2$ do erro no contorno para diferentes discretizações. Faça um gráfico (Plots) comparando a convergência dos três tipos de elementos. A solução analítica é dada por:
 
