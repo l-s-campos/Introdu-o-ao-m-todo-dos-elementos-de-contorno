@@ -525,7 +525,6 @@ Fontes: `data/Laplace/Laplace_dad.jl`, `src/Core/{Input,Interpolation,GeometricP
 - Convenção `"0;T"`, `"1;q"` (e elasticidade `tx;ux;ty;uy`).
 - `attach_analytical!`, `H_G_*`, `solve`, `rel_error`.
 - CDC em cantos e o papel do elemento descontínuo no conflito de nós.
-- ONELAB como interface do *solver*.
 
 == Leituras e código
 

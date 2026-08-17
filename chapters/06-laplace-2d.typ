@@ -1,4 +1,4 @@
-// Laplace 2D — Gmsh + CDC + BEM_gmsh
+// Laplace 2D — CDC + H,G + solve (BEM_gmsh)
 // Geometria de contorno: capítulo "Indo para 2D"
 
 = Laplace 2D
@@ -9,15 +9,15 @@ Aqui o Gmsh deixa de ser só malha e passa a carregar *CDC*; montamos $H,G$ e re
 
 == Objetivos
 
-+ Ativar o `BEM_gmsh` e rodar o fluxo mínimo do quadrado ($T = x$).
-+ Ler CDCs nos *grupos físicos* do `.geo` \/ `.msh` (`"0;T"`, `"1;q"`).
++ Rodar o fluxo mínimo do quadrado ($T = x$) no `BEM_gmsh`.
++ Ler CDCs nos *grupos físicos* (`"0;T"`, `"1;q"`) e ligar a `dad.BC` \/ `dad.BV`.
 + Seguir o pipeline PDE $arrow.r$ equação integral $arrow.r$ $H T = G q$ $arrow.r$ $A x = b$ $arrow.r$ internos.
-+ Entender a diagonal de $H$ (corpo rígido) e quando usar H-matriz.
++ Entender a diagonal de $H$ (corpo rígido) e o papel de `npg` na montagem.
 
 == Setup
 
 Código: #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`].
-Clone, abra Julia *na pasta do projeto* e prepare o ambiente:
+Na pasta do projeto:
 
 ```julia
 using Pkg
@@ -29,9 +29,11 @@ using DrWatson
 include(datadir("Laplace", "Laplace_dad.jl"))
 ```
 
-GUI do sistema (opcional): #link("https://gmsh.info/#Download")[gmsh.info].
+Se o capítulo *Indo para 2D* ainda não rodou, comece por `data/examples/geo_unit_square.jl`.
 
-== Fluxo mínimo (quadrado unitário, $T = x$)
+== Fluxo mínimo (quadrado, $T = x$)
+
+Rode *antes* da álgebra — o resto do capítulo só nomeia cada linha.
 
 ```julia
 props = Laplace(1.0)
@@ -39,136 +41,22 @@ msh   = quadrado(ndiv=20, show=false)
 dad   = format2d(msh, props)
 
 attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
-H_G_full_direct(dad, 20)   # densa; H_G_Hmat(dad) se N for grande
+H_G_full_direct(dad, 20)   # npg = 20 (Gauss na montagem)
 solve(dad)
 
 @show rel_error(dad)
 plot_geo(dad)
-# export_results_to_gmsh(dad, msh, :T; viewer=false)
-gp = geometric_props(dad)
-@show gp.perimeter gp.area gp.centroid
 ```
 
-Os grupos físicos da malha já carregam as CDCs. A geometria foi preparada em *Indo para 2D*; a convenção de CDC é desenvolvida *neste* capítulo.
+As CDCs já vêm dos grupos físicos do `quadrado` (ver abaixo). `attach_analytical!` *não* sobrescreve CDC: só guarda a solução exata para `rel_error`.
 
-== Grupos físicos $arrow.r$ CDC
+== Por que Laplace \/ Poisson importam
 
-No `BEM_gmsh`, o *nome* da curva física no Gmsh carrega tipo e valor da condição de contorno.
-
-#table(
-  columns: (auto, auto),
-  inset: 8pt,
-  stroke: 0.5pt + luma(200),
-  [*Nome*], [*Significado (Laplace)*],
-  [`"0;T"`], [Dirichlet: potencial \/ temperatura $T$ prescrita],
-  [`"1;q"`], [Neumann: fluxo $q = -k partial T \/ partial n$ prescrito],
-)
-
-Exemplos: `"0;100"`, `"1;0"` (isolado). Elasticidade usa `"tx;ux;ty;uy"` (capítulo de elasticidade).
-
-#table(
-  columns: (auto, auto),
-  inset: 7pt,
-  stroke: 0.5pt + luma(200),
-  [*Onde*], [*Papel do Gmsh \/ `BEM_gmsh`*],
-  [*Indo para 2D*], [malha, $N_k$, $J$, $upright(bold(n))$, perímetro \/ área \/ centróide],
-  [*Este capítulo*], [CDC nos grupos, montagem $H,G$, `solve`, erro],
-)
-
-Boas práticas (repete o essencial da geometria):
-1. Contorno externo anti-horário; furos horários.
-2. Elementos descontínuos no campo (`format2d`) — cantos sem nó compartilhado de CDC.
-3. `ordem` da malha alinhada a `tipo`.
-4. Convergência: variar `ndiv` e medir erro (`rel_error` \/ capítulo de erros).
-
-== Mapa do BEM (leia isto antes da álgebra)
-
-Antes das fórmulas, fixe o *pipeline* inteiro. Cada bloco das seções seguintes preenche *um* passo desta cadeia — inclusive o cálculo da diagonal de $H$, que é só um detalhe técnico do passo 4.
-
-#block(
-  width: 100%,
-  fill: luma(248),
-  inset: 12pt,
-  radius: 6pt,
-  stroke: 0.6pt + luma(200),
-)[
-  #set par(justify: false)
-  #set text(size: 10.5pt)
-  *1. PDE* $quad nabla^2 T = 0$ em $Omega$, com CDCs em $Gamma = partial Omega$
-
-  $arrow.b.double$
-
-  *2. Resíduos ponderados + integração por partes (Green)* $quad$
-  o operador sai de $T$ e vai para a função peso $v$
-
-  $arrow.b.double$
-
-  *3. Solução fundamental (SF)* $quad$
-  escolhe-se $v = T^*$ tal que $-nabla^2 T^* = delta(x - x_d)$;
-  o domínio some e sobra uma *equação integral só no contorno*
-
-  $arrow.b.double$
-
-  *4. Discretização* $quad$
-  $T$ e $q$ ≈ funções de forma nos elementos; integrais → matrizes $H$ e $G$
-  (aqui entram quadratura, singularidades e a *diagonal de* $H$)
-
-  $arrow.b.double$
-
-  *5. Condições de contorno (CDC)* $quad$
-  em cada nó, $T$ *ou* $q$ é conhecido → reorganiza-se $H T = G q$ em $A x = b$
-
-  $arrow.b.double$
-
-  *6. Solve* $quad x = A^(-1) b$ $arrow.r$ contorno completo $(T, q)$ em todos os nós
-
-  $arrow.b.double$
-
-  *7. Pontos internos (pós-processamento)* $quad$
-  com $(T, q)$ no contorno já conhecidos, $T(x_d)$ no interior é só uma integral
-  — *sem* novo sistema linear
-]
-
-Correspondência com o `BEM_gmsh`:
-
-#table(
-  columns: (auto, auto),
-  inset: 7pt,
-  stroke: 0.5pt + luma(200),
-  [*Passo*], [*No código*],
-  [1–3 formulação], [já embutida em `fundamental` / montagem],
-  [4 $H, G$], [`H_G_full_direct(dad, npg)` ou `H_G_Hmat(dad)`],
-  [5 CDC], [grupos físicos Gmsh + `format2d` / `attach_analytical!`],
-  [6 solve], [`solve(dad)`],
-  [7 internos], [automático se `pontointerno=true`; ver também `plot_geo`],
-)
-
-#block(
-  width: 100%,
-  fill: rgb("#ecfdf5"),
-  inset: 10pt,
-  radius: 4pt,
-  stroke: 0.5pt + rgb("#99f6e4"),
-)[
-  *Ideia-chave.* No MEF montamos “rigidez” no *volume*. No BEM montamos $H$ e $G$ no *contorno*; o preço é que essas matrizes são cheias e as integrais podem ser singulares quando o ponto fonte $x_d$ cai no elemento que está sendo integrado.
-]
-
-== Formulação
-
-=== Passos 1–3: da PDE à equação integral
-
-A equação de Laplace é dada por:
-
-$ nabla^2 T = 0 . $
-
-Com fonte de domínio ($f != 0$) vira Poisson, $nabla^2 T = f$ — o capítulo *Poisson 2D* trata o termo extra.
-A *mesma* PDE descreve vários problemas físicos: só mudam o nome do campo, a lei constitutiva e o significado de $f$ e do fluxo.
-
-=== Aplicações físicas (Laplace \/ Poisson)
+A *mesma* PDE descreve vários problemas: mudam o nome do campo, a lei constitutiva e o significado de $f$ e do fluxo. Com $f = 0$ é Laplace; com fonte de domínio, Poisson (capítulo seguinte).
 
 #figure(
   kind: table,
-  caption: [Exemplos de problemas físicos descritos por Laplace ou Poisson (adaptado de tabelas clássicas de MEC\/BEM).],
+  caption: [Exemplos de problemas físicos descritos por Laplace ou Poisson.],
 )[
 #set text(size: 9.5pt)
 #table(
@@ -183,33 +71,33 @@ A *mesma* PDE descreve vários problemas físicos: só mudam o nome do campo, a 
     [*Lei \/ fluxo*],
   ),
   [$nabla^2 phi = 0$],
-  [Torção de Saint-Venant (barras elásticas)],
-  [$phi = phi(x,y)$: função de empenamento],
-  [Hooke; tensões a partir de $phi$ (via $bold(D) = bold(a)^(-1)$)],
+  [Torção de Saint-Venant],
+  [$phi$: função de empenamento],
+  [Hooke (tensões a partir de $phi$)],
 
   [$nabla · (S nabla u) + f = 0$],
-  [Pequenas deflexões de membranas],
-  [$u$: deflexão; $f$: carga transversal; $S$: tensão por comprimento],
-  [$bold(D) = S bold(I)$ (isotrópico)],
+  [Deflexão de membranas],
+  [$u$: deflexão; $f$: carga; $S$: tensão],
+  [$bold(D) = S bold(I)$],
 
   [$nabla · (bold(D) nabla T) + f = 0$],
   [Condução de calor],
-  [$T$: temperatura; $bold(D)$: condutividade; $f$: geração interna],
+  [$T$: temperatura; $bold(D)$: condutividade; $f$: geração],
   [Fourier: $bold(q) = - bold(D) nabla T$],
 
   [$nabla · (nabla phi) + f = 0$],
-  [Escoamento irrotacional, incompressível e invíscido],
-  [$phi$: potencial de velocidade; $f$: fonte de massa],
-  [$bold(v) = nabla phi$ (cinemática; sem lei constitutiva extra)],
+  [Escoamento potencial (irrot., invíscido)],
+  [$phi$: potencial de velocidade; $f$: fonte],
+  [$bold(v) = nabla phi$],
 
   [$nabla · (bold(D) nabla phi) + f = 0$],
-  [Escoamento em meio poroso],
-  [$phi$: carga piezométrica; $bold(D)$: permeabilidade; $f$: fonte],
+  [Meio poroso],
+  [$phi$: carga piezométrica; $bold(D)$: permeabilidade],
   [Darcy: $bold(q) = - bold(D) nabla phi$],
 
   [$nabla · (bold(D) nabla V) + f = 0$],
-  [Potencial elétrico em meios condutores],
-  [$V$: potencial; $bold(D)$: condutividade elétrica; $f$: carga],
+  [Potencial elétrico],
+  [$V$: potencial; $bold(D)$: condutividade elétrica],
   [Ohm: $bold(q) = - bold(D) nabla V$],
 )
 ]
@@ -221,76 +109,255 @@ A *mesma* PDE descreve vários problemas físicos: só mudam o nome do campo, a 
   radius: 4pt,
   stroke: 0.5pt + luma(200),
 )[
-  *Leitura para o curso.* No `BEM_gmsh` o protótipo é *potencial* $T$ com $q = -k partial T \/ partial n$ (calor \/ Laplace escalar).
-  Casos com $bold(D)$ anisotrópico ou $f != 0$ mudam a SF ou pedem termo de domínio (Poisson \/ DIBEM).
-  A formulação integral e as matrizes $H,G$ *são as mesmas* em espírito: campo no contorno + fluxo conjugado.
+  *No curso.* O protótipo do `BEM_gmsh` é potencial $T$ com
+  $q = -k partial T \/ partial n$ (glossário). Anisotropia ou $f != 0$ mudam a SF
+  ou pedem termo de domínio (Poisson \/ DIBEM). As matrizes $H,G$ seguem a *mesma*
+  lógica: campo no contorno + fluxo conjugado.
 ]
 
-No restante deste capítulo usamos a forma canônica
+== Grupos físicos $arrow.r$ CDC
 
-$ nabla^2 T = 0 $
+No Gmsh, o *nome* da curva física carrega tipo e valor. O `format2d` lê isso e preenche `dad.BC` (0 = Dirichlet, 1 = Neumann) e `dad.BV` (valor).
 
-(com $k$ absorvido na definição de $q$ quando conveniente).
+#table(
+  columns: (auto, auto),
+  inset: 8pt,
+  stroke: 0.5pt + luma(200),
+  [*Nome*], [*Significado (Laplace)*],
+  [`"0;T"`], [Dirichlet: $T$ prescrito],
+  [`"1;q"`], [Neumann: $q = -k partial T \/ partial n$ prescrito],
+)
 
-Usando o método dos resíduos ponderados e aplicando a segunda identidade de Green (com $u = T$ e peso $v$):
+Exemplos: `"0;100"`, `"1;0"` (isolado). Elasticidade: `"tx;ux;ty;uy"` (capítulo próprio).
 
-$ integral_Omega (v nabla^2 T - T nabla^2 v) d Omega = integral_Gamma (v (partial T)/(partial n) - T (partial v)/(partial n)) d s $
+=== O `quadrado` do pacote (CDCs de $T = x$)
 
-obtém-se a equação integral de contorno:
+Em `data/Laplace/Laplace_dad.jl`, com $k = 1$ e solução $T = x$
+($q = - partial T \/ partial n$):
 
-$ 0.5 T(x_d , y_d) = integral_Gamma T q^* d s - integral_Gamma T^* q d s, $
+```julia
+# Laplace_dad.jl — trecho de quadrado(...)
+# l1 bottom, l2 right, l3 top, l4 left
+gmsh.model.addPhysicalGroup(1, [l1, l3], -1, "1;0")   # isolado (q = 0)
+gmsh.model.addPhysicalGroup(1, [l2], -1, "1;-1")      # direita: q = -1
+gmsh.model.addPhysicalGroup(1, [l4], -1, "0;0")       # esquerda: T = 0
+gmsh.model.addPhysicalGroup(2, [s1], -1, "Domain")
+```
 
-onde $T^*$ e $q^*$ são as soluções fundamentais:
+Conferência rápida: normal saindo à direita é $+upright(bold(e))_x$, $partial T\/partial n = 1$, logo $q = -1$; topo\/base $partial T\/partial n = 0$; esquerda $T = 0$.
 
-$ T^* = (-1)/(2 pi k) ln r $
+=== Cantos e elemento descontínuo
 
-$ q^* = 1/(2 pi r^2) [(x - x_d) n_x + (y - y_d) n_y] . $
+Em um vértice, duas arestas podem pedir CDCs *incompatíveis* no mesmo nó
+(ex.: $T$ de um lado e $q$ do outro, ou dois $T$ diferentes).
+Por isso o `format2d` coloca nós de *campo* no interior do elemento
+(`discontinuous_nodes_weights` \/ Gauss–Legendre) — cada elemento tem seus $T_i,q_i$,
+sem nó compartilhado no canto. A geometria pode continuar isoparamétrica nos vértices
+(`Equispaced`), como no capítulo *Indo para 2D*.
 
-O coeficiente $0.5$ à esquerda vale para ponto fonte $x_d$ *sobre* um contorno liso. É o termo de corpo rígido / ângulo sólido: geometricamente, metade do “salto” da solução fundamental fica de cada lado do contorno. (Em cantos o fator não é $1/2$; por isso o código prefere elementos *descontínuos* ou calcula a diagonal de $H$ de forma indireta — passo 4.)
+=== `attach_analytical!` vs CDC da malha
 
-=== Passo 4: discretização → matrizes $H$ e $G$
+```julia
+# Analytical.jl (essência)
+function attach_analytical!(dad::BEMdata, ana::AnalyticalSolution)
+    set_cache!(dad; analytical=ana)
+    return dad
+end
+```
 
-Podemos representar a temperatura e fluxo em um elemento descontinuo com  $m$  nós como:
-$T = N_1 T_1 + N_2 T_2 + N_3 T_3 + ... + N_m T_m$
-$q = N_1 q_1 + N_2 q_2 + N_3 q_3 + ... + N_m q_m$
-onde estamos aproximando nossa distribuição de temperatura e fluxo no elemento por uma função polinomial de  grau  $(m - 1)$ .
+Só registra a referência para erro \/ gráficos.
+Para *forçar* Dirichlet analítico em todos os nós (patch test), o pacote tem
+`apply_analytical_bc!(dad, ana)` — isso *sim* sobrescreve `BC` \/ `BV`.
+No fluxo didático padrão do quadrado, *não* chame `apply_analytical_bc!`:
+as CDCs do `.msh` já batem com $T = x$.
 
-Discretizando em $n$ elementos de contorno descontínuos:
+== Mapa do BEM (leia antes da álgebra)
 
-$0.5 T(x_d , y_d) = sum_(j = 1)^(n_(e l e m)) [integral_(Gamma_j) T q^* d Gamma] - sum_(j = 1)^(n_(e l e m)) [integral_(Gamma_j) T^* q d Gamma]$
+Cada seção seguinte preenche *um* passo. A diagonal de $H$ é detalhe do passo 4.
 
-Usando a representação de   $T$ e $q$  na equação acima temos:
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 12pt,
+  radius: 6pt,
+  stroke: 0.6pt + luma(200),
+)[
+  #set par(justify: false)
+  #set text(size: 10.5pt)
+  *1. PDE* $quad nabla^2 T = 0$ em $Omega$, CDCs em $Gamma$
 
-$ 0.5 T(x_d , y_d) = sum_(j = 1)^(n_(e l e m)) {integral_(Gamma_j) [mat(delim: #none, N_1, N_2, N_3, dots.c, N_m)] [mat(delim: #none, T_1; T_2; T_3; dots.v; T_m)]_j q^* d Gamma} \ -
-sum_(j = 1)^(n_(e l e m)) {integral_(Gamma_j) T^* [mat(delim: #none, N_1, N_2, N_3, dots.c, N_m)] [mat(delim: #none, q_1; q_2; q_3; dots.v; q_m)]_j d Gamma} $
+  $arrow.b.double$
 
-Repetindo essa equação para cada diferente nó-fonte $x_d = x_i$ montamos um sistema matricial:
+  *2. Resíduos + Green* $quad$ o operador passa de $T$ para o peso $v$
 
-$ H T = G q $
+  $arrow.b.double$
 
-- Coluna ligada a $T$: integrais de $q^* N_k$ → entradas de $H$ (núcleo *mais* singular).
-- Coluna ligada a $q$: integrais de $T^* N_k$ → entradas de $G$ (singularidade fraca, integrável).
-- A linha $i$ é a equação integral escrita com ponto fonte no nó $i$.
+  *3. Solução fundamental* $quad$ $v = T^*$ com $-nabla^2 T^* = delta(x - x_d)$;
+  o domínio some $arrow.r$ equação integral só no contorno
 
-==== Diagonal de $H$: por que é especial?
+  $arrow.b.double$
 
-Quando o ponto fonte $x_i$ está *no mesmo elemento* que o ponto de integração, $r -> 0$ e $q^* ~ 1/r$ (em 2D) deixa de ser uma integral comum. Integrar $H_(i i)$ “na marra” é possível, mas delicado (transformações, partes finitas, etc.).
+  *4. Discretização* $quad$ $T,q approx N_k$; integrais $arrow.r$ $H,G$
+  (quadratura `npg`, singularidades, *diagonal de* $H$)
 
-==== Método indireto (corpo a temperatura constante)
+  $arrow.b.double$
 
-Em vez de atacar a singularidade forte de frente, usamos uma solução *exata* trivial do problema de Laplace:
+  *5. CDC* $quad$ em cada nó, $T$ *ou* $q$ conhecido $arrow.r$ $H T = G q$ vira $A x = b$
 
-$ T(x) equiv 1, quad q(x) equiv 0 . $
+  $arrow.b.double$
 
-Ela satisfaz $nabla^2 T = 0$ e a equação integral. No sistema discreto isso vira
+  *6. Solve* $quad x = A^(-1) b$ $arrow.r$ $(T,q)$ completo no contorno
 
-$ H {1} = G {0} = {0} $.
+  $arrow.b.double$
 
-Ou seja, *cada linha de* $H$ *soma zero*. Como os termos fora da diagonal $H_(i j)$ ($i != j$) são integrais regulares (já calculadas por Gauss), a diagonal sai de graça:
+  *7. Internos* $quad$ com contorno conhecido, $T(x_d)$ interior é *só* integral
+  — sem novo sistema linear
+]
 
-$ H_(i i) = - sum_(j = 1, j != i)^N H_(i j) , quad i = 1, ..., N . $
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Passo*], [*No `BEM_gmsh`*],
+  [1–3 formulação], [`fundamental` \/ núcleos na montagem],
+  [4 $H,G$], [`H_G_full_direct(dad, npg)`],
+  [5 CDC], [grupos Gmsh + `format2d`; troca de colunas em `applyBC`],
+  [6 solve], [`solve(dad)` $arrow.r$ `applyBC` + `bem_linsolve`],
+  [7 internos], [`pontointerno=true` em `format2d`; `plot_geo`],
+)
 
-Isso *já inclui* o fator de ângulo sólido (o “$0.5$” no contorno liso, ou outro valor em cantos).
+#block(
+  width: 100%,
+  fill: rgb("#ecfdf5"),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + rgb("#99f6e4"),
+)[
+  *Ideia-chave.* No MEF montamos “rigidez” no *volume*. No BEM montamos $H$ e $G$ no *contorno*;
+  o preço é matrizes cheias e integrais singulares quando a fonte $x_d$ cai no elemento integrado.
+]
+
+== Formulação
+
+=== Passos 1–3: da PDE à equação integral
+
+Problema canônico do capítulo:
+
+$ nabla^2 T = 0 quad "em" Omega, $
+
+com $q = -k partial T \/ partial n$ no contorno (quando $f != 0$, ver *Poisson 2D*).
+
+*Em cinco movimentos:*
+
+1. Resíduo ponderado: $integral_Omega v nabla^2 T dif Omega = 0$ para pesos $v$ adequados.
+2. Integração por partes \/ 2ª identidade de Green ($u = T$, peso $v$):
+
+$ integral_Omega (v nabla^2 T - T nabla^2 v) dif Omega
+  = integral_Gamma (v partial_n T - T partial_n v) dif s . $
+
+3. Escolhe-se a *solução fundamental* $v = T^*$ tal que
+   $-nabla^2 T^* = delta(x - x_d)$ (em sentido distribucional).
+4. O termo de domínio com $nabla^2 T^*$ vira avaliação em $x_d$; com $nabla^2 T = 0$,
+   sobra uma *equação integral só em* $Gamma$.
+5. No contorno liso o coeficiente de $T(x_d)$ é $1\/2$ (ângulo sólido); no interior é $1$;
+   em cantos, $c(x_d) != 1\/2$ — por isso o código prefere elementos descontínuos ou
+   calcula a diagonal de $H$ de forma *indireta* (passo 4).
+
+Equação integral no contorno liso:
+
+$ c(x_d) T(x_d)
+  = integral_Gamma T q^* dif s - integral_Gamma T^* q dif s ,
+  quad c = 1\/2 " (liso)" . $
+
+No pacote, os núcleos 2D ($U hat(=) T^*$, $T hat(=) q^*$ no código) são:
+
+```julia
+# Laplace/Fundamental.jl
+function fundamental(props::Laplace, r::SVector{2}, n::SVector{2})
+    k = props.k
+    R = _R(r)                                    # |r|
+    G = -log(R) / (2π * k)                       # T*
+    H = dot(r, n) / (R^2 * 2π)                   # q*
+    return KernelPair(G, H)
+end
+```
+
+Ou seja (notação das notas):
+
+$ T^* = - (ln r)\/(2 pi k) ,
+  quad
+  q^* = (upright(bold(r)) · upright(bold(n))) \/ (2 pi r^2) . $
+
+=== Passo 4: discretização $arrow.r$ $H$ e $G$
+
+Em cada elemento descontínuo com $m$ nós:
+
+$ T(xi) = sum_(k=1)^m N_k (xi) T_k ,
+  quad
+  q(xi) = sum_(k=1)^m N_k (xi) q_k . $
+
+Colocando a fonte em cada nó $i$ e somando elementos $j = 1,...,n_"elem"$:
+
+$ sum_j sum_k
+  ( integral_(Gamma_j) q^* N_k dif Gamma ) T_k^(j)
+  -
+  sum_j sum_k
+  ( integral_(Gamma_j) T^* N_k dif Gamma ) q_k^(j)
+  = 0
+  quad "(+ termo livre na diagonal de" H")" . $
+
+Em forma matricial global:
+
+$ H T = G q . $
+
+Definições operacionais (linha $i$ = fonte no nó $i$; coluna ligada ao GL $k$):
+
+$
+H_(i k) = integral_Gamma q^* (x, x_i) N_k (x) dif Gamma
+  + c_i delta_(i k) ,
+quad
+G_(i k) = integral_Gamma T^* (x, x_i) N_k (x) dif Gamma .
+$
+
+- $H$: núcleo *mais* singular ($q^* ~ 1\/r$ em 2D no elemento da fonte).
+- $G$: singularidade *fraca* ($ln r$), em geral integrável com quadratura adequada.
+- `npg` em `H_G_full_direct(dad, npg)` fixa a quadratura de montagem (eco do Gauss do cap. 05).
+
+Trecho real da montagem densa (`src/Core/Assembly_full.jl`):
+
+```julia
+function H_G_full_direct(dad::BEMdata{<:Scalar}; npg=20, threaded=true)
+    _init_quadrature!(dad, npg)
+    H = zeros(dad.nt, dad.nt)
+    G = zeros(dad.nt, dad.n)
+    set_cache!(dad; H, G)
+    # ... para cada fonte i e elemento el:
+    #     integrate_element(...)  ou  _far_nodal_scalar!(...)
+    #     H[i, j] += ...;  G[i, j] += ...
+    @inbounds for i in 1:dad.nt
+        H[i, i] = 0.0
+        H[i, i] = -sum(H[i, :])     # diagonal por soma nula (corpo rígido)
+    end
+    return H, G
+end
+```
+
+No elemento singular o pacote usa Guiggiani; no quase-singular, regra $sinh$; longe, lumping nodal — detalhes em `integrate_element`. Para a aula, o essencial é: *integra o que for regular e fecha a diagonal de $H$ por identidade*.
+
+==== Diagonal de $H$: corpo a temperatura constante
+
+Quando a fonte está no mesmo elemento, integrar $H_(i i)$ “na marra” é delicado.
+Em vez disso, usa-se a solução exata trivial de Laplace
+
+$ T(x) equiv 1 , quad q(x) equiv 0 . $
+
+Ela implica $H {1} = G {0} = {0}$, logo *cada linha de* $H$ *soma zero*.
+Com os $H_(i j)$ ($i != j$) já calculados,
+
+$ H_(i i) = - sum_(j != i) H_(i j) . $
+
+Isso *já inclui* o fator de ângulo sólido ($1\/2$ no liso, outro valor em cantos).
+No código: exatamente o laço `H[i,i] = -sum(H[i,:])` acima.
 
 #block(
   width: 100%,
@@ -299,56 +366,84 @@ Isso *já inclui* o fator de ângulo sólido (o “$0.5$” no contorno liso, ou
   radius: 4pt,
   stroke: 0.5pt + luma(200),
 )[
-  *Ordem prática na montagem (passo 4):*
+  *Ordem prática (passo 4):*
   1. zere $H$ e $G$;
-  2. para cada par (nó-fonte $i$, elemento $j$), integre e *some* nas colunas certas de $H$ e $G$ — *pule* ou trate à parte o caso singular $i in$ elemento $j$ em $H$;
-  3. corrija a diagonal: $H_(i i) = -sum_(j != i) H_(i j)$;
-  4. (opcional) a diagonal de $G$ tem só singularidade fraca e em geral *é* integrada com quadratura adequada — o truque indireto raramente é necessário.
+  2. para cada par (fonte $i$, elemento $j$), some contribuições regulares \/ tratadas;
+  3. $H_(i i) = -sum_(j != i) H_(i j)$;
+  4. diagonal de $G$: em geral *integre* (singularidade fraca) — o truque indireto raramente é necessário.
 ]
 
-No `BEM_gmsh`, os passos 2–3 estão dentro de `H_G_full_direct`.
+=== Passos 5–6: CDC e $A x = b$
 
-=== Passos 5–6: CDCs e o sistema $A x = b$
+Depois de $H T = G q$ ainda falta, em cada nó, *uma* informação.
+A CDC decide qual coluna vai para a esquerda (incógnita) e o que alimenta $b$.
 
-Depois de montar $H T = G q$, *ainda não se resolve nada*: em cada nó falta uma informação. A CDC diz qual coluna vai para o lado esquerdo (incógnita) e qual contribui para o lado direito (dado).
+Regra por nó $i$:
+- *Dirichlet* ($T_i$ conhecido, `BC[i]==0`): incógnita $q_i$ $arrow.r$ coluna $i$ de $-G$ em $A$; $H_(:i) T_i$ vai a $b$;
+- *Neumann* ($q_i$ conhecido, `BC[i]==1`): incógnita $T_i$ $arrow.r$ coluna $i$ de $H$ em $A$; $G_(:i) q_i$ vai a $b$.
 
-==== Exemplo (1 elemento por lado)
+No pacote (`src/Core/Boundary_conditions.jl`):
 
-A fim de ilustrar como se aplica as condições de contorno e se calcula as variáveis desconhecidas será analisado um problema de condução de calor unidirecional com uma discretização de um elemento por lado.
+```julia
+function applyBC(dad::BEMdata{<:Union{Laplace,OrthotropicLaplace}}, A, B, b)
+    n = dad.n
+    for bc in 1:n
+        if dad.BC[bc] == 0          # Dirichlet: incógnita = q
+            A[:, bc] .= .-view(dad.G, :, bc)
+            B[:, bc] .= .-view(dad.H, :, bc)
+        end
+    end
+    fill!(b, 0)
+    for j in 1:n
+        if dad.BC[j] == 0
+            b .-= view(dad.H, :, j) .* dad.BV[j]
+        else
+            b .+= view(dad.G, :, j) .* dad.BV[j]
+        end
+    end
+end
+```
+
+e o solve estacionário:
+
+```julia
+# Core/Solver.jl (essência)
+function solve(dad::BEMdata{<:Union{Laplace,OrthotropicLaplace}}; ...)
+    applyBC(dad; ...)
+    x = bem_linsolve(dad.A, dad.b)
+    # split_sol! → dad.T, dad.q
+    return dad.T
+end
+```
+
+==== Exemplo didático (1 elemento por lado)
+
+Condução unidimensional com um elemento por aresta do retângulo:
 
 #image("../assets/laplace-2d/exemplo-unidirecional.png", width: 80%)
 
-As equações obtidas podem ser escritas na forma matricial, como:
+Esquema (macron = conhecido):
 
-$ (mat(delim: #none, H_11, H_12, H_13, H_14; H_21, H_22, H_23, H_24; H_31, H_32, H_33, H_34; H_41, H_42, H_43, H_44; ))
-(mat(delim: #none, macron(T_1); T_2; macron(T_3); T_4))
-=
-(mat(delim: #none, G_11, G_12, G_13, G_14; G_21, G_22, G_23, G_24; G_31, G_32, G_33, G_34; G_41, G_42, G_43, G_44; ))
-(mat(delim: #none, q_1; macron(q_2); q_3; macron(q_4))) $
+$ H mat(macron(T_1); T_2; macron(T_3); T_4)
+  = G mat(q_1; macron(q_2); q_3; macron(q_4)) . $
 
-onde $macron(T)$ e $macron(q)$ são termos *conhecidos* (CDC).
-
-Separando os termos conhecidos dos desconhecidos:
-
-$ (mat(delim: #none, -G_11, H_12, -G_13, H_14; -G_21, H_22, -G_23, H_24; -G_31, H_32, -G_33, H_34; -G_41, H_42, -G_43, H_44; ))(mat(delim: #none, q_1; T_2; q_3; T_4)) = (mat(delim: #none, -H_11, G_12, -H_13, G_14; -H_21, G_22, -H_23, G_24; -H_31, G_32, -H_33, G_34; -H_41, G_42, -H_43, G_44; ))(mat(delim: #none, macron(T_1); macron(q_2); macron(T_3); macron(q_4))) $
-
-Assim, pode-se escrever $A x = b$. Resolvendo o sistema linear obtém-se as variáveis que faltavam no contorno. No `BEM_gmsh` isso é o `solve(dad)`.
-
-Regra prática por nó $i$:
-- se $T_i$ é preescrito (Dirichlet): a incógnita é $q_i$ → coluna $i$ de $-G$ entra em $A$, e $H_(: i) T_i$ vai para $b$;
-- se $q_i$ é preescrito (Neumann): a incógnita é $T_i$ → coluna $i$ de $H$ entra em $A$, e $G_(: i) q_i$ vai para $b$.
+Reorganizando colunas conhecidas \/ desconhecidas obtém-se $A x = b$ com
+$x = (q_1, T_2, q_3, T_4)$. No `quadrado` real as CDCs misturam Dirichlet e Neumann
+como na seção dos grupos físicos — o mecanismo é o mesmo `applyBC`.
 
 === Passo 7: pontos internos
 
-A equação integral para pontos *interiores* ($x_d in Omega$, fora de $Gamma$) é ligeiramente modificada — o coeficiente à esquerda vira $1$, não $0.5$:
+Para $x_d in Omega$ (fora de $Gamma$), $c = 1$:
 
-$ T(x_d , y_d) = integral_Gamma T q^* d s - integral_Gamma T^* q d s $
+$ T(x_d) = integral_Gamma T q^* dif s - integral_Gamma T^* q dif s . $
 
-Detalhe importante: com $T$ e $q$ *já conhecidos em todo o contorno* (passos 5–6), a temperatura em qualquer ponto interno é só avaliar essas integrais. *Não* se monta nem se resolve um novo $A x = b$.
+Com $(T,q)$ *já conhecidos em todo o contorno*, isso é pós-processamento:
+*não* se monta nem se resolve outro $A x = b$.
+Ative com `format2d(..., pontointerno=true)`.
 
-== Exemplo resolvido ponta a ponta (`BEM_gmsh`)
+== Lab guiado: quadrado $T = x$
 
-Problema: quadrado unitário, $k = 1$, CDCs tais que a solução exata é $T(x,y) = x$ (e portanto $q = - partial T / partial n$). Malha Gmsh com `ndiv=16`, montagem densa, impressão de números e gráfico.
+Um único script (relatório em tela). CDCs = grupos do `quadrado`; referência = `ana_laplace_linear`.
 
 ```julia
 using DrWatson
@@ -356,102 +451,57 @@ using DrWatson
 using LinearAlgebra, Printf
 include(datadir("Laplace", "Laplace_dad.jl"))
 
-# --- 1. Física e malha ---
-props = Laplace(1.0)                       # k = 1
-msh   = quadrado(ndiv=16, show=false)      # grava .msh e devolve o caminho
+props = Laplace(1.0)
+msh   = quadrado(ndiv=16, show=false)
 dad   = format2d(msh, props; pontointerno=true)
 
-println("Arquivo de malha: ", msh)
-println("Nós de contorno N = ", dad.n)
-println("Pontos internos   = ", length(dad.internalNodes))
+println("N = ", dad.n, "  internos = ", length(dad.internalNodes))
 
-# --- 2. Campo analítico T = x  (bate com as CDCs padrão do quadrado) ---
-ana = ana_laplace_linear(; direction=SA[1.0, 0.0])
-attach_analytical!(dad, ana)
-
-# --- 3. Montagem H, G (densa) e solução ---
-H_G_full_direct(dad, 16)                   # npg = 16
+attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
+H_G_full_direct(dad, 16)
 solve(dad)
 
-# --- 4. Números na tela ---
-err = rel_error(dad)
-@printf "Erro relativo (rel_error) = %.6e\n" err
+@printf "rel_error = %.6e\n" rel_error(dad)
 
-println("\nPrimeiros nós do contorno:")
-println(" i |      x |      y |    T_num |  T_exato |     q_num")
+println(" i |    x |    y |   T_num | T_exato |    q_num")
 for i in 1:min(8, dad.n)
     x, y = dad.Nodes[i]
-    T_ex = x                               # T = x
-    @printf "%2d | %6.3f | %6.3f | %8.5f | %8.5f | %9.5f\n" i x y dad.T[i] T_ex dad.q[i]
+    @printf "%2d | %5.3f | %5.3f | %7.5f | %7.5f | %8.5f\n" i x y dad.T[i] x dad.q[i]
 end
 
-# Erro pontual máximo em T no contorno
 eT = maximum(abs(dad.T[i] - dad.Nodes[i][1]) for i in 1:dad.n)
-@printf "\nmax |T_num - x| no contorno = %.6e\n" eT
-
-# --- 5. Gráfico ---
-fig = plot_geo(dad)                        # visualização do solver (backend do projeto)
-# save("laplace_quadrado.png", fig)        # descomente para gravar PNG
-fig
+@printf "max |T_num - x| = %.6e\n" eT
+plot_geo(dad)
 ```
 
-O que você deve observar:
-- `rel_error` cai ao aumentar `ndiv` (faça `ndiv = 8, 16, 32` e anote numa tabela);
-- nos lados verticais, $T approx x$ (constante em cada lado); nos horizontais, $q approx 0$;
-- pontos internos, se houver, seguem $T approx x$ sem novo sistema linear.
-
-== Montagem densa vs. H-matriz
-
-Até $N tilde.eq 3 dot.op 10^3$–$5 dot.op 10^3$ nós, a montagem *densa* (`H_G_full_direct`) costuma ser a escolha didática e prática: implementação simples, fatoração LU direta, ótima para estudos de convergência.
-
-Limitações do BEM denso:
-- memória $O(N^2)$ para armazenar $H$ e $G$;
-- tempo de montagem e de fatoração também $O(N^2)$–$O(N^3)$;
-- em malhas finas (furos, camadas limite geométricas, 3D) o custo explode antes da física ficar interessante.
-
-Quando $N$ cresce, o `BEM_gmsh` oferece montagem *hierárquica*:
-
-```julia
-msh = quadrado(ndiv=80, show=false, nome="quad_fine")
-dad = format2d(msh, Laplace(1.0); pontointerno=false)
-attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
-
-H_G_Hmat(dad; atol=1e-6, nmax=32)   # blocos comprimidos
-@show compression_ratio(dad.H)
-solve(dad)                          # GMRES sobre operador misto
-@show rel_error(dad)
-```
-
-#table(
-  columns: (auto, auto, auto),
-  inset: 7pt,
-  stroke: 0.5pt + luma(200),
-  [*Critério*], [*Densa* `H_G_full_direct`], [*H-matriz* `H_G_Hmat`],
-  [Memória], [$O(N^2)$], [tipicamente $O(N log N)$],
-  [Uso no curso], [padrão; $N tilde.eq 10^2$–$10^3$], [malhas grandes; projeto avançado],
-  [Solver], [LU direta], [iterativo (GMRES)],
-  [Controle], [`npg`], [`atol`, `nmax`, …],
-)
-
-Regra prática: comece *sempre* denso e com malha grossa; só mude para H-matriz quando o denso não couber na RAM ou demorar demais. Detalhes em `docs/src/pt-br/performance.md` do repositório.
+Observar:
+- `rel_error` cai com `ndiv in {8,16,32}` (tabela no exercício 0);
+- lados verticais: $T approx x$; horizontais: $q approx 0$;
+- internos seguem $T approx x$ sem novo sistema.
 
 == Exercícios
 
-Use as medidas de erro do capítulo *Medidas de erro* (e/ou `rel_error(dad)` do `BEM_gmsh`). Notação: potencial $T$, fluxo $q = -k partial T / partial n$.
+Notação: $T$, $q = -k partial T \/ partial n$. Erros: capítulo *Medidas de erro* e\/ou `rel_error(dad)`.
+Ordem do elemento: `tipo` \/ `ordem` no gerador e em `format2d` (linear $p=1$, quadrático $p=2$, …).
 
-*Malha e CDC*
-1. Rode `data/examples/geo_unit_square.jl` e confira `geometric_props`.
-2. Abra um `.geo` de `data/Laplace/` e separe geometria de CDC (`"0;..."` \/ `"1;..."`).
+*Escada*
 
-*Problemas de Laplace*
++ *E0 — convergência no quadrado.* Para `ndiv in {8,16,32}` (e, se puder, `tipo in {1,2}`),
+  rode o lab $T = x$, monte a tabela `ndiv, tipo, N, rel_error, max|T-x|` e comente a taxa aparente.
 
-+ Resolva esse problema com elementos lineares, quadráticos e cúbicos e calcule o erro médio, o erro máximo e a norma $L_2$ do erro no contorno para diferentes discretizações. Faça um gráfico (Plots) comparando a convergência dos três tipos de elementos. A solução analítica é dada por:
++ *E1 — leia a malha.* Abra o trecho de grupos físicos de `quadrado` (ou outro `.geo` em `data/Laplace/`)
+  e classifique cada aresta como Dirichlet ou Neumann. Confira `dad.BC` \/ `dad.BV` após `format2d`.
 
-$ T(theta) &= theta/pi \ q(x) &= - 1/(pi x) quad "em" quad y = 0 $
++ *E2 — setor circular.* Elementos lineares, quadráticos e cúbicos; erro médio, máximo e $L_2$ no contorno
+  para várias malhas; gráfico de convergência. Analítico:
+
+$ T(theta) = theta\/pi ,
+  quad
+  q(x) = -1\/(pi x) quad "em" quad y = 0 . $
 
 #image("../assets/laplace-2d/setor-circular.png", width: 80%)
 
-+ Analise o seguinte problema de placa com condições de contorno mistas:
++ *E3 — placa mista.*
 
 - $T(x = 0) = 0$
 - $T(x = 1) = cos(pi y)$
@@ -459,18 +509,60 @@ $ T(theta) &= theta/pi \ q(x) &= - 1/(pi x) quad "em" quad y = 0 $
 
 #image("../assets/laplace-2d/placa-mista.png", width: 80%)
 
-A solução analítica é:
+$ T^"an" = sinh(pi x) cos(pi y) \/ sinh(pi) . $
 
-$ T^"an" = sinh(pi x) cos(pi y) / sinh(pi) $
+Varie o número de elementos; tabela do erro percentual no ponto interno
+$(sqrt(2)\/2, sqrt(2)\/2)$.
 
-Varie o número de elementos e faça uma tabela com o erro percentual no ponto interno $(x, y) = (sqrt(2) / 2, sqrt(2) / 2)$.
-
-+ Faça um mapa de cor da distribuição de temperatura em uma placa com dimensões e condições de contorno mostradas na figura.
++ *E4 — mapa de cores.* Placa da figura: obtenha $T$ no contorno (+ internos se quiser) e
+  produza um mapa (`plot_geo` e\/ou export para o Gmsh). Critério: figura legível + CDCs usadas no texto.
 
 #image("../assets/laplace-2d/placa-mapa.png", width: 80%)
 
 == Desafio
 
-Baseado nesse #link("https://onlinelibrary.wiley.com/doi/epdf/10.1002/fld.1650030504")[artigo] calcule o coeficiente de sustentação de um perfil NACA usando o BEM.
-
+Com base neste #link("https://onlinelibrary.wiley.com/doi/epdf/10.1002/fld.1650030504")[artigo],
+estime o coeficiente de sustentação de um perfil NACA via BEM.
 #link("https://youtu.be/_G4yNayAPPE")[gravação]
+
+== Extra: montagem hierárquica (H-matriz)
+
+*Fora da trilha obrigatória* (também aparece em *Trabalhos finais*, proposta D).
+Até $N tilde.eq 10^3$–$5 times 10^3$, a montagem *densa* `H_G_full_direct` basta para o curso.
+
+Quando $N$ cresce, memória $O(N^2)$ e fatoração direta doem. O pacote oferece
+
+```julia
+msh = quadrado(ndiv=80, show=false, nome="quad_fine")
+dad = format2d(msh, Laplace(1.0); pontointerno=false)
+attach_analytical!(dad, ana_laplace_linear(; direction=SA[1.0, 0.0]))
+
+H_G_Hmat(dad; atol=1e-6, nmax=32)
+@show compression_ratio(dad.H)
+solve(dad)                 # caminho iterativo quando A é hierárquica
+@show rel_error(dad)
+```
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Critério*], [*Densa*], [*H-matriz*],
+  [API], [`H_G_full_direct`], [`H_G_Hmat`],
+  [Memória], [$O(N^2)$], [tipicamente $O(N log N)$],
+  [Solver], [LU (`bem_linsolve`)], [GMRES \/ blocos (`solve_Hmat`)],
+  [Curso 30 h], [padrão], [opcional \/ monografia],
+)
+
+Regra: comece denso e grosso; só compre quando o denso não couber ou demorar demais.
+Detalhes: `docs/src/pt-br/performance.md` no repositório.
+
+== Leituras e código
+
+- `data/Laplace/Laplace_dad.jl` — `quadrado`, CDCs
+- `src/Laplace/Fundamental.jl` — $T^*$, $q^*$
+- `src/Core/Assembly_full.jl` — `H_G_full_direct`, diagonal de $H$
+- `src/Core/Boundary_conditions.jl` — `applyBC`
+- `src/Core/Solver.jl` — `solve`
+- `src/Core/Analytical.jl` — `attach_analytical!`, `apply_analytical_bc!`
+- Capítulo *Indo para 2D* (geometria) · *Poisson 2D* (fonte $f$) · *Medidas de erro*
