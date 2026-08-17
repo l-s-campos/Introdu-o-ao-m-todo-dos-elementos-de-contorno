@@ -51,11 +51,13 @@
 #include "chapters/04-equacoes-diferenciais.typ"
 #include "chapters/05-indo-para-2d.typ"
 #include "chapters/06-laplace-2d.typ"
-#include "chapters/08-erros.typ"
 #include "chapters/09-poisson-2d.typ"
 #include "chapters/10-elasticidade-2d.typ"
 #include "chapters/11-propgeo-3d.typ"
 #include "chapters/12-trabalhos-finais.typ"
+
+// ---- Apêndice (referência) ----
+#include "chapters/08-erros.typ"
 
 // ---- Extra (fora da trilha principal de 30 h) ----
 #pagebreak()

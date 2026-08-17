@@ -1,6 +1,6 @@
 #import "../template.typ": chapter-page
 #chapter-page("Extra")[
-  = Extra
+  = Extra e apêndice
   <extra>
 
   == Materiais complementares
@@ -12,28 +12,10 @@
 
   == Capítulos extras
 
-  - #link("viga-euler.html")[Viga de Euler] — BEM 1D de ordem superior (opcional na trilha de 30 h)
-  - #link("trabalhos-finais.html")[Trabalhos finais] — quatro propostas baseadas no `BEM_gmsh`
+  - #link("viga-euler.html")[Viga de Euler] — BEM 1D de ordem superior (opcional)
+  - #link("trabalhos-finais.html")[Trabalhos finais] — propostas ancoradas no `BEM_gmsh`
 
-  == Medidas de erro
+  == Apêndice: medidas de erro
 
-  erro médio
-
-  $bar.v.double upright(bold(u)) bar.v.double_"med" = sum | u_i |$
-
-  $epsilon_u = (bar.v.double upright(bold(u)) - upright(bold(u))^"exact" bar.v.double_"med") / (bar.v.double upright(bold(u))^"exact" bar.v.double_"med")$
-
-  erro máximo
-
-  $bar.v.double upright(bold(u)) bar.v.double_"max" = max | u_i |$
-
-  $epsilon_u = (bar.v.double upright(bold(u)) - upright(bold(u))^"exact" bar.v.double_"max") / (bar.v.double upright(bold(u))^"exact" bar.v.double_"max")$
-
-  norma $L_2$ do erro
-
-  $bar.v.double upright(bold(u)) bar.v.double_(L_2) = sqrt(sum_(i = 1)^(N_e) (u_i)^2)$
-
-  $epsilon_u = (bar.v.double upright(bold(u)) - upright(bold(u))^"exact" bar.v.double_(L_2)) / (bar.v.double upright(bold(u))^"exact" bar.v.double_(L_2))$
-
-  No código: `rel_error(dad)` após `attach_analytical!`.
+  #include "../../chapters/08-erros.typ"
 ]

@@ -89,7 +89,7 @@ No Gmsh / `BEM_gmsh`: Laplace `"0;T"` ou `"1;q"`; elasticidade `"tx;ux;ty;uy"` (
   [$n$ ou $N$], [número de nós / pontos de colocação no contorno],
   [$n_"elem"$], [número de elementos de contorno],
   [$n_"pg"$ / `npg`], [pontos de Gauss por elemento],
-  [$epsilon_u$], [erro relativo (médio, máximo ou $L_2$ — capítulo *Medidas de erro*)],
+  [$epsilon_u$], [erro relativo (médio, máximo ou $L_2$ — *Apêndice: medidas de erro*)],
   [`rel_error(dad)`], [erro relativo agregado no `BEM_gmsh`],
 )
 

@@ -481,7 +481,7 @@ Observar:
 
 == Exercícios
 
-Notação: $T$, $q = -k partial T \/ partial n$. Erros: capítulo *Medidas de erro* e\/ou `rel_error(dad)`.
+Notação: $T$, $q = -k partial T \/ partial n$. Erros: *Apêndice: medidas de erro* e\/ou `rel_error(dad)`.
 Ordem do elemento: `tipo` \/ `ordem` no gerador e em `format2d` (linear $p=1$, quadrático $p=2$, …).
 
 *Escada*

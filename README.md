@@ -18,10 +18,10 @@ Curso de **30 h**. Código de referência: [`BEM_gmsh`](https://github.com/l-s-c
 9. [Propgeo 3D](docs/propgeo-3d.html)
 10. [Trabalhos finais](docs/trabalhos-finais.html)
 
-## Extra
+## Extra e apêndice
 
 - [Viga de Euler](docs/viga-euler.html) (aprofundamento opcional)
-- [Medidas de erro / links](docs/extra.html)
+- [Extra / medidas de erro (apêndice)](docs/extra.html)
 
 ## Compilar
 
