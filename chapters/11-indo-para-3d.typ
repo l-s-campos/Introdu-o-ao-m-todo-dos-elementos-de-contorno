@@ -8,38 +8,46 @@
 No capítulo *Indo para 2D* o laboratório aprendeu a malhar só o contorno $Gamma$,
 calcular $N_k$, $J$, $upright(bold(n))$ e reduzir área\/centróide a integrais em $Gamma$.
 
-Aqui o domínio é um *sólido* $Omega subset RR^3$. O “contorno” passa a ser uma
-*superfície* fechada (malha de elementos 2D em $RR^3$). O foco continua sendo
-*geometria + pipeline do `BEM_gmsh`*:
+Esta é a *última aula* da trilha: o domínio vira um *sólido* $Omega subset RR^3$ e o
+“contorno” uma *superfície* fechada — mas o *roteiro* é o mesmo do 2D.
 
-1. gerar superfície com Gmsh (`mesh_cube`, …);
-2. montar o `dad` com `format3d`;
-3. validar malha com `geometric_props` (área, volume, centróide — o antigo “propgeo”);
-4. rodar um *Laplace 3D mínimo* (cubo, $T = z$) com o mesmo `H_G_full_direct` + `solve` do 2D.
+#block(
+  width: 100%,
+  fill: rgb("#ecfdf5"),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + rgb("#99f6e4"),
+)[
+  *Mensagem da aula.* 2D e 3D são *semelhantes* no `BEM_gmsh`:
+  `format*` $arrow.r$ `geometric_props` $arrow.r$ `H_G_full_direct` $arrow.r$ `solve`.
+  Mudam a dimensão de $Gamma$, a SF e o número de DOFs — não a lógica.
+]
 
-CDC detalhada e problemas 3D avançados ficam para projetos; o essencial é *sair do plano*
-sem perder o fio do curso.
+Nesta aula você:
+1. gera superfície com Gmsh (`mesh_cube`, …);
+2. monta o `dad` com `format3d`;
+3. valida a malha com `geometric_props` ($A$, $V$, centróide);
+4. repete o pipeline em *Laplace 3D* e, no exercício final, em *elasticidade 3D* simples.
 
 == Objetivos
 
-+ Ver o que muda de 2D para 3D na malha e no `BEMdata`.
-+ Usar `format3d` e inspecionar nós, normais e elementos de face.
-+ Obter $A$, $V$ e centróide só com a superfície (`geometric_props` 3D).
-+ Conferir orientação (normal exterior) e o papel de cavidades.
-+ Rodar dois exemplos simples: (G) só geometria no cubo; (L) Laplace $T=z$ no cubo.
-+ Comparar erros de geometria e de potencial (apêndice de erros).
++ Ver o que muda (e o que *não* muda) de 2D para 3D.
++ Usar `format3d` e inspecionar nós, normais e faces.
++ Fechar geometria com `geometric_props` 3D (orientação inclusa).
++ Rodar Laplace 3D mínimo no cubo ($T = z$) com a *mesma* API do 2D.
++ Nos exercícios: um de geo, um de Laplace, um de elasticidade — fechamento do curso.
 
 == Mapa
 
-+ Por que “indo para 3D”
++ Por que “indo para 3D” (tabela 2D $arrow.r$ 3D)
 + Ambiente e `format3d`
 + Elemento de superfície: $J$ e $upright(bold(n))$
-+ Propgeo: divergência e radial (A, V, c)
-+ Lab G — cubo unitário (só geometria)
-+ Lab L — Laplace 3D mínimo ($T = z$)
++ Propgeo: divergência e radial ($A$, $V$, $upright(bold(c))$)
++ Lab G — cubo (geometria)
++ Lab L — Laplace 3D ($T = z$)
 + Orientação e cavidades
 + Armadilhas
-+ Exercícios
++ Exercícios finais (3)
 + Leituras
 
 == Por que “indo para 3D”
@@ -308,49 +316,123 @@ Mesma gramática do Laplace 2D (`"0;T"` \/ `"1;q"`), agora em *superfícies*.
   [Misturar `format2d` em `.msh` 3D], [Use `format3d`],
 )
 
-== Exercícios
+== Exercícios finais (3)
 
-Apêndice de erros. Sempre reporte `dad.n` e o que mediu ($A,V$ ou $T$).
+Última entrega da trilha. Apêndice de erros. Em *cada* item: reporte `dad.n` (e `dimension`),
+o que mediu, e *uma linha* explicitando o paralelo 2D $arrow.r$ 3D
+(ex.: “`format2d` $arrow.r$ `format3d`”; “$P,A$ $arrow.r$ $A,V$”; “$T$ $arrow.r$ $upright(bold(u))$ com 3 DOFs”).
 
-=== E0 — Labs G e L
+=== E1 — Geometria (cubo ou paralelepípedo)
 
-(i) Tabela do Lab G (`ndiv`, $e_A$, $e_V$, default vs `npg_boundary`).
-(ii) Tabela do Lab L (`ndiv`, `npg`, erro $T=z$).
-(iii) Uma frase: a geo já era boa quando o potencial convergiu?
+*2D análogo:* Lab de `geometric_props` no quadrado \/ coroa (*Indo para 2D*).
 
-=== E1 — Paralelepípedo
+1. Gere o cubo unitário (`mesh_cube`, $L=1$) com `ndiv in {2,3,4,6}`.
+2. `dad = format3d(msh, Laplace(1.0); pontointerno=false)`.
+3. `gp = geometric_props(dad)` e, numa malha, também `npg_boundary=8`.
+4. Tabela: `ndiv`, $n$, $A$, $V$, $upright(bold(c))$, $e_A=|A-6|$, $e_V=|V-1|$,
+   $|upright(bold(c))-(1\/2,1\/2,1\/2)|$.
+5. Confira `mean(n · (x - c)) > 0` (normal para fora).
+6. *Opcional (+):* paralelepípedo $L_x times L_y times L_z$ e fórmulas analíticas de $A,V$.
 
-$L_x, L_y, L_z$ distintos. Geo: $A$ e $V$ analíticos.
-Opcional: Laplace com $T = z\/L_z$ (CDC análogas ao cubo).
+*Critério:* $e_A$ e $e_V$ caindo com `ndiv`; sinal de $V$ correto; texto do paralelo 2D\/3D.
 
-=== E2 — Esfera facetada
+=== E2 — Laplace 3D (potencial no cubo)
 
-Só geometria: $A$ e $V$ vs $4 pi R^2$ e $(4\/3) pi R^3$; erro vs número de faces.
+*2D análogo:* quadrado com $T=x$ (*Laplace 2D*).
 
-=== E3 — Cubo com cavidade
+1. Mesmo cubo; CDC do `mesh_cube` ($T=0$ em $z=0$, $T=1$ em $z=1$, lados $q=0$).
+2. Pipeline *idêntico* ao 2D:
 
-(a) $V approx V_"ext" - V_"cav"$ com orientação correta;
-(b) inverta só a cavidade e relate o sinal de $V$;
-(c) (opcional) um potencial simples se montar CDC coerentes.
+```julia
+H_G_full_direct(dad; npg=8)
+solve(dad)
+```
 
-=== E4 — Divergência na mão
+3. Erro vs $T = z$ nos nós (como no Lab L): $epsilon_2$ e $epsilon_infinity$ (apêndice).
+4. Tabela `ndiv` (e, se puder, `npg`) × $n$ × erros.
+5. *Antes* do solve: uma linha com `gp.volume` da mesma malha (geo ok $arrow.r$ campo).
 
-Com `Nodes`, `Normal`, pesos do `dad`:
+*Critério:* erro de $T$ caindo com refino; menção explícita de que a API é a do Laplace 2D.
 
-$ V_3 = (1\/3) sum_i (upright(bold(x))_i · upright(bold(n))_i)\, (w J)_i $
+=== E3 — Elasticidade 3D (patch de Dirichlet no cubo)
 
-Compare com `gp.volume`.
+*2D análogo:* patch $upright(bold(u)) = bold(epsilon)\, upright(bold(x))$ (*Elasticidade 2D*).
 
-== O que fica para depois
+Objetivo: ver que o pipeline *continua o mesmo* com 3 DOFs por nó.
 
-- Elasticidade 3D, H-matrizes 3D, problemas industriais — trabalhos \/ pesquisa.
+1. Superfície do cubo unitário (`mesh_cube` + `format3d`), agora com
+
+```julia
+dad = format3d(msh, Elasticity(1.0, 0.3, 1.0); tipo=1, pontointerno=false)
+```
+
+2. Patch de deformação uniforme (ex. $epsilon_(x x)=0.01$, demais nulos):
+   em *todo* nó de superfície e em *cada* direção $d=1,2,3$,
+
+```julia
+# u = ε · x  (Dirichlet em todos os DOFs de contorno)
+for i in 1:dad.n
+    x = dad.Nodes[i]
+    u = (εxx * x[1], εxy * x[1] + εyy * x[2], ...)  # escolha um ε simples
+    for d in 1:3
+        dad.BC[3*(i-1)+d] = 0          # Dirichlet
+        dad.BV[3*(i-1)+d] = u[d]
+    end
+end
+```
+
+   Sugestão mínima: $epsilon_(x x)=0.01$, $epsilon_(y y)=epsilon_(z z)=epsilon_(i j)=0$
+   $arrow.r$ $upright(bold(u)) = (0.01\, x,\, 0,\, 0)$.
+
+3. De novo a *mesma* sequência:
+
+```julia
+H_G_full_direct(dad; npg=8)
+solve(dad)
+```
+
+4. Erro em deslocamento: $epsilon_2$ e $epsilon_infinity$ empilhando os 3 componentes
+   (ou `rel_error` se anexar analítico compatível). Compare 2 refinamentos de `ndiv`.
+
+5. No relatório, complete a tabela mental do curso:
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Etapa*], [*2D (aulas anteriores)*], [*3D (esta aula)*],
+  [Malha], [`format2d`], [`format3d`],
+  [Geo], [$P,A,upright(bold(c))$], [$A,V,upright(bold(c))$],
+  [Laplace], [$T$ \/ $q$; `"0;T"`], [$T$ \/ $q$ em *faces*],
+  [Elasticidade], [$upright(bold(u)),upright(bold(t))$ 2 DOFs], [$upright(bold(u)),upright(bold(t))$ *3* DOFs],
+  [Montagem \/ solve], [`H_G_full_direct` + `solve`], [*iguais*],
+)
+
+*Critério:* patch com erro pequeno ou decrescente; CDC 3 DOFs documentadas; tabela 2D\/3D preenchida com suas palavras.
+
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(200),
+)[
+  *Fechamento.* Se E1–E3 rodaram, você repetiu em 3D o arco inteiro do curso:
+  geometria de contorno $arrow.r$ potencial $arrow.r$ elasticidade — com o mesmo código de montagem.
+  Trabalhos finais aprofundam um tema; a trilha de 30 h encerra aqui.
+]
+
+== Depois do curso
+
+- Trabalhos finais (propostas A–E no `BEM_gmsh`).
+- H-matrizes, trinca, contato, multirregião — quando a geometria 2D\/3D já estiver sólida.
 - Internos (`pontointerno=true`) e pós-processamento volumétrico.
-- SF e singularidades 3D em profundidade (além do uso via `H_G_full_direct`).
 
 == Leituras e código
 
-- Cap. *Indo para 2D* — radial, divergência, `format2d`, descontínuo
-- Cap. *Laplace 2D* — pipeline $H,G$, CDC, `solve` (idêntico na API)
+- Cap. *Indo para 2D* — radial, divergência, `format2d` (espelho desta aula)
+- Cap. *Laplace 2D* — `H_G_full_direct` + `solve` (mesma API no Lab L \/ E2)
+- Cap. *Elasticidade 2D* — patch Dirichlet (espelho do E3 com 2 DOFs)
 - *Apêndice: medidas de erro*
 - `src/Core/Input.jl` — `format3d`
 - `src/Core/GeometricProperties.jl` — `geometric_props_3d`, `_calc_F_3d`
