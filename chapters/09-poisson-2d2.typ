@@ -116,9 +116,10 @@ Sejam $x_1,...,x_N$ as colocações (`point(dad,i)`, $i=1..N$).
 *1. Interpolação*
 
 $
-f(x) approx sum_(j=1)^N phi.alt(|x-x_j|) alpha_j
-quad (+ "polinômios se" poly_deg >= 0) .
+f(x) approx sum_(j=1)^N phi.alt(|x - x_j|) alpha_j
 $
+(mais monômios de baixa ordem se `poly_deg` $>= 0$).
+
 
 Nos nós:
 
