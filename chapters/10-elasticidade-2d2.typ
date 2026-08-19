@@ -160,7 +160,7 @@ antes de montar.
 
 O parser (`parse_pairs` em `Input.jl`) lê o nome do grupo físico como
 
-$ tipo_1; valor_1; tipo_2; valor_2 $
+`tipo_1; valor_1; tipo_2; valor_2`
 
 para os dois DOFs $(x,y)$:
 
