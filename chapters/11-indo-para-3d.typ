@@ -1,6 +1,6 @@
 // Indo para 3D — geometria de superfície + exemplos BEM 3D simples
 // Extensão do cap. Indo para 2D; código BEM_gmsh (format3d, geometric_props, Laplace 3D)
-// Nome legado: Indo para 3D
+// Nome legado: Propgeo 3D
 
 = Indo para 3D
 <indo-para-3d>
@@ -34,7 +34,7 @@ sem perder o fio do curso.
 + Por que “indo para 3D”
 + Ambiente e `format3d`
 + Elemento de superfície: $J$ e $upright(bold(n))$
-+ Indo para 3D: divergência e radial
++ Propgeo: divergência e radial (A, V, c)
 + Lab G — cubo unitário (só geometria)
 + Lab L — Laplace 3D mínimo ($T = z$)
 + Orientação e cavidades
@@ -134,7 +134,7 @@ $
 É o análogo 3D de $J = |d upright(bold(x))\/d xi|$ no contorno 2D. O sinal de
 $upright(bold(n))$ fixa fora\/dentro — veja a seção de orientação.
 
-== Indo para 3D (geometria só com $Gamma$)
+== Propgeo: geometria só com $Gamma$
 
 === Divergência
 
