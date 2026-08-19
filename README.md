@@ -15,7 +15,7 @@ Curso de **30 h**. Código de referência: [`BEM_gmsh`](https://github.com/l-s-c
 6. [Laplace 2D](docs/laplace-2d.html)
 7. [Poisson 2D](docs/poisson-2d.html)
 8. [Elasticidade 2D](docs/elasticidade-2d.html)
-9. [Propgeo 3D](docs/propgeo-3d.html)
+9. [Indo para 3D](docs/indo-para-3d.html)
 10. [Trabalhos finais](docs/trabalhos-finais.html)
 
 ## Extra e apêndice

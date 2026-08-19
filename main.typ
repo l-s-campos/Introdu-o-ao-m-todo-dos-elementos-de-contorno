@@ -53,7 +53,7 @@
 #include "chapters/06-laplace-2d.typ"
 #include "chapters/09-poisson-2d.typ"
 #include "chapters/10-elasticidade-2d.typ"
-#include "chapters/11-propgeo-3d.typ"
+#include "chapters/11-indo-para-3d.typ"
 #include "chapters/12-trabalhos-finais.typ"
 
 // ---- Apêndice (referência) ----

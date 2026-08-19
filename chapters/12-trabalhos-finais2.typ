@@ -14,8 +14,6 @@ O núcleo BEM já está no repositório — a equipe usa a biblioteca como *plat
 
 *Equipes:* 1–2 alunos. *Uma* proposta por equipe.
 
-*Carga:* 20–40 h extraclasse após Laplace/elasticidade. Começar cedo.
-
 *Entregáveis (todas):*
 
 1. *Relatório* (12–20 p., PDF): formulação BEM do problema; 3–8 refs; malha/CDC; herdado vs. próprio; números/tabelas/figuras; erro/convergência/custo (*Apêndice: medidas de erro*); limites e futuro.
@@ -48,9 +46,6 @@ O núcleo BEM já está no repositório — a equipe usa a biblioteca como *plat
 
 W1 plano · W2 primeiro número · W3 estudo a meio · W4 relatório + defesa.
 
-== Integridade e IA
-
-Cite código e analíticos. IA ok se a equipe explicar na defesa. Resultado irreprodutível = inválido.
 
 == Escolha orientada
 
@@ -61,7 +56,7 @@ Cite código e analíticos. IA ok se a equipe explicar na defesa. Resultado irre
   [*Se curte…*], [*Prefira*], [*Cuidado*],
   [Sólidos \/ $K_I$], [A], [Singularidade; malha dual],
   [Interfaces], [B], [Condicionamento],
-  [Dinâmica], [C], [CFL; erro DIBEM],
+  [Dinâmica], [C], [erro DIBEM],
   [HPC], [D], [Medir tempo/memória],
   [Contato], [E], [Zona ativa],
 )

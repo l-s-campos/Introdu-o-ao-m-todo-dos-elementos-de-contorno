@@ -17,7 +17,7 @@
   6. #link("laplace-2d.html")[Laplace 2D]
   7. #link("poisson-2d.html")[Poisson 2D]
   8. #link("elasticidade-2d.html")[Elasticidade 2D]
-  9. #link("propgeo-3d.html")[Propgeo 3D]
+  9. #link("indo-para-3d.html")[Indo para 3D]
   10. #link("trabalhos-finais.html")[Trabalhos finais]
 
   == Extra

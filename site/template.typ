@@ -12,7 +12,7 @@
   (id: "laplace-2d", title: "Laplace 2D", file: "laplace-2d.html"),
   (id: "poisson-2d", title: "Poisson 2D", file: "poisson-2d.html"),
   (id: "elasticidade-2d", title: "Elasticidade 2D", file: "elasticidade-2d.html"),
-  (id: "propgeo-3d", title: "Propgeo 3D", file: "propgeo-3d.html"),
+  (id: "indo-para-3d", title: "Indo para 3D", file: "indo-para-3d.html"),
   (id: "trabalhos-finais", title: "Trabalhos finais", file: "trabalhos-finais.html"),
   (id: "viga-euler", title: "Viga de Euler (extra)", file: "viga-euler.html"),
   (id: "extra", title: "Extra", file: "extra.html"),

@@ -28,7 +28,7 @@ const PAGES = [
   { id: "laplace-2d", title: "Laplace 2D", file: "laplace-2d.html", src: "site/pages/06-laplace-2d.typ" },
   { id: "poisson-2d", title: "Poisson 2D", file: "poisson-2d.html", src: "site/pages/09-poisson-2d.typ" },
   { id: "elasticidade-2d", title: "Elasticidade 2D", file: "elasticidade-2d.html", src: "site/pages/10-elasticidade-2d.typ" },
-  { id: "propgeo-3d", title: "Propgeo 3D", file: "propgeo-3d.html", src: "site/pages/11-propgeo-3d.typ" },
+  { id: "indo-para-3d", title: "Indo para 3D", file: "indo-para-3d.html", src: "site/pages/11-indo-para-3d.typ" },
   { id: "trabalhos-finais", title: "Trabalhos finais", file: "trabalhos-finais.html", src: "site/pages/12-trabalhos-finais.typ" },
   { id: "viga-euler", title: "Viga de Euler (extra)", file: "viga-euler.html", src: "site/pages/90-viga-euler.typ" },
   { id: "extra", title: "Extra", file: "extra.html", src: "site/pages/extra.typ" },
