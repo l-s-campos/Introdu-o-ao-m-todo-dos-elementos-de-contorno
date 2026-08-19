@@ -1,127 +1,430 @@
-// Poisson 2D
-// markdown2typst + tex2typst + BEM_gmsh
+// Poisson 2D — DIBEM (fonte de domínio)
+// Pré-requisito: Laplace 2D
 
 = Poisson 2D
 <poisson-2d>
 
-= MECID / DIBEM
+No capítulo *Laplace 2D* o problema era $nabla^2 T = 0$ e o sistema ficou
 
-A equação de Poisson é dada por:
+$ H T = G q $
 
-$ nabla^2 T = f(x, y), $
+só com integrais em $Gamma$. Agora admitimos *fonte de domínio*:
 
-um novo termo aparece na equação integral de contorno:
+$ nabla^2 T = f(x) quad "em" Omega . $
 
-$ 0.5 T(x_d , y_d) = integral_Gamma T q^* d s - integral_Gamma T^* q d s + integral_Omega T^* f d Omega, $
+A equação integral *ganha um termo em* $Omega$. Em vez de malha volumétrica de EF, o
+`BEM_gmsh` monta o operador *DIBEM* (Direct Interpolation BEM): uma matriz $M$ tal que
 
-esse termo precisa de um tratamento extra. Vamos aproximar $T^* f$ por funções de base radial:
+$
+  bold(d) approx M bold(f) ,
+  quad
+  d_i approx integral_Omega T^* (x, x_i)\, f(x)\, dif Omega ,
+$
 
-$ T^* f = sum_(j = 1)^n phi.alt(r_j) alpha_j . $
+usando RBF nos nós de colocação (contorno + internos) e redução das integrais de
+volume ao contorno — o mesmo espírito do `geometric_props` no cap. *Indo para 2D*.
 
-$phi.alt$ é uma função de base radial que será tomada aqui por $r^2 log(r)$. $alpha$ são coeficientes desconhecidos que podem ser obtidos aplicando essa equação $n$ vezes e montando um sistema matricial:
+== Objetivos
 
-$ mat(delim: "[", phi.alt(upright(X)_1 - upright(X)_1), phi.alt(upright(X)_1 - upright(X)_2), dots.c, phi.alt(upright(X)_1 - upright(X)_N); phi.alt(upright(X)_2 - upright(X)_1), phi.alt(upright(X)_2 - upright(X)_2), dots.c, phi.alt(upright(X)_2 - upright(X)_N); dots.v, dots.v, dots.down, dots.v; phi.alt(upright(X)_N - upright(X)_1), phi.alt(upright(X)_N - upright(X)_2), dots.c, phi.alt(upright(X)_N - upright(X)_N)) mat(delim: "{", alpha_1; alpha_2; dots.v; alpha_N) = mat(delim: "{", upright(f) (upright(X)_1) T^* (X_d comma X_1); upright(f) (upright(X)_2) T^* (X_d comma X_2); dots.v; upright(f) (upright(X)_N) T^* (X_d comma X_N)) = mat(delim: "{", upright(T)^* (X_d comma X_1), dots.c, 0; 0, upright(T)^* (X_d comma X_2), 0; dots.v, dots.down, dots.v; 0, 0, upright(T)^* (X_d comma X_N)) mat(delim: "{", upright(f) (upright(X)_1); upright(f) (upright(X)_2); dots.v; upright(f) (upright(X)_N)) $
++ Derivar *por que* aparece $integral_Omega T^* f$ a partir do Laplace.
++ Entender DIBEM: RBF $arrow.r$ $F$ $arrow.r$ primitivas no contorno $arrow.r$ $M$.
++ Montar `H_G_full_direct` + `DIBEM` e usar o cache `dad.M`.
++ Resolver Poisson estacionário $H T - G q = M f$ (RHS de domínio).
++ Ver $M$ como “massa” no transiente (ponte).
++ Exercícios clássicos com API DIBEM e erros do apêndice.
 
-escrito de maneira sintética:
+== Mapa
 
-$ alpha = F^(-1) D f . $
++ De Laplace a Poisson (PDE $arrow.r$ BIE)
++ DIBEM em detalhe (ideia, fórmulas, código)
++ Onde $M$ entra no sistema
++ Lab A: sanidade ($f=0$ e tamanho de $M$)
++ Lab B: Poisson manufaturado $u = x^2+y^2$ ($f=4$)
++ Transiente (ponte)
++ Armadilhas
++ Exercícios
++ Leituras
 
-Voltando a integral de domínio:
+== De Laplace a Poisson
 
-$ integral_Omega T^* f d Omega = integral_Omega sum_(j = 1)^n phi.alt(r_j) alpha_j d Omega = sum_(j = 1)^n integral_Omega phi.alt(r_j) d Omega F^(-1) D f = s F^(-1) D f = s_f D f $
+=== PDE e notação
 
-$ integral_Omega T^* f d Omega = mat(delim: "{", upright(s)_1, upright(s)_2, ..., upright(s)_n) F^(-1) mat(delim: "{", upright(T)^* (X_d comma X_1), dots.c, 0; 0, upright(T)^* (X_d comma X_2), 0; dots.v, dots.down, dots.v; 0, 0, upright(T)^* (X_d comma X_N)) mat(delim: "{", upright(f) (upright(X)_1); upright(f) (upright(X)_2); dots.v; upright(f) (upright(X)_N)) = mat(delim: "{", upright(s)_(f 1) upright(T)^* (X_d comma X_1), upright(s)_(f 2) upright(T)^* (X_d comma X_2), ..., upright(s)_(f N) upright(T)^* (X_d comma X_N)) mat(delim: "{", upright(f) (upright(X)_1); upright(f) (upright(X)_2); dots.v; upright(f) (upright(X)_N)) $
+$
+  nabla^2 T = f quad "em" Omega ,
+  quad
+  q = - k (partial T)\/(partial n) quad "em" Gamma .
+$
 
-Fazendo isso para os $n$ pontos fontes:
+- $f = 0$: Laplace (capítulo anterior) — $H T = G q$.
+- $f$ conhecida: Poisson estacionário — $H T - G q = M f$.
+- no tempo: $M$ multiplica $dot(T)$ ou $accent(T, dot.double)$ (calor\/onda).
 
-$ mat(delim: "{", upright(s)_(f 1) upright(T)^* (X_1 comma X_1), upright(s)_(f 2) upright(T)^* (X_1 comma X_2), ..., upright(s)_(f N) upright(T)^* (X_1 comma X_N); upright(s)_(f 1) upright(T)^* (X_2 comma X_1), upright(s)_(f 2) upright(T)^* (X_2 comma X_2), ..., upright(s)_(f N) upright(T)^* (X_2 comma X_N); dots.v; upright(s)_(f 1) upright(T)^* (X_N comma X_1), upright(s)_(f 2) upright(T)^* (X_N comma X_2), ..., upright(s)_(f N) upright(T)^* (X_N comma X_N)) mat(delim: "{", upright(f) (upright(X)_1); upright(f) (upright(X)_2); dots.v; upright(f) (upright(X)_N)) = M f $
+Física típica (tabela de aplicações do Laplace): geração de calor, membrana
+($S nabla^2 w = -p$), etc. Mudam os *nomes* de $T$ e $f$.
 
-a diagonal dessa matriz não é bem definida devido a singularidade da solução fundamental. Ela será calculada de maneira indireta como feito com a matriz $H$.
+=== Identidade integral
 
-Esse procedimento deve ser capaz de calcular essa integral quando a função $f$ for constante e igual a 1.
+Mesma identidade de Green do Laplace, peso = SF $T^*$ com $-nabla^2 T^* = delta(x-x_d)$:
 
-$ I_(1 d) = integral_Omega T^* (X_d , X) d Omega $
+$
+  integral_Omega (T^* nabla^2 T - T nabla^2 T^*) dif Omega
+  =
+  integral_Gamma (T^* partial_n T - T partial_n T^*) dif s .
+$
 
-Igualando as equações:
+Com $nabla^2 T = f$ e o salto da SF:
 
-$ M [1] = [I_1] $
+$
+  c(x_d) T(x_d)
+  =
+  integral_Gamma T q^* dif s
+  -
+  integral_Gamma T^* q dif s
+  +
+  integral_Omega T^* f dif Omega .
+$
 
-a diagonal da matriz $M$  deve ser dada por
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Onde*], [*$c(x_d)$*],
+  [Interior], [$1$],
+  [Contorno liso], [$1\/2$],
+  [Canto], [$c != 1\/2$; no código, diagonal de $H$ indireta],
+)
 
-$ M_(i i) = I_(1 i) - sum_(j = 1)^N M_(i j) , " com " i != j, " para " i = 1, 2, . . ., N, $
+$H$ e $G$ são *os mesmos* do Laplace. O bloco novo é só
 
-No `BEM_gmsh` o termo de domínio é montado por *DIBEM* (funções de base radial) e fica disponível após a montagem de $H$ e $G$:
+$ d(x_d) := integral_Omega T^* (x, x_d)\, f(x)\, dif Omega . $
+
+Discretamente, nas colocações $x_i$:
+
+$
+  H T - G q = bold(d) ,
+  quad
+  bold(d) approx M bold(f) .
+$
+
+== DIBEM em detalhe
+
+=== Ideia em uma frase
+
+Interpola $f$ (ou outra densidade de domínio) por RBF nos $N =$ `dad.nt` pontos
+(contorno + internos) e transforma $integral_Omega T^* f$ em combinações de
+*integrais só em* $Gamma$, montando a matriz $M$ uma vez.
+
+=== Passo a passo
+
+Sejam $x_1,...,x_N$ as colocações (`point(dad,i)`, $i=1..N$).
+
+*1. Interpolação*
+
+$
+  f(x) approx sum_(j=1)^N phi.alt(|x - x_j|) alpha_j
+$
+(mais monômios de baixa ordem se `poly_deg` $>= 0$).
+
+
+Nos nós:
+
+$
+  F bold(alpha) = bold(f) ,
+  quad
+  F_(i j) = phi.alt(|x_i-x_j|)
+  \ (i != j),\
+  F_(i i)\ "com regularização" .
+$
+
+No pacote o default é `PHS()` (polyharmonic spline; ver `Radial_Basis_Functions.jl`).
+
+*2. Integral contra a SF*
+
+$
+  d(x_i)
+  =
+  integral_Omega T^* (x,x_i) f(x) dif Omega
+  approx
+  sum_j alpha_j integral_Omega T^* (x,x_i) phi.alt_j (x) dif Omega .
+$
+
+*3. Redução ao contorno*
+
+Integrais radiais $integral_Omega g(r) dif Omega$ com $r=|x-x_i|$ viram integrais em
+$Gamma$ via primitiva + fator $upright(bold(n))·upright(bold(r))\/r^2$ em 2D
+(mesma geometria da área no cap. *Indo para 2D*).
+
+O código acumula, por fonte $i$:
+
+- `IF[i]` — contribuição de contorno ligada à RBF;
+- `ID[i]` — contribuição ligada à SF (caso $f equiv 1$).
+
+Longe do elemento: lumping nodal; perto: Gauss regular (`_dibem_accumulate_IF_ID!`).
+
+*4. Matriz $M$*
+
+Forma densa típica (RBF genérica em `DIBEM_dense`):
+
+```julia
+M = IF' / F .* D          # D_ij ~ T*(xi, xj), i≠j
+for i in 1:dad.nt
+    M[i, i] = 0
+    M[i, i] = -sum(M[i, :]) + ID[i]
+end
+```
+
+A diagonal impõe a identidade do caso constante:
+
+$
+  M bold(1) = bold(I D)
+  quad arrow.r.double.long quad
+  M_(i i) = I D_i - sum_(j != i) M_(i j) .
+$
+
+#block(
+  width: 100%,
+  fill: rgb("#ecfdf5"),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + rgb("#99f6e4"),
+)[
+  *Analogia com $H$.*
+  Laplace: $T equiv 1$, $q equiv 0$ $arrow.r$ $H bold(1)=0$ $arrow.r$
+  $H_(i i)=-sum_(j!=i) H_(i j)$.
+  DIBEM: $f equiv 1$ $arrow.r$ $M bold(1)=bold(I D)$ $arrow.r$ diagonal de $M$ por linha.
+  Em ambos: *não integre o singular “na marra”*.
+]
+
+Depois disso:
+
+$ bold(d) = M bold(f) . $
+
+=== O que DIBEM *não* é
+
+- Não é malha de volume MEF: internos são *centros de RBF* e sensores, não elementos de $Omega$.
+- Não substitui $H,G$: só constrói $M$.
+- Poucos internos, aglomerados ou fora de $Omega$ $arrow.r$ $F$ mal-condicionada e $M$ ruim.
+
+=== Código no pacote
+
+```julia
+# Laplace/Domain.jl — essência DIBEM_dense
+# F_ij = φ(|xi-xj|),  D_ij = T*(xi,xj)
+# IF, ID = primitivas no contorno
+# M = (IF'/F) .* D  +  diagonal via ID
+
+function DIBEM_dense(dad::BEMdata{<:Laplace}; rbf=PHS())
+    # ... monta F, D ...
+    _dibem_accumulate_IF_ID!(IF, ID, dad, rbf; mon=mon, IP=IP)
+    M = IF' / F .* D
+    for i in 1:dad.nt
+        M[i, i] = 0
+        M[i, i] = -sum(M[i, :]) + ID[i]
+    end
+    set_cache!(dad; M, dibem_F=F, dibem_rbf=rbf, dibem_method=:dense)
+    return M
+end
+```
+
+API:
+
+```julia
+DIBEM(dad)                         # :dense, rbf=PHS()
+DIBEM(dad; rbf=PHS(3; poly_deg=0))
+DIBEM(dad; method=:hmatrix)        # N grande — extra / trabalhos
+```
+
+Exige colocações de domínio: `format2d(..., pontointerno=true)` (ou lista de internos no `dad`).
+Então `dad.nt = dad.n + n_"int"`.
+
+== Onde $M$ entra no sistema
+
+=== Estacionário (Poisson)
+
+Equação discreta *antes* das CDC:
+
+$ H T - G q = M f . $
+
+1. `H_G_full_direct(dad, npg)` — monta $H,G$ (como no Laplace).
+2. `DIBEM(dad)` — monta $M$.
+3. Amostra $f$ em *todas* as colocações $i=1..N$ $arrow.r$ vetor `fvec`.
+4. `d = M * fvec`.
+5. `applyBC(dad)` — reorganiza $H T - G q$ em $A x = b_"CDC"$ (igual ao Laplace).
+6. Soma o domínio no RHS: `dad.b .+= d` (mesmo tamanho que as linhas de $H$, `dad.nt`).
+7. Resolve $A x = b$ e espalha $T,q$ (`bem_linsolve` + `split_sol!`, ou equivalente).
+
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(200),
+)[
+  *Por que somar $d$ em `b` depois do `applyBC`?*
+  As CDC só movem colunas de $H$ e $G$. O termo $M f$ já está no *lado direito* da
+  identidade integral; na forma $A x = b$ ele permanece como contribuição conhecida
+  em todas as equações de colocação (contorno e internos).
+]
+
+=== Transiente \/ outros
+
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Modelo*], [*Papel de $M$*],
+  [Calor $dot(T) ~ kappa nabla^2 T$], [`solve_transient` usa $M$ como massa],
+  [Onda], [`solve_Houbolt` \/ `solve_transient_o2`],
+  [Helmholtz $nabla^2 T + kappa^2 T = 0$], [desloca $H - kappa^2 M$ (`κ2` em `applyBC`)],
+)
+
+
+
+== Poisson manufaturado $u = x^2+y^2$ ($f = 4$)
+
+No quadrado unitário, $u = x^2+y^2$ $arrow.r$ $nabla^2 u = 4$.
+Dirichlet com o valor exato em todo o contorno.
 
 ```julia
 using DrWatson
 @quickactivate :BEM
+using LinearAlgebra, Statistics
 include(datadir("Laplace", "Laplace_dad.jl"))
 
-props = Laplace(1.0)
-msh   = quadrado(ndiv=24, show=false)
-dad   = format2d(msh, props; pontointerno=true)  # internos entram no DIBEM
+ufun(p) = p[1]^2 + p[2]^2
+fval = 4.0
+
+msh = quadrado(ndiv=12, show=false, nome="pois_dibem")
+dad = format2d(msh, Laplace(1.0); pontointerno=true)
+
+for i in 1:dad.n
+    dad.BC[i] = 0
+    dad.BV[i] = ufun(dad.Nodes[i])
+end
 
 H_G_full_direct(dad, 16)
-DIBEM(dad)                 # monta a matriz de domínio (tipo massa) M
-# DIBEM(dad; rbf=PHS(3; poly_deg=0))  # variante de RBF
+M = DIBEM(dad; rbf=PHS(3; poly_deg=1))
 
-solve(dad)                 # estacionário sem fonte
-# Transiente (difusão) — o termo M u̇ é tratado pelo integrador:
-# sol = solve_transient(dad, 0.01, 1.0)      # 1ª ordem (calor)
-# solve_Houbolt(dad, 0.05, 2.0)              # 2ª ordem (onda)
-# sol = solve_transient_o2(dad, 0.05, 2.0)   # 2ª ordem via DifferentialEquations
+# f em todas as colocações (contorno + internos)
+fvec = fill(fval, dad.nt)
+# se f for campo: fvec = [f(point(dad, i)) for i in 1:dad.nt]
+d = M * fvec
 
+applyBC(dad)                 # A, b só com CDC (H,G)
+dad.b .+= d                  # domínio
+
+x = dad.A \ dad.b
+Tfull = zeros(dad.nt)
+qfull = zeros(dad.n)
+Tfull[1:length(x)] .= x
+split_sol!(dad, Tfull, qfull)
+set_cache!(dad; T=Tfull, q=qfull)
+
+pts = [dad.Nodes; dad.internalNodes]
+uex = ufun.(pts)
+u   = dad.T
+rmse = sqrt(mean(abs2, u .- uex))
+einf = maximum(abs, u .- uex)
+@show rmse, einf
 plot_geo(dad)
 ```
 
-Para carga de domínio estacionária, a contribuição $M f$ entra no lado direito do sistema após a aplicação das CDCs (veja `Domain.jl` e os exemplos em `docs/src/pt-br/examples.md`). Os pontos internos da malha Gmsh (`Physical Surface`) são reutilizados como centros das RBFs — não é necessário gerar uma malha volumétrica de elementos finitos.
+*Variantes (tabela):* `ndiv in {8,12,16}`; `PHS(3; poly_deg=1)` vs `PHS(5; poly_deg=2)`;
+misto Dirichlet\/Neumann com $q = -2(x n_x + y n_y)$ nos lados horizontais.
+
+Normas: *Apêndice: medidas de erro*. Aqui RMSE e $epsilon_infinity$ em `pts`.
+
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(200),
+)[
+  *Implementação.* O caminho `applyBC` $arrow.r$ `b .+= M*f` $arrow.r$ `A\\b` $arrow.r$ `split_sol!`
+  deixa o papel de $M$ *explícito*. Se a versão do pacote expuser um helper de Poisson
+  estacionário com DIBEM, use-o — a matemática é a mesma: $H T - G q = M f$.
+]
+
+== Transiente (ponte)
+
+Com $M$ no cache:
+
+```julia
+H_G_full_direct(dad, 16)
+DIBEM(dad)
+# sol = solve_transient(dad, 0.01, 1.0)     # calor
+# solve_Houbolt(dad, 0.05, 2.0)             # 2ª ordem
+```
+
+Estabilidade Δt ↔ malha ↔ qualidade de $M$: monografia (proposta C dos trabalhos).
+Nos exercícios E3–E4, o foco é sensor no tempo + erro, não a teoria completa de CFL.
+
+== Armadilhas
+
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Sintoma*], [*Causa típica*],
+  [`DIBEM` falha ou $M$ absurda], [Sem `pontointerno`; pontos ruins; RBF inadequada],
+  [Erro grande com $f$ simples], [Malha grossa; `poly_deg` baixo; CDC errada],
+  [Solução “desloca” com $f=0$], [Somou `d` não nulo por engano; `fvec` sujo],
+  [Dimensão de `b` ≠ `d`], [Misturou `n` e `nt`; internos desligados],
+  [Neumann manufaturado explode], [Sinal de $q=-k partial_n u$],
+  [Transiente explode], [Δt grande; $M$ pobre],
+)
 
 == Exercícios
 
-Todos os exercícios têm de ser resolvidos com diferentes discretizações.
+Apêndice de erros. Sempre reporte $N$ (`dad.n`, `dad.nt`) e a norma usada.
 
-+ Determine a superfície de deflexão de uma membrana elástica em forma de um triângulo equilátero com comprimento lateral a = 5,0 m. A membrana está fixa ao longo de sua borda e é submetida a uma carga distribuída uniformemente f = 10 kN/m² e uma tensão S = 1 kN/m. Os eixos coordenados são tomados como mostrado na figura.
+=== E1 — Membrana triangular
 
-A equação que rege esse problema é: $S nabla^2 w = − f$
+$ S nabla^2 w = -f $, $a=5$, $f=10$, $S=1$ (unidades do enunciado); contorno $w=0$.
 
 #image("../assets/poisson-2d/membrana.png", width: 80%)
 
-A solução analítica é dada por:
+$
+  w = -f/(2 S) [
+    1/2 (x^2+y^2)
+    - 1/(a sqrt(3)) (y^3 - 3 x^2 y)
+    - a^2\/18
+  ] .
+$
 
-$ w = - f/(2 S) [1/2 (x^2 + y^2) - 1/(a sqrt(3)) (y^3 - 3 x^2 y) - 1/18 a^2] $
+No código a PDE é $nabla^2 T = f_"bem"$ com $T=w$: use $f_"bem" = -f\/S$.
+DIBEM + RHS; erros em ≥ 100 internos; mapa de $w$.
 
-Calcule o erro médio e a norma L2 do erro em 100 pontos internos. Faça um gráfico com a distribuição de deflexão.
+=== E2 — Elipse
 
-+ Considere um cubo unitário inicialmente a temperatura zero e submetido a um aquecimento súbito em uma de suas faces.
+$ nabla^2 u = 4 - x^2 $ no domínio da figura.
 
-#image("../assets/poisson-2d/cubo-transiente.png", width: 80%)
-
-A face aquecida é elevada e mantida a uma temperatura unitária. Supõe-se que as propriedades do material sejam unitárias. A solução analítica para este problema de exemplo pode ser encontrada como:
-
-$ T(Y, t) = 1 - 4/pi sum_(n = 0)^infinity ((- 1)^n)/(2 n + 1) exp {-((2 n + 1)^2 pi^2 kappa t)/(4 L^2)} cos ((2 n + 1) pi Y)/(2 L) $
-
-Usando `solve_transient` (ou Houbolt / `solve_transient_o2` quando couber) no `BEM_gmsh`, resolva esse problema e compare com a solução analítica.
-
-+ Considere uma elipse que é governada por: $nabla^2 u = 4 - x^2$
-
-a solução analítica é dada por:
-
-$u = [1.6 - 1/246 (50 x^2 - 8 y^2 + 33.6)]((x^2)/4 + y^2 - 1)$e $mat(delim: #none, q = 0.4(x^2 + 8 y^2) + 1/246 (-50 x^3 - 96 x y^2 + 83.2 x) x/2 +; 1/246 (-96 x^2 y + 32 y^3 - 83.2 y) y)$calcule os erros do potencial nos pontos internos e do fluxo no contorno.
+$
+  u = [
+    1.6 - 1/246 (50 x^2 - 8 y^2 + 33.6)
+  ] (x^2\/4 + y^2 - 1) .
+$
 
 #image("../assets/poisson-2d/elipse.png", width: 80%)
 
-extra
+Amostra $f(x,y)=4-x^2$ em cada colocação para montar `fvec`.
+Erros de $u$ (internos) e de $q$ no contorno ($q=-partial_n u$, normal exterior);
+≥ 3 malhas.
 
-Um cilindro oco com temperatura inicial zero é considerado. O raio interno a=1 e o raio externo b = 2. A superfície interna do cilindro é mantida a uma temperatura=1. Nesse caso, são impostas restrições de simetria. As propriedades do material são unitárias. A solução analítica é dada por:
+=== E3 — Transiente (placa \/ cubo)
 
-$ T(r, t) = (upright(l n) (b \/ r))/(upright(l n) (b \/ a)) T_1 + pi sum_(n = 1)^infinity (J_0 (b alpha_n) J_0 (a alpha_n))/(J_0^2 (a alpha_n) - J_0^2 (b alpha_n)) {J_0 (r alpha_n) Y_0 (b alpha_n) - J_0 (b alpha_n) Y_0 (r alpha_n)} upright(e)^(-i alpha_n^2) , $
+$T_0=0$; uma face em $T=1$; propriedades unitárias. Série:
 
-onde $T_i$ é a temperatura constante na superfície interna, $J_0$ e $Y_0$ são as funções de Bessel de primeira e segunda espécies, respectivamente, e $alpha$ é a raiz de:
+$
+  T(Y,t)
+  =
+  1 - (4\/pi) sum_(n=0)^infinity
+  ((-1)^n)\/(2n+1)
+  exp{ -((2n+1)^2 pi^2 kappa t)\/(4 L^2) }
+  cos(((2n+1) pi Y)\/(2 L)) .
+$
 
-$ J_0 (a x) Y_0 (b x) - J_0 (b x) Y_0 (a x) = 0 . $
+#image("../assets/poisson-2d/cubo-transiente.png", width: 80%)
 
-você pode usar a função #link("https://juliamath.github.io/Roots.jl/stable/roots/#Searching-for-all-zeros-in-an-interval")[fzeros] para encontrar $alpha$
-
-== Gravação
-
-#link("https://youtu.be/uSREar_ejnM")[https://youtu.be/uSREar\_ejnM]
+`DIBEM` + `solve_transient` (ou Houbolt); sensores vs $t$; erro em 2–3 instantes.
