@@ -29,7 +29,7 @@ Começar cedo.
    - descrição da malha Gmsh e das CDCs (tipos físicos);
    - o que foi herdado do `BEM_gmsh` vs. o que a equipe implementou/adaptou;
    - resultados com *números*, tabelas e figuras;
-   - análise de erro / convergência / custo;
+   - análise de erro / convergência / custo (*Apêndice: medidas de erro*);
    - limitações e trabalho futuro.
 2. *Repositório ou pasta reproduzível:* scripts Julia, `.geo`/geradores, `README`
    com comandos exatos (`julia --project=... script.jl`), seeds e versões.

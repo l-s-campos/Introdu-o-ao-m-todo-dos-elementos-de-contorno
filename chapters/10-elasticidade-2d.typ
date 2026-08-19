@@ -1,167 +1,397 @@
-// Elasticidade 2D
-// markdown2typst + tex2typst
+// Elasticidade 2D — Kelvin + BEM_gmsh
+// Pré-requisito: Laplace 2D
 
 = Elasticidade 2D
 <elasticidade-2d>
 
-Notação (ver glossário): deslocamentos $u_i$, trações $t_i$, Poisson do material $nu$ (não confundir com a função peso $v$ da formulação integral).
+O pipeline é o *mesmo* do Laplace: malha de contorno $arrow.r$ SF $arrow.r$ $H,G$
+$arrow.r$ CDC $arrow.r$ $A x = b$ $arrow.r$ `solve`. O que muda:
 
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Peça*], [*Laplace*], [*Elasticidade 2D*],
+  [Campo primário], [$T$ (escalar)], [$upright(bold(u))=(u_x,u_y)$],
+  [Conjugado de Neumann], [$q = -k partial_n T$], [tração $upright(bold(t))$, $t_i = sigma_(i j) n_j$],
+  [SF], [$T^*$, $q^*$], [tensores de Kelvin $U_(i j)$, $T_(i j)$],
+  [DOFs por nó], [$1$], [$2$ ($H,G$ em blocos $2 times 2$)],
+  [CDC no Gmsh], [`"0;T"` \/ `"1;q"`], [`"tipo_x;val_x;tipo_y;val_y"`],
+  [Props], [`Laplace(k)`], [`Elasticity(E, ν, ρ; plane_strain\/stress)`],
+)
 
-= Equações importantes
+Notação (glossário): Poisson do *material* $nu$; *não* use $v$ para o Poisson
+(reserve $v$ à função peso da formulação, se aparecer).
 
-A relação de equilíbrio de tensão pode ser escrita como:
+== Objetivos
 
-$ (partial sigma_(x x))/(partial x) + (partial sigma_(x y))/(partial y) + f_x = 0 \ (partial sigma_(y x))/(partial x) + (partial sigma_(y y))/(partial y) + f_y = 0 $
++ Ligar equilíbrio + Hooke à BIE de contorno (Kelvin).
++ Entender plane strain vs plane stress no `Elasticity(...)`.
++ Ler e montar CDC vetoriais no Gmsh.
++ Rodar o *patch test* de Dirichlet e um problema clássico do repo.
++ Reportar erro em $upright(bold(u))$ (e tensões nos exercícios) — apêndice de erros.
 
-$ (partial sigma_(i j))/(partial x_j) + f_i = 0 $
+== Mapa
 
-Relação deformação-deslocamento pode ser escrita como:
++ Problema contínuo (resumo operacional)
++ De Navier à equação integral
++ Kelvin no `BEM_gmsh` + diagonal de $H$
++ CDC `"tipo;val;tipo;val"`
++ Lab 1 — patch $upright(bold(u)) = bold(epsilon) upright(bold(x))$
++ Lab 2 — tubo pressurizado
++ Tensões (pós-processamento, sem muro de fórmulas)
++ Armadilhas
++ Exercícios (cilindro, Kirsch, viga)
++ Leituras
 
-$ epsilon_(x x) = (partial u_x)/(partial x) ; quad epsilon_(y y) = (partial u_y)/(partial y) ; quad epsilon_(x y) = 1/2 ((partial u_x)/(partial y) + (partial u_y)/(partial x)) $
+== Problema contínuo (o que importa para o BEM)
 
-$ epsilon_(i j) = 1/2 ((partial u_i)/(partial x_j) + (partial u_j)/(partial x_i)) $
+=== Equilíbrio, cinemática, Hooke
 
-Relação tensão-deformação pode ser escrita como:
+$
+partial_j sigma_(i j) + f_i = 0 ,
+quad
+epsilon_(i j) = 1/2 (partial_i u_j + partial_j u_i) .
+$
 
-$ & upright(bold(epsilon))_(x x) = (1/E) sigma_(x x) + ((-v)/E) sigma_(y y) \ & epsilon_(y y) = ((-v)/E) sigma_(x x) + (1/E) sigma_(y y) \ & epsilon_(x y) = 1/(2 mu) sigma_(x y) $
+Isotrópico linear: $E$, $nu$, módulo de cisalhamento
 
-$ mu = E/(2(1 + v)) $
+$ mu = E \/ (2(1+nu)) . $
 
-Essas três relações podem ser usadas para chegar na seguinte equação diferencial de deslocamentos:
+Eliminando $sigma$ e $epsilon$ chega-se às equações de *Navier* em $upright(bold(u))$.
+A SF de Kelvin é a resposta a uma *força pontual* unitária nesse operador
+(análogo a $T^*$ ser a resposta a uma fonte pontual em Laplace).
 
-$ (partial^2 u_x)/(partial x^2) + (partial^2 u_x)/(partial y^2) + 1/(1 - 2 v) ((partial^2 u_x)/(partial x^2) + (partial^2 u_y)/(partial x partial y)) = (-f_x)/mu \ (partial^2 u_y)/(partial x^2) + (partial^2 u_y)/(partial y^2) + 1/(1 - 2 v) ((partial^2 u_y)/(partial y^2) + (partial^2 u_x)/(partial x partial y)) = (-f_y)/mu $
+No contorno, *por nó e por direção* ($x$ e $y$): ou se prescreve deslocamento $u_i$,
+ou se prescreve tração $t_i$ — nunca os dois no mesmo DOF (como $T$ vs $q$).
 
-$ (partial^2 u_i)/(partial x_j partial x_j) + (1/(1 - 2 v)) (partial^2 u_j)/(partial x_i partial x_j) = (-f_i)/mu $
+=== Estado plano
 
-A solução fundamental dessa equação de deslocamento é dada por:
+#table(
+  columns: (auto, auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Modelo*], [*Hipótese*], [*No pacote*],
+  [Plane *strain*], [$epsilon_z = 0$ (seção longa)], [`Elasticity(E,ν,ρ)` default],
+  [Plane *stress*], [$sigma_z = 0$ (chapa fina)], [`Elasticity(E,ν,ρ; plane_stress=true)`],
+)
 
-$ U_(i j) (p, Q) = 1/(8 pi mu(1 - v)) {(3 - 4 v) ln [1/(r(p, Q))] delta_(i j) + (partial r(p, Q))/(partial x_i) (partial r(p, Q))/(partial x_j)} $
+O código usa um Poisson *efetivo* $tilde(nu)$ nos núcleos 2D:
 
-e para a tração:
+- strain: $tilde(nu) = nu$;
+- stress: $tilde(nu) = nu\/(1+nu)$  
+  (e $lambda, mu$ em cache — `lame_constants` em `Structures.jl`).
 
-$ T_(i j) (p, Q) &= (-1)/(4 pi(1 - nu) r(p, Q)) ((partial r(p, Q))/(partial n)) \
-& times [(1 - 2 nu) delta_(i j) + 2 (partial r(p, Q))/(partial x_i) (partial r(p, Q))/(partial x_j)] \
-& +(1 - 2 v)/(4 pi(1 - v) r(p, Q)) [(partial r(p, Q))/(partial x_j) n_i - (partial r(p, Q))/(partial x_i) n_j] $
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(200),
+)[
+  *Não* misture: se o problema físico é chapa fina (Kirsch, viga fina do repo),
+  use `plane_stress=true`. Se for cilindro “longo” \/ tubo do repo, use o default
+  strain. Ajustar $E',nu'$ *na mão* e ainda pedir strain no construtor é receita
+  de inconsistência — prefira a flag do `Elasticity`.
+]
 
-Usando um procedimento semelhante ao apresentado para o problema potencial obtemos a equação integral de contorno:
+== Da PDE à equação integral
 
-$ mat(delim: "[", u_x (p); u_y (p)) & +integral_Gamma mat(delim: "[", T_(x x) (p comma Q), T_(x y) (p comma Q); T_(y x) (p comma Q), T_(y y) (p comma Q)) mat(delim: "[", u_x (Q); u_y (Q)) dif Gamma(Q) \ &= integral_Gamma mat(delim: "[", U_(x x) (p comma Q), U_(x y) (p comma Q); U_(y x) (p comma Q), U_(y y) (p comma Q)) mat(delim: "[", t_x (Q); t_y (Q)) dif Gamma(Q) $
+Mesma lógica do Laplace (resíduos $arrow.r$ identidades de Betti\/Green $arrow.r$ SF):
 
-$ u_i (p) + integral_Gamma T_(i j) (p, Q) u_j (Q) "d" Gamma(Q) = integral_Gamma U_(i j) (p, Q) t_j (Q) "d" Gamma(Q) $
+$
+c_(i k)(x_d)\, u_k (x_d)
++ integral_Gamma T_(i j)(x_d,x)\, u_j (x)\, dif Gamma
+=
+integral_Gamma U_(i j)(x_d,x)\, t_j (x)\, dif Gamma
++
+"termo de domínio se" f_i != 0 .
+$
 
-Essa equação pode ser derivada e junto com as relações tensão deformação obtém-se a equação que pode ser usada para calcular a tensão:
+- $U_(i j)$: deslocamento fundamental (Kelvin) — singularidade fraca ($ln r$ em 2D).
+- $T_(i j)$: tração fundamental — singularidade forte ($1\/r$).
+- $c_(i k)$: termo livre (ângulo sólido tensorial); no contorno liso $c = (1\/2) I$.
 
-$ sigma_(i j) (p) + integral_Gamma lr(\{(2 mu nu)/(1 - 2 nu) delta_(i j) (partial T_(m k) (p, Q))/(partial x_m)) \ +mu [(partial T_(i k) (p, Q))/(partial x_j) + (partial T_(j k) (p, Q))/(partial x_i)]} u_k (Q) dif Gamma(Q) \ = integral_Gamma lr(\{(2 mu nu)/(1 - 2 nu) delta_(i j) (partial U_(m k) (p, Q))/(partial x_m)) + mu [(partial U_(i k) (p, Q))/(partial x_j) + (partial U_(j k) (p, Q))/(partial x_i)]} t_k (Q) dif Gamma(Q) $
+Discretização com as *mesmas* $N_k$ do cap. *Indo para 2D* \/ Laplace:
 
-que pode ser reescrita como:
+$
+upright(bold(u)) = sum_k N_k upright(bold(u))_k ,
+quad
+upright(bold(t)) = sum_k N_k upright(bold(t))_k
+$
 
-$ sigma_(i j) (p) + integral_Gamma S_(k i j) (p, Q) u_k (Q) upright(space.nobreak d) Gamma(Q) = integral_Gamma D_(k i j) (p, Q) t_k (Q) upright(space.nobreak d) Gamma(Q) $
+$arrow.r$ sistema global (blocos $2 times 2$ por par de nós)
 
-onde os tensores $S_(k i j)$ e $D_(k i j)$ são dados por:
+$ H upright(bold(U)) = G upright(bold(T)) $
 
-$ S_(k i j) (p, Q) &= mu/(2 pi(1 - nu)) (1/(r^2)) n_i [2 nu (partial r)/(partial x_j) (partial r)/(partial x_k) + (1 - 2 nu) delta_(j k)] \
-& +mu/(2 pi(1 - nu)) (1/(r^2)) n_j [2 nu (partial r)/(partial x_i) (partial r)/(partial x_k) + (1 - 2 nu) delta_(i k)] \
-& +mu/(2 pi(1 - v)) (1/(r^2)) n_k [2(1 - 2 v) (partial r)/(partial x_i) (partial r)/(partial x_j) -(1 - 4 v) delta_(i j)] \
-& +mu/(pi(1 - nu)) (1/(r^2))((partial r)/(partial n)) [(1 - 2 nu) delta_(i j) (partial r)/(partial x_k) + nu(delta_(j k) (partial r)/(partial x_i) + delta_(i k) (partial r)/(partial x_j)) \
-& -4 (partial r)/(partial x_i) (partial r)/(partial x_j) (partial r)/(partial x_k)] $
+(vetores empilhados $u_x,u_y$ por nó). CDC reorganizam colunas $arrow.r$ $A x = b$;
+`solve(dad)` faz `applyBC` + solve + espalha `dad.T`\/`dad.u` e trações.
 
-$ D_(k i j) (p, Q) = 1/(4 pi(1 - nu)) (1/r) [(1 - 2 nu)(delta_(j k) (partial r)/(partial x_i) + delta_(i k) (partial r)/(partial x_j) - delta_(i j) (partial r)/(partial x_k)) \ + 2 (partial r)/(partial x_i) (partial r)/(partial x_j) (partial r)/(partial x_k)] $
+Força de corpo $f_i$: DIBEM elástico existe no pacote — *fora* do núcleo desta aula
+(análogo ao Poisson; ver trabalhos se precisar).
 
-== Código (`BEM_gmsh`)
+== Kelvin no `BEM_gmsh`
+
+```julia
+# Elasticity/Fundamental.jl — essência 2D
+function fundamental(props::Elasticity, r::SVector{2}, n::SVector{2})
+    ν = effective_nu(props)   # tilde(ν)
+    μ = props.mu
+    R = norm(r)
+    # U ~ [(3-4ν) log(1/R) I + r̂⊗r̂] / (const · μ)
+    # T ~ (1/R) · [termos com dr/dn, (1-2ν), ...]
+    return KernelPair(U, T)   # Mat 2×2 cada
+end
+```
+
+Montagem: o *mesmo* `H_G_full_direct(dad, npg)` do Laplace, no branch *vectorial*
+(`Assembly_full.jl`): laços por fonte, `integrate_element`, e diagonal de $H$ por
+*corpo rígido* (translação: linhas de cada bloco somam zero de forma análoga).
+
+```julia
+# após montar contribuições regulares (vectorial):
+# H[ii, ii] corrigido para que translação rígida ⇒ tração nula
+```
+
+Você *não* precisa reprogramar Kelvin: confira que `dad.properties isa Elasticity`
+antes de montar.
+
+== CDC no Gmsh — formato real do pacote
+
+O parser (`parse_pairs` em `Input.jl`) lê o nome do grupo físico como
+
+`tipo_1; valor_1; tipo_2; valor_2`
+
+para os dois DOFs $(x,y)$:
+
+#table(
+  columns: (auto, auto),
+  inset: 8pt,
+  stroke: 0.5pt + luma(200),
+  [*`tipo`*], [*Significado*],
+  [`0`], [Dirichlet: o `valor` é $u$ naquela direção],
+  [`1`], [Neumann: o `valor` é $t$ (tração) naquela direção],
+)
+
+Exemplos:
+
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*String*], [*Leitura*],
+  [`"0;0;0;0"`], [$u_x=0$, $u_y=0$ (engaste)],
+  [`"1;0;1;0"`], [$t_x=0$, $t_y=0$ (livre)],
+  [`"1;0;0;0"`], [$t_x=0$, $u_y=0$ (rolo horizontal)],
+  [`"0;0;1;0"`], [$u_x=0$, $t_y=0$ (rolo vertical)],
+  [`"1;P;1;0"`], [$t_x=P$, $t_y=0$ (tração uniforme em $x$)],
+)
+
+#block(
+  width: 100%,
+  fill: luma(248),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + luma(200),
+)[
+  Textos antigos às vezes escrevem `"tx;ux;ty;uy"`. No `BEM_gmsh` o que vale é
+  *pares* `(tipo, valor)` por direção — igual ao espírito de `"0;T"` \/ `"1;q"`,
+  só que *duas* vezes. Veja `quadrado_elasticity`, `pressurized_tube.jl`,
+  `plate_with_hole.jl`.
+]
+
+Cantos: elementos *descontínuos* no campo (como no Laplace) evitam um nó com duas
+CDCs incompatíveis. `format2d` + `tipo`\/ordem alinhados à malha.
+
+== Lab 1 — Patch test (deformação uniforme)
+
+Solução exata $upright(bold(u)) = bold(epsilon)\, upright(bold(x))$ (polinômio linear) —
+o BEM com elementos adequados deve reproduzi-la com erro muito pequeno.
 
 ```julia
 using DrWatson
 @quickactivate :BEM
 include(datadir("Laplace", "Laplace_dad.jl"))
+# espelho: data/examples/elasticity_patch.jl
 
-# --- verificação: patch de Dirichlet (ε_xx = 0.01) ---
-msh = quadrado_elasticity(ndiv=15, show=false)
-dad = format2d(msh, Elasticity(1.0, 0.3, 1.0); pontointerno=false)
+E, ν, εxx = 1.0, 0.3, 0.01
+msh = quadrado_elasticity(ndiv=10, show=false, nome="ex_elast_patch", ordem=2)
+dad = format2d(msh, Elasticity(E, ν, 1.0; plane_strain=true);
+               tipo=2, pontointerno=false)
 
-ana = ana_elasticity_patch(; E=1.0, ν=0.3, εxx=0.01)
-apply_analytical_bc!(dad, ana)   # impõe u = ε · x em todo o contorno
+ana = ana_elasticity_patch(; E=E, ν=ν, εxx=εxx)
+apply_analytical_bc!(dad, ana)   # sobrescreve BC/BV com u = ε·x (e t se misto)
 
-H_G_full_direct(dad, 16)
+H_G_full_direct(dad; npg=12)
 solve(dad)
-@show rel_error(dad)
+@show rel_error(dad)             # ‖u - u_ana‖₂ / ‖u_ana‖₂
 plot_geo(dad)
 ```
 
-Problemas clássicos com malha pronta em `data/elastico/iso/`:
+`ana_elasticity_patch` (`Analytical.jl`): $u = epsilon upright(bold(x))$ e tração de
+Hooke em plane strain a partir de $sigma$ constante.
+
+*Esperado:* `rel_error` pequeno (no exemplo do repo, tipicamente $<< 10^(-1)$ já em malha grossa; refine se precisar).
+*Se falhar:* malha\/orientação, `plane_strain` inconsistente com o analítico, ou `tipo`≠ordem.
+
+Default do `quadrado_elasticity` *sem* `apply_analytical_bc!`: esquerda engastada
+`"0;0;0;0"`, resto livre `"1;0;1;0"` — útil para outros testes; o patch *exige*
+o `apply_analytical_bc!` (Dirichlet em todo o contorno).
+
+== Lab 2 — Tubo pressurizado (repo)
 
 ```julia
 include(datadir("elastico", "iso", "pressurized_tube.jl"))
+# define Ra, Rb, E, ν, P, ur_tube, σr_tube, σθ_tube, mesh_pressurized_tube
+
 msh = mesh_pressurized_tube(; ndiv=16, show=false)
-dad = format2d(msh, Elasticity(E, ν, 1.0); pontointerno=true)
+dad = format2d(msh, Elasticity(E, ν, 1.0; plane_strain=true); pontointerno=true)
+
+# CDCs do .geo: simetria nos eixos; confira se a pressão interna no arco
+# está como você espera (ajuste BV/BC nos nós do furo se o gerador deixar livre).
+# Tração de pressão no sólido: t = -P n  (n exterior ao material).
+
 H_G_full_direct(dad, 16)
 solve(dad)
-# compare com ur_tube / σr_tube / σθ_tube no mesmo arquivo
+plot_geo(dad)
+
+# sensores: compare u_r numérico com ur_tube(r) nos nós / internos
 ```
 
-Convenção de CDC nos grupos físicos: `"tx;ux;ty;uy"` (ver capítulo *Laplace 2D*).
+Analítico (Lamé, pressão interna $P$, exterior livre) — como no arquivo do repo:
+
+$
+sigma_r (r) = c (1 - R_b^2\/r^2) ,
+quad
+sigma_theta (r) = c (1 + R_b^2\/r^2) ,
+quad
+c = R_a^2 P \/ (R_b^2 - R_a^2) ,
+$
+
+$
+u_r (r) = ((1+nu)\/E)\, c\, [ (1-2 nu) r + R_b^2\/r ]
+quad "(plane strain do arquivo)" .
+$
+
+== Tensões (pós-processamento)
+
+Com $upright(bold(u)), upright(bold(t))$ no contorno, tensões em pontos *interiores*
+vêm de integrais com núcleos $D_(k i j)$ e $S_(k i j)$ (hipersingulares no contorno).
+
+#block(
+  width: 100%,
+  fill: rgb("#ecfdf5"),
+  inset: 10pt,
+  radius: 4pt,
+  stroke: 0.5pt + rgb("#99f6e4"),
+)[
+  *Nesta aula.* Não decore as páginas de $S$ e $D$. Use:
+  (1) deslocamentos e `rel_error` no patch;
+  (2) nos exercícios, sensores onde o repo já dá $sigma$ analítico
+  (`σr_tube`, Kirsch, viga) e compare componentes em pontos internos \/ contorno
+  com a API de pós-processamento disponível na sua versão do `BEM_gmsh`.
+  Fórmulas completas: material legado \/ livros de BEM elástico.
+]
+
+== Armadilhas
+
+#table(
+  columns: (auto, auto),
+  inset: 7pt,
+  stroke: 0.5pt + luma(200),
+  [*Sintoma*], [*Causa típica*],
+  [Patch com erro grande], [`plane_strain` ≠ analítico; ordem\/`tipo`; BC não aplicadas],
+  [Corpo “voa” (modo rígido)], [Só Neumann em todo o contorno — prenda o corpo rígido],
+  [Tração com sinal trocado], [Normal para dentro; pressão $t = -P n$ com $n$ exterior],
+  [Kirsch longe do analítico], [Usou strain em problema de stress (ou o contrário)],
+  [Cantos ruins], [Elemento contínuo com CDC mista — use descontínuo],
+  [`parse` estranho da CDC], [String com número ímpar de campos; label sem pares],
+)
 
 == Exercícios
 
-=== Cilindro pressurizado
+`BEM_gmsh` + malhas em `data/elastico/iso/` (ou Gmsh próprio).
+≥ 3 refinamentos. Apêndice de erros: $epsilon_2$ (`rel_error` quando houver ana)
+e $epsilon_infinity$ em sensores de $upright(bold(u))$ e $sigma$.
 
-Raio interno $R_a = 50 m m$
+=== E0 — Patch
 
-Raio externo   $R_b = 100 m m$
+Rode o Lab 1 com `ndiv in {6,10,16}` e `tipo in {1,2}`. Tabela `N`, `rel_error`.
+Comente a taxa (deve saturar em erro de integração\/máquina se o patch for exato).
 
-Modulo de elasticidade   $E = 200 G P a$
+=== E1 — Cilindro \/ tubo pressurizado
 
-Poisson   $nu = 0.32$
-
-Pressão $P = 100 N \/ m m$
+$R_a = 50$, $R_b = 100$ (mm); $E = 200$ GPa; $nu = 0.32$; $P = 100$ N\/mm
+(valores alinhados a `pressurized_tube.jl` em MPa·mm).
 
 #image("../assets/elasticidade-2d/cilindro.png", width: 80%)
 
-$ u_r = ((1 + v) p r_a^2)/((r_b^2 - r_a^2) E) [(1 - 2 v) r + (r_b^2)/r] \
-sigma_r = (p r_a^2)/(r_b^2 - r_a^2) - (r_a^2 r_b^2 p)/(r_b^2 - r_a^2) 1/(r^2) \
-sigma_h = (p r_a^2)/(r_b^2 - r_a^2) + (r_a^2 r_b^2 p)/(r_b^2 - r_a^2) 1/(r^2) $
+Compare $u_r$ e $sigma_r, sigma_theta$ com Lamé; simetria de quarto de círculo.
+Documente as CDCs de simetria e a pressão no raio interno.
 
-=== Placa com furo
+=== E2 — Placa com furo (Kirsch)
 
-Raio $R = 50 m m$
-
-Modulo de elasticidade   $E = 100 G P a$
-
-Poisson   $nu = 0.25$
-
-Pressão $P = 1 N \/ m m$
-
-Esse problema é de estado plano de tensão. Para ser tratado pelas soluções fundamentais de estado plano de deformação as propriedades deve ser ajustadas:
+$R = 50$ mm; tração remota $P$ em $x$; $E$, $nu$ como em `plate_with_hole.jl`.
+*Plane stress:* `Elasticity(..., plane_stress=true)`.
 
 #image("../assets/elasticidade-2d/placa-furo.png", width: 80%)
 
-$ nu' = nu/(1 + nu) \ E' = E [1 - (nu^(' 2))/((1 + nu')^2)] $
+$
+sigma_(r r) = (P\/2)(1 - a^2\/r^2)
+  + (P\/2)(1 - 4 a^2\/r^2 + 3 a^4\/r^4) cos 2 theta ,
+$
+$
+sigma_(theta theta) = (P\/2)(1 + a^2\/r^2)
+  - (P\/2)(1 + 3 a^4\/r^4) cos 2 theta ,
+$
+$
+sigma_(r theta) = -(P\/2)(1 + 2 a^2\/r^2 - 3 a^4\/r^4) sin 2 theta .
+$
 
-A solução analítica é dada por:
+(com $a=R$; confira a forma exata no arquivo do repo se os coeficientes diferirem.)
+Malha: `mesh_plate_with_hole`. Erros em sensores perto do furo e longe.
 
-$ mat(delim: #none, sigma_r = sigma/2 (1 - (a^2)/(r^2)) + sigma/2 (1 + (3 a^4)/(r^2) - (4 a^2)/(r^2)) cos(2 theta); sigma_theta = sigma/2 (1 + (a^2)/(r^2)) - sigma/2 (1 + (3 a^4)/(r^4)) cos(2 theta); tau_(r theta) = - sigma/2 (1 - (3 a^4)/(r^4) + (4 a^2)/(r^2)) sin(2 theta)) $
+=== E3 — Viga em balanço (cisalhamento parabólico)
 
-=== Viga
+$L=48$, $D=12$; $E$, $nu$, $P$ como `cantilever_beam.jl` (plane stress).
+Analítico:
 
-Uma viga com um carregamento parabólico $t_2 (y) = - P/(2 I) ((D^2)/4 - y^2)$ tem solução analítica:
-
-Comprimento $L = 48 m m$
-
-Altura $D = 12 m m$
-
-Modulo de elasticidade   $E = 300 G P a$
-
-Poisson   $nu = 0.3$
-
-Pressão $P = 1000 N$
+$
+u_1 = - (P y)\/(6 E I) [ (6L-3x)x + (2+nu)(y^2 - D^2\/4) ] ,
+$
+$
+u_2 = (P)\/(6 E I) [ 3 nu y^2 (L-x) + (4+5 nu) D^2 x \/ 4 + (3L-x) x^2 ] ,
+$
+$
+sigma_(x x) = - P(L-x) y \/ I ,
+quad
+tau_(x y) = - P\/(2 I) (D^2\/4 - y^2) ,
+quad
+I = D^3\/12 .
+$
 
 #image("../assets/elasticidade-2d/viga.png", width: 80%)
 
-$ u_1 (x, y) = - (P y)/(6 E I) [(6 L - 3 x) x + (2 + v)(y^2 - (D^2)/4)] $
+O gerador deixa o extremo livre com `"1;0;1;0"`: para o exercício, imponha a tração
+parabólica $t_y (y)$ no extremo $x=L$ (via BV nos nós ou grupo físico adequado) e
+engaste em $x=0$. Compare $u$ e $sigma$ em $x=L\/2$.
 
-$ u_2 (x, y) = P/(6 E I) [(3 v) y^2 (L - x) + (4 + 5 v) (D^2 x)/4 + (3 L - x) x^2] $
+== O que fica para depois
 
-$ sigma_(x x) (x, y) = - (P(L - x) y)/I \ tau_(x y) (x, y) = - P/(2 I) ((D^2)/4 - y^2) $
+- Trinca dual \/ $K_I$ — trabalhos, proposta A (`src/Crack/`).
+- Anisotropia Lekhnitskii — `data/elastico/aniso/`.
+- Contato Hertz — proposta E.
+- DIBEM com força de corpo — espelho do Poisson.
 
-Resolva os três exercícios com o `BEM_gmsh` (malhas em `data/elastico/iso/` ou gerador próprio via Gmsh). Reporte erros em deslocamentos e tensões para pelo menos três refinamentos.
+== Leituras e código
 
-#link("https://youtu.be/R6-_ECEQXRk")[gravação]
+- Cap. *Laplace 2D* — pipeline $H,G$, CDC, diagonal, `solve`
+- Cap. *Indo para 2D* — $N_k$, $J$, $upright(bold(n))$, descontínuo
+- *Apêndice: medidas de erro*
+- `src/Elasticity/Fundamental.jl` — Kelvin
+- `src/Core/Structures.jl` — `Elasticity`, `plane_stress`
+- `src/Core/Analytical.jl` — `ana_elasticity_patch`
+- `src/Core/Input.jl` — `parse_pairs`, `format2d`
+- `data/examples/elasticity_patch.jl`
+- `data/elastico/iso/pressurized_tube.jl`, `plate_with_hole.jl`, `cantilever_beam.jl`
+- #link("https://youtu.be/R6-_ECEQXRk")[gravação]
