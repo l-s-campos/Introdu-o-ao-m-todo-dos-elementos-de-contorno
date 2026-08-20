@@ -1,8 +1,9 @@
 # Apresentações (Touying)
 
-Slides enxutos por capítulo — [Touying](https://typst.app/universe/package/touying/) + tema `university`.
+Slides **com o conteúdo completo de cada aula**, gerados a partir de `chapters/*.typ`.
+Pacote: [Touying](https://typst.app/universe/package/touying/) · tema `university` · 16:9.
 
-## Compilar um capítulo
+## Compilar um
 
 ```bash
 typst compile --root . slides/06-laplace-2d.typ docs/slides/06-laplace-2d.pdf
@@ -18,7 +19,17 @@ for f in slides/[0-9]*.typ; do
 done
 ```
 
-## Arquivos
+## Estrutura
+
+| Item | Papel |
+|------|--------|
+| `_theme.typ` | tema comum (`@preview/touying:0.7.4`) |
+| `0x-*.typ` / `9x-*.typ` | um deck por capítulo |
+| `docs/slides/*.pdf` | PDFs compilados |
+
+Cada `==` das notas vira um slide (seções longas usam fonte menor). Fórmulas, código, tabelas e imagens das notas entram no deck.
+
+## Capítulos
 
 | Fonte | PDF |
 |-------|-----|
@@ -35,5 +46,3 @@ done
 | `12-trabalhos-finais.typ` | [pdf](../docs/slides/12-trabalhos-finais.pdf) |
 | `90-viga-euler.typ` | [pdf](../docs/slides/90-viga-euler.pdf) |
 | `91-contato-halfspace.typ` | [pdf](../docs/slides/91-contato-halfspace.pdf) |
-
-Tema compartilhado: `_theme.typ` (`@preview/touying:0.7.4`, tema university, 16:9).
