@@ -21,6 +21,7 @@ Curso de **30 h**. Código de referência: [`BEM_gmsh`](https://github.com/l-s-c
 ## Extra e apêndice
 
 - [Viga de Euler](docs/viga-euler.html) (aprofundamento opcional)
+- [Contato half-space](docs/contato-halfspace.html) (opcional)
 - [Extra / medidas de erro (apêndice)](docs/extra.html)
 
 ## Compilar

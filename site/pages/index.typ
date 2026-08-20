@@ -23,6 +23,7 @@
   == Extra
 
   - #link("viga-euler.html")[Viga de Euler] (aprofundamento opcional)
+  - #link("contato-halfspace.html")[Contato half-space] (opcional)
   - #link("extra.html")[Medidas de erro e links]
 
   == Links úteis

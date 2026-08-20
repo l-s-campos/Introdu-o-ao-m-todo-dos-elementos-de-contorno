@@ -70,3 +70,4 @@
 #pagebreak()
 
 #include "chapters/90-viga-euler.typ"
+#include "chapters/91-contato-halfspace.typ"

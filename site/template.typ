@@ -15,6 +15,7 @@
   (id: "indo-para-3d", title: "Indo para 3D", file: "indo-para-3d.html"),
   (id: "trabalhos-finais", title: "Trabalhos finais", file: "trabalhos-finais.html"),
   (id: "viga-euler", title: "Viga de Euler (extra)", file: "viga-euler.html"),
+  (id: "contato-halfspace", title: "Contato half-space (extra)", file: "contato-halfspace.html"),
   (id: "extra", title: "Extra", file: "extra.html"),
 )
 

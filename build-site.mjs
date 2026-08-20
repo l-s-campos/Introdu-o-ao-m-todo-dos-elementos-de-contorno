@@ -31,6 +31,7 @@ const PAGES = [
   { id: "indo-para-3d", title: "Indo para 3D", file: "indo-para-3d.html", src: "site/pages/11-indo-para-3d.typ" },
   { id: "trabalhos-finais", title: "Trabalhos finais", file: "trabalhos-finais.html", src: "site/pages/12-trabalhos-finais.typ" },
   { id: "viga-euler", title: "Viga de Euler (extra)", file: "viga-euler.html", src: "site/pages/90-viga-euler.typ" },
+  { id: "contato-halfspace", title: "Contato half-space (extra)", file: "contato-halfspace.html", src: "site/pages/91-contato-halfspace.typ" },
   { id: "extra", title: "Extra", file: "extra.html", src: "site/pages/extra.typ" },
 ];
 

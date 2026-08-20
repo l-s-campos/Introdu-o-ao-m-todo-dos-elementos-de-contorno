@@ -281,7 +281,7 @@ julia --project=. scripts/plate_large.jl
 == Proposta E — Contato elástico por BEM de semi-espaço / semi-plano
 
 *Nível.* Avançado. \
-*Âncoras no código.* `src/Contact/`, `scripts/hertz_line_2d.jl`,
+*Âncoras no código.* Cap. extra *Contato half-space*; `src/Contact/`, `scripts/hertz_line_2d.jl`,
 `scripts/contact_pohrt_li.jl`, `scripts/compare_contact_acceleration.jl`,
 dados de fretting / Cattaneo–Mindlin em `data/elastico/iso/`.
 

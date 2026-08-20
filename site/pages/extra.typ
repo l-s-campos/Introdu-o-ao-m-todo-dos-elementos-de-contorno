@@ -13,6 +13,7 @@
   == Capítulos extras
 
   - #link("viga-euler.html")[Viga de Euler] — BEM 1D de ordem superior (opcional)
+  - #link("contato-halfspace.html")[Contato half-space] — Hertz / Pohrt–Li no `BEM_gmsh` (opcional)
   - #link("trabalhos-finais.html")[Trabalhos finais] — propostas ancoradas no `BEM_gmsh`
 
   == Apêndice: medidas de erro
