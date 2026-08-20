@@ -24,6 +24,17 @@ Curso de **30 h**. Código de referência: [`BEM_gmsh`](https://github.com/l-s-c
 - [Contato half-space](docs/contato-halfspace.html) (opcional)
 - [Extra / medidas de erro (apêndice)](docs/extra.html)
 
+
+## Apresentações (Touying)
+
+Slides curtos por capítulo em [`slides/`](slides/) — pacote [Touying](https://typst.app/universe/package/touying/).
+
+```bash
+typst compile --root . slides/06-laplace-2d.typ docs/slides/06-laplace-2d.pdf
+```
+
+PDFs gerados: [`docs/slides/`](docs/slides/). Ver [`slides/README.md`](slides/README.md).
+
 ## Compilar
 
 ```bash
