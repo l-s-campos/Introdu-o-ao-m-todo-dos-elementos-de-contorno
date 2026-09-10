@@ -6,9 +6,9 @@
 
 // Conteudo completo da aula (chapters/11-indo-para-3d.typ)
 
-= "Indo para 3D"
+= Indo para 3D
 
-== "Indo para 3D - intro"
+== Indo para 3D - intro
 
 #set text(size: 12.5pt)
 No capítulo *Indo para 2D* o laboratório aprendeu a malhar só o contorno $Gamma$,
@@ -35,9 +35,9 @@ Nesta aula você:
 3. valida a malha com `geometric_props` ($A$, $V$, centróide);
 4. repete o pipeline em *Laplace 3D* e, no exercício final, em *elasticidade 3D* simples.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Objetivos"
+== Objetivos
 
 + Ver o que muda (e o que *não* muda) de 2D para 3D.
 + Usar `format3d` e inspecionar nós, normais e faces.
@@ -45,9 +45,9 @@ Nesta aula você:
 + Rodar Laplace 3D mínimo no cubo ($T = z$) com a *mesma* API do 2D.
 + Nos exercícios: um de geo, um de Laplace, um de elasticidade — fechamento do curso.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Mapa"
+== Mapa
 
 + Por que “indo para 3D” (tabela 2D $arrow.r$ 3D)
 + Ambiente e `format3d`
@@ -60,11 +60,11 @@ Nesta aula você:
 + Exercícios finais (3)
 + Leituras
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Por que \"indo para 3D\""
+== Por que \"indo para 3D\"
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 #table(
   columns: (auto, auto, auto),
   inset: 7pt,
@@ -91,9 +91,9 @@ Nesta aula você:
   Se $V$ e as normais estiverem errados, o BEM 3D herda o erro.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Ambiente"
+== Ambiente
 
 ```julia
 using DrWatson
@@ -104,11 +104,11 @@ include(datadir("Laplace", "cube_mesh.jl"))
 (Na primeira vez: `Pkg.activate` no clone + `Pkg.instantiate`.)
 GUI Gmsh: #link("https://gmsh.info/#Download")[gmsh.info] — útil para ver faces e grupos.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "format3d: do .msh ao dad"
+== format3d: do .msh ao dad
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 O Gmsh gera *elementos de dimensão 2* (faces). O `format3d` (`Input.jl`) lê esses
 elementos, coloca nós de campo (descontínuos por face, grau `tipo`), calcula
 jacobiano de superfície e normal:
@@ -139,11 +139,11 @@ CDC nesta aula: os grupos do `mesh_cube` já trazem Dirichlet no topo\/base e
 Neumann nos lados (para o Lab L). Para *só* geometria (Lab G), os nomes importam
 pouco — importam $J$ e $upright(bold(n))$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Elemento de superfície: e"
+== Elemento de superfície: e
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Em cada face, com parâmetros $(xi, eta)$:
 
 $
@@ -163,13 +163,13 @@ $
 É o análogo 3D de $J = |d upright(bold(x))\/d xi|$ no contorno 2D. O sinal de
 $upright(bold(n))$ fixa fora\/dentro — veja a seção de orientação.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Propgeo: geometria só com"
+== Propgeo: geometria só com
 
-== "Divergência"
+== Divergência
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 $
 integral_Omega nabla · upright(bold(F))\, dif V
 =
@@ -186,11 +186,11 @@ $
   [campos com $x_i$], [constantes], [momentos $arrow.r$ centróide],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Radial no pacote"
+== Radial no pacote
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Como no 2D, o código integra primitivas ao longo do raio $0 arrow.r upright(bold(x))$
 e monta com o fator
 
@@ -217,11 +217,11 @@ gp2 = geometric_props(dad; npg_radial=12, npg_boundary=8)
 Pólo na *origem* dos nós: corpos longe de $upright(bold(0))$ ou não estrelados podem
 pedir translação da malha ou mais cuidado na orientação.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Lab G - Cubo unitário (só geometria)"
+== Lab G - Cubo unitário (só geometria)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Analítico: $A = 6$, $V = 1$, $upright(bold(c)) = (1\/2,1\/2,1\/2)$ se o cubo é $[0,1]^3$.
 
 ```julia
@@ -256,11 +256,11 @@ mean_out = sum(dot(dad.Normal[i], dad.Nodes[i] - c) for i in 1:dad.n) / dad.n
 *Esperado:* erros de $A$ e $V$ caindo com `ndiv` (ordens de grandeza do teste do repo:
 poucos % em malha moderada). Se $V < 0$, inverta orientação global.
 
+#set text(size: 18pt)
+
+== Lab L - Laplace 3D mínimo ( no cubo)
+
 #set text(size: 14pt)
-
-== "Lab L - Laplace 3D mínimo ( no cubo)"
-
-#set text(size: 10.5pt)
 O mesmo cubo, agora com o solver. Solução exata compatível com as CDC do
 `mesh_cube`: $T=0$ em $z=0$, $T=1$ em $z=L$, lados isolados $arrow.r$ $T = z\/L$
 (com $L=1$, $T=z$).
@@ -306,9 +306,9 @@ SF 3D no pacote: $T^* = 1\/(4 pi k R)$ (`Fundamental.jl`) — você não monta n
   (3) erro de campo. Se (1) falha, não debugue singularidade de $H$ ainda.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "CDC do cubo (referência)"
+== CDC do cubo (referência)
 
 Em `cube_mesh.jl` (faces = Physical Group dim 2):
 
@@ -320,9 +320,9 @@ Em `cube_mesh.jl` (faces = Physical Group dim 2):
 
 Mesma gramática do Laplace 2D (`"0;T"` \/ `"1;q"`), agora em *superfícies*.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Orientação e cavidades"
+== Orientação e cavidades
 
 #table(
   columns: (auto, auto),
@@ -338,9 +338,9 @@ Mesma gramática do Laplace 2D (`"0;T"` \/ `"1;q"`), agora em *superfícies*.
 2D: exterior anti-horário, furo horário. 3D: mão direita nas faces para $upright(bold(n))$
 *para fora do material* em todas as componentes de $partial Omega$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Armadilhas"
+== Armadilhas
 
 #table(
   columns: (auto, auto),
@@ -355,17 +355,17 @@ Mesma gramática do Laplace 2D (`"0;T"` \/ `"1;q"`), agora em *superfícies*.
   [Misturar `format2d` em `.msh` 3D], [Use `format3d`],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exercícios finais (3)"
+== Exercícios finais (3)
 
 Última entrega da trilha. Apêndice de erros. Em *cada* item: reporte `dad.n` (e `dimension`),
 o que mediu, e *uma linha* explicitando o paralelo 2D $arrow.r$ 3D
 (ex.: “`format2d` $arrow.r$ `format3d`”; “$P,A$ $arrow.r$ $A,V$”; “$T$ $arrow.r$ $upright(bold(u))$ com 3 DOFs”).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E1 - Geometria (cubo ou paralelepípedo)"
+== E1 - Geometria (cubo ou paralelepípedo)
 
 *2D análogo:* Lab de `geometric_props` no quadrado \/ coroa (*Indo para 2D*).
 
@@ -379,11 +379,11 @@ o que mediu, e *uma linha* explicitando o paralelo 2D $arrow.r$ 3D
 
 *Critério:* $e_A$ e $e_V$ caindo com `ndiv`; sinal de $V$ correto; texto do paralelo 2D\/3D.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E2 - Laplace 3D (potencial no cubo)"
+== E2 - Laplace 3D (potencial no cubo)
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 *2D análogo:* quadrado com $T=x$ (*Laplace 2D*).
 
 1. Mesmo cubo; CDC do `mesh_cube` ($T=0$ em $z=0$, $T=1$ em $z=1$, lados $q=0$).
@@ -400,11 +400,11 @@ solve(dad)
 
 *Critério:* erro de $T$ caindo com refino; menção explícita de que a API é a do Laplace 2D.
 
+#set text(size: 18pt)
+
+== E3 - Elasticidade 3D (patch de Dirichlet no cubo)
+
 #set text(size: 14pt)
-
-== "E3 - Elasticidade 3D (patch de Dirichlet no cubo)"
-
-#set text(size: 10.5pt)
 *2D análogo:* patch $upright(bold(u)) = bold(epsilon)\, upright(bold(x))$ (*Elasticidade 2D*).
 
 Objetivo: ver que o pipeline *continua o mesmo* com 3 DOFs por nó.
@@ -471,17 +471,17 @@ solve(dad)
   Trabalhos finais aprofundam um tema; a trilha de 30 h encerra aqui.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Depois do curso"
+== Depois do curso
 
 - Trabalhos finais (propostas A–E no `BEM_gmsh`).
 - H-matrizes, trinca, contato, multirregião — quando a geometria 2D\/3D já estiver sólida.
 - Internos (`pontointerno=true`) e pós-processamento volumétrico.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Leituras e código"
+== Leituras e código
 
 - Cap. *Indo para 2D* — radial, divergência, `format2d` (espelho desta aula)
 - Cap. *Laplace 2D* — `H_G_full_direct` + `solve` (mesma API no Lab L \/ E2)
@@ -496,4 +496,4 @@ solve(dad)
 - #link("https://1drv.ms/f/s!AmfyGvdmTYongqYn5kjjlZaMHr9h2w?e=z0sXvU")[Arquivos legados propgeo]
 - #link("https://youtu.be/Uc-rxXDBU6I")[gravação]
 
-#set text(size: 14pt)
+#set text(size: 18pt)

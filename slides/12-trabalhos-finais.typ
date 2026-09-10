@@ -6,9 +6,9 @@
 
 // Conteudo completo da aula (chapters/12-trabalhos-finais.typ)
 
-= "Trabalhos finais"
+= Trabalhos finais
 
-== "Trabalhos finais - intro"
+== Trabalhos finais - intro
 
 Curso de *30 horas* — Introdução ao Método dos Elementos de Contorno. \
 Código: #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`].
@@ -19,11 +19,11 @@ Estas propostas *não* são exercícios de “rodar o exemplo e plotar”. Cada 
 repositório — o trabalho é *usar a biblioteca como plataforma de pesquisa*, não
 como caixa-preta.
 
+#set text(size: 18pt)
+
+== Regras gerais
+
 #set text(size: 14pt)
-
-== "Regras gerais"
-
-#set text(size: 10.5pt)
 *Equipes:* 1–2 alunos. *Uma* proposta por equipe (combinar com o docente se quiser
 fusão parcial).
 
@@ -67,18 +67,18 @@ copiar `scripts/intro.jl`, mudar `ndiv` e entregar um gráfico de $T=x$.
   [Reprodutibilidade e clareza do relatório/código], [15 %],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Proposta A - Mecânica da fratura com Dual BEM (trinca + + propagação)"
+== Proposta A - Mecânica da fratura com Dual BEM (trinca + + propagação)
 
 *Nível.* Avançado. \
 *Âncoras no código.* `src/Crack/`, `data/elastico/iso/center_crack.jl`,
 `scripts/crack_central.jl`, `data/examples/crack_feddersen.jl`, grupos físicos
 tipo `"5;…"` (faces duais).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema científico"
+== Problema científico
 
 Placa finita com trinca central (ou trinca de borda / geometria *nova* proposta
 pela equipe) sob tração remota. Calcular fatores de intensidade de tensão
@@ -90,9 +90,9 @@ Em seguida, dar *pelo menos um passo de propagação* com critério MTS (e, se
 couber, estimativa de vida via Paris já esboçada no script) — discutindo o que o
 código faz e o que ainda é simplificado.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que deve ir além do script pronto"
+== O que deve ir além do script pronto
 
 Escolha *no mínimo duas* frentes:
 
@@ -107,9 +107,9 @@ Escolha *no mínimo duas* frentes:
 - Um experimento numérico de *caminho*: vários passos MTS com remalhagem manual
   ou semi-automática (mesmo que tosca), documentando falhas.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Entregas específicas"
+== Entregas específicas
 
 - Tabela $K_I^"num"$ vs. $K_I^"ref"$ com erro relativo para ≥ 4 razões $a/W$ ou
   ≥ 4 malhas.
@@ -119,9 +119,9 @@ Escolha *no mínimo duas* frentes:
 - Seção “o que o Dual BEM ainda não faz neste trabalho” (contato entre faces,
   3D, plástico, …).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Pontos de partida (não são o trabalho)"
+== Pontos de partida (não são o trabalho)
 
 ```julia
 using DrWatson
@@ -131,18 +131,18 @@ include(datadir("elastico", "iso", "center_crack.jl"))
 # ver scripts/crack_central.jl e a API CrackTip / propagate!
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Proposta B - Multirregião, interfaces e materiais contrastantes"
+== Proposta B - Multirregião, interfaces e materiais contrastantes
 
 *Nível.* Avançado. \
 *Âncoras no código.* `src/MultiRegion/`, `data/Laplace/two_regions.jl`,
 `scripts/two_regions_interface.jl`; elasticidade anisotrópica em
 `data/elastico/aniso/` (Lekhnitskii); DIBEM se houver fonte por região.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema científico"
+== Problema científico
 
 Sistemas em que *um único* contorno exterior não basta: duas ou mais sub-regiões
 com condutividades (ou módulos) diferentes, acopladas por condições de
@@ -158,11 +158,11 @@ A equipe formula o bloco do sistema global, implementa/adapta um caso com
 - sensibilidade ao contraste $k_1/k_2$ (ou $E_1/E_2$) em vários logaritmos de
   razão.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que deve ir além do script pronto"
+== O que deve ir além do script pronto
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Pelo menos duas frentes:
 
 - Geometria *não* retângulo-retângulo: inclusão circular/elíptica, parede
@@ -179,18 +179,18 @@ Pelo menos duas frentes:
 - Perfil de $q$ normal ao longo da interface e balanço integral
   $integral_Gamma_("ext") q dif s approx 0$ (estacionário sem fonte).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Entregas específicas"
+== Entregas específicas
 
 - Diagrama de blocos do sistema algébrico multirregião (incógnitas por região +
   multiplicadores/condições de interface).
 - Curva erro e/ou fluxo residual vs. contraste e vs. $N$.
 - Discussão de condicionamento: o que acontece com $k_1/k_2 = 10^3$ ou $10^(-3)$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Pontos de partida"
+== Pontos de partida
 
 ```julia
 using DrWatson
@@ -200,9 +200,9 @@ include(datadir("Laplace", "two_regions.jl"))
 # data/elastico/aniso/*.jl  para a variante mecânica
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Proposta C - Dinâmica no contorno: ondas / calor transiente com análise de esquema"
+== Proposta C - Dinâmica no contorno: ondas / calor transiente com análise de esquema
 
 *Nível.* Avançado. \
 *Âncoras no código.* `DIBEM`, `solve_transient`, `solve_transient_o2`,
@@ -210,9 +210,9 @@ include(datadir("Laplace", "two_regions.jl"))
 `scripts/wave_propagation.jl`, catálogo `:bar_sudden`, `:annulus`,
 `:membrane_v0`, `:membrane_forced`, `:ricker`, …
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema científico"
+== Problema científico
 
 Acoplar as matrizes de contorno $H,G$ a uma matriz de domínio tipo massa $M$
 (DIBEM) e integrar no tempo um problema *hiperbólico* (onda escalar) *ou*
@@ -227,9 +227,9 @@ O foco *não* é “gerar um vídeo”. É responder com números:
   1ª ordem se comportam em *dispersão*, *dissipação numérica* e custo;
 - se a escolha de RBF / densidade de pontos internos domina o erro espacial.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que deve ir além do script pronto"
+== O que deve ir além do script pronto
 
 Pelo menos duas frentes:
 
@@ -244,18 +244,18 @@ Pelo menos duas frentes:
   reprodutível + métrica $L_2(Omega)$ aproximada via pontos internos ao longo do
   tempo.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Entregas específicas"
+== Entregas específicas
 
 - Formulação discreta: de $H T = G q + M f$ (ou $M accent(u, dot.double)$) ao marchador usado.
 - Gráficos espaço-tempo ou snapshots em instantes teóricos de reflexão.
 - Tabela de erros vs. $Delta t$ e vs. $N$ com ordem observada.
 - Discussão honesta: onde o DIBEM polui a solução em relação ao erro de tempo.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Pontos de partida"
+== Pontos de partida
 
 ```julia
 using DrWatson
@@ -266,26 +266,26 @@ dad, meta = wave_problem(:bar_sudden; ndiv=12, n_int=6)
 # scripts/wave_propagation.jl  (WAVE_CASE, WAVE_SOLVER=houbolt|diffeq|both)
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Proposta D - H-matrizes, custo e fidelidade em malhas grandes"
+== Proposta D - H-matrizes, custo e fidelidade em malhas grandes
 
 *Nível.* Avançado. \
 *Âncoras no código.* `H_G_Hmat`, `src/Hmat/`, `scripts/compare_hbs_hss.jl`,
 `scripts/profile_assembly.jl`, `scripts/plate_large.jl`, docs de performance.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema científico"
+== Problema científico
 
 Para um problema *verificável* (Laplace $T=x$ ou elasticidade patch / placa com
 furo com solução de Kirsch), construir a *fronteira de Pareto* precisão × custo.
 Não basta um run com H-matriz: o trabalho é *instrumentar*, varrer $N$ e
 responder com dados *quando* comprimir vale a pena.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que deve ir além do script pronto"
+== O que deve ir além do script pronto
 
 Pelo menos duas frentes:
 
@@ -300,17 +300,17 @@ Pelo menos duas frentes:
   com interpretação; perfil (`@time`, `TimerOutputs`) e gargalo (integração vs.
   álgebra).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Entregas específicas"
+== Entregas específicas
 
 - Gráfico único “erro × tempo” com famílias densa / H-matriz.
 - Tabela $N$, memória, `compression_ratio`, tempos, erro.
 - Texto explícito: *em que regime* a equipe recomenda H-matriz neste hardware.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Pontos de partida"
+== Pontos de partida
 
 ```bash
 julia --project=. scripts/compare_hbs_hss.jl
@@ -318,26 +318,26 @@ julia --project=. scripts/profile_assembly.jl
 julia --project=. scripts/plate_large.jl
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Proposta E - Contato elástico por BEM de semi-espaço / semi-plano"
+== Proposta E - Contato elástico por BEM de semi-espaço / semi-plano
 
 *Nível.* Avançado. \
 *Âncoras no código.* Cap. extra *Contato half-space*; `src/Contact/`, `scripts/hertz_line_2d.jl`,
 `scripts/contact_pohrt_li.jl`, `scripts/compare_contact_acceleration.jl`,
 dados de fretting / Cattaneo–Mindlin em `data/elastico/iso/`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema científico"
+== Problema científico
 
 Reproduzir e *estender* um contato clássico (Hertz linha 2D ou Cattaneo–Mindlin /
 fretting) no formalismo de semi-espaço ou semi-plano do `BEM_gmsh`. O centro é a
 física do contato (zona ativa, pressão, deslizamento), não só chamar um script.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que deve ir além do script pronto"
+== O que deve ir além do script pronto
 
 Pelo menos duas frentes:
 
@@ -351,17 +351,17 @@ Pelo menos duas frentes:
   carga em “ciclo” com análise de deslizamento parcial; *ou* visualização da zona
   de contato evolutiva + comparação de CPU entre variantes.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Entregas específicas"
+== Entregas específicas
 
 - Figura $p(x)/p_0$ vs. $x/a$ sobreposta à elipse de Hertz.
 - Tabela de erros ($p_0$, semi-largura, força resultante) vs. malha.
 - Seção sobre limites do modelo de semi-espaço / semi-plano.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Pontos de partida"
+== Pontos de partida
 
 ```bash
 julia --project=. scripts/hertz_line_2d.jl
@@ -369,9 +369,9 @@ julia --project=. scripts/contact_pohrt_li.jl
 julia --project=. scripts/compare_contact_acceleration.jl
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Cronograma sugerido (a partir da 2ª metade do curso)"
+== Cronograma sugerido (a partir da 2ª metade do curso)
 
 #table(
   columns: (auto, auto),
@@ -384,9 +384,9 @@ julia --project=. scripts/compare_contact_acceleration.jl
   [W4], [Congelar resultados; relatório + README; ensaio da defesa],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Integridade e uso de IA"
+== Integridade e uso de IA
 
 - Cite o `BEM_gmsh`, as notas e *todas* as soluções analíticas/handbooks.
 - Podem usar assistentes de código, mas a equipe deve explicar *qualquer* trecho
@@ -394,9 +394,9 @@ julia --project=. scripts/compare_contact_acceleration.jl
 - Não entregue resultados que não conseguiu reproduzir do zero no ambiente da
   disciplina.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Escolha orientada"
+== Escolha orientada
 
 #table(
   columns: (auto, auto, auto),
@@ -413,4 +413,4 @@ julia --project=. scripts/compare_contact_acceleration.jl
 Em dúvida, fale com o docente *antes* de W2: trocar de proposta depois do primeiro
 marco custa caro.
 
-#set text(size: 14pt)
+#set text(size: 18pt)

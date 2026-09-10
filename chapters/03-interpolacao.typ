@@ -99,6 +99,8 @@ scatter(t, y; label="real", xlabel="anos desde 1980",
 plot!(tt, p.(tt); label="interpolante", lw=2)
 ```
 
+#image("../assets/interpolacao/china-pop.png", width: 80%)
+
 == Exercícios
 
 + Suponha que você queira interpolar os pontos (-1,0), (0,1), (2,0), (3,1) e (4,2) por um polinômio de grau o mais baixo possível.
@@ -128,6 +130,8 @@ y = @. t^2 + t + 0.05*sin(20*t)
 scatter(t, y; label="dados", legend=:topleft)
 ```
 
+#image("../assets/interpolacao/dados-n5.png", width: 80%)
+
 O interpolante polinomial, calculado usando o `fit`, parece muito bom.
 
 ```julia
@@ -138,6 +142,8 @@ scatter(t, y; label="dados", legend=:topleft)
 plot!(xx, p.(xx); label="interpolante", lw=2)
 ```
 
+#image("../assets/interpolacao/interp-n5.png", width: 80%)
+
 Mas agora considere um conjunto diferente de pontos gerados quase exatamente da mesma maneira.
 
 ```julia
@@ -147,6 +153,8 @@ y = @. t^2 + t + 0.05*sin(20*t)
 scatter(t, y; label="dados", legend=:topleft)
 ```
 
+#image("../assets/interpolacao/dados-n18.png", width: 80%)
+
 Os pontos em si não têm nada de especial. Mas observe o que acontece com o interpolante polinomial.
 
 ```julia
@@ -155,6 +163,8 @@ x = range(-1, 1; length=1000)
 scatter(t, y; label="dados", legend=:topleft)
 plot!(x, p.(x); label="interpolante", lw=2)
 ```
+
+#image("../assets/interpolacao/interp-n18.png", width: 80%)
 
 Certamente deve haver funções que são mais representativas desses pontos!
 
@@ -187,6 +197,8 @@ plot!(xx, p1.(xx); label="linear por partes", lw=2)
 plot!(xx, p3.(xx); label="cúbico por partes", lw=2)
 ```
 
+#image("../assets/interpolacao/spline-por-partes.png", width: 80%)
+
 == Exercício
 
 + Os dois vetores a seguir definem uma forma geometrica.
@@ -213,7 +225,11 @@ ss = range(0, 15; length=400)
 plot(itpx.(ss), itpy.(ss); label="cúbica periódica", lw=2, aspect_ratio=1)
 ```
 
+#image("../assets/interpolacao/curva-periodica.png", width: 70%)
+
 Compare com a spline *sem* `Periodic` (condição natural).
+
+#image("../assets/interpolacao/curva-periodica-vs-natural.png", width: 70%)
 
 == Estabilidade da interpolação polinomial
 
@@ -231,6 +247,8 @@ plot(xx, f.(xx); label="função", title="Interpolante equidistante, n=6",
 scatter!(t, y; label="nós")
 plot!(xx, p.(xx); label="interpolante", lw=2, ls=:dash)
 ```
+
+#image("../assets/interpolacao/interp-equidist-n6.png", width: 80%)
 
 Isso parece bom. Queremos rastrear o comportamento do erro à medida que $N$ aumenta. Estimaremos o erro no interpolante contínuo, amostrando-o em um grande número de pontos e tomando a norma máxima.
 
@@ -250,6 +268,8 @@ plot(n, err; yscale=:log10, xlabel="n", ylabel="max error",
      marker=:circle, label=false, lw=2)
 ```
 
+#image("../assets/interpolacao/erro-equidist.png", width: 80%)
+
 O erro diminui inicialmente como seria de esperar, mas começa a crescer. Ambas as fases ocorrem a taxas exponenciais em $n$, ou seja,  $O(k^n)$, aparecendo linear em um gráfico semi-log.
 
 == Fenômeno de Runge
@@ -262,6 +282,8 @@ f = x -> 1/(x^2 + 16)
 xx = range(-1, 1; length=400)
 plot(xx, f.(xx); title="Função teste", label=false, lw=2)
 ```
+
+#image("../assets/interpolacao/runge-funcao.png", width: 75%)
 
 Essa função possui infinitamente muitas derivadas contínuas em toda a linha real e parece fácil de aproximar em $[- 1, 1]$. Começamos fazendo interpolação polinomial equispacada para alguns pequenos valores de $n$.
 
@@ -278,6 +300,8 @@ end
 plt
 ```
 
+#image("../assets/interpolacao/runge-erro-baixo.png", width: 80%)
+
 A convergência até agora parece bastante boa, embora não seja uniformemente. No entanto, observe o que acontece à medida que continuamos aumentando o grau.
 
 ```julia
@@ -290,6 +314,8 @@ for n in @. 12 + 15*(1:3)
 end
 plt
 ```
+
+#image("../assets/interpolacao/runge-erro-alto.png", width: 80%)
 
 A convergência no meio não pode ficar melhor do que a precisão da máquina em relação aos valores da função. Portanto, a manutenção da lacuna crescente entre o centro e as extremidades empurra as curvas de erro exponencialmente rapidamente nas extremidades, destruindo a convergência.
 
@@ -320,6 +346,8 @@ for n in [4, 10, 16, 40]
 end
 plt
 ```
+
+#image("../assets/interpolacao/chebyshev-erro.png", width: 80%)
 
 A partir do grau 16, o erro está dentro da precisão de máquina e ele permanece lá à medida que $n$ aumenta.
 
@@ -373,6 +401,9 @@ plot(ns, err_eq; yscale=:log10, marker=:circle, label="equidistante",
 plot!(ns, err_ch; marker=:square, label="Chebyshev", lw=2)
 ```
 
+#image("../assets/interpolacao/runge-n16-eq-vs-cheb.png", width: 80%)
+#image("../assets/interpolacao/runge-erro-eq-vs-cheb.png", width: 80%)
+
 == Integração numérica
 
 A primitiva de $e^x$ é simples, isso torna a avaliação de $integral_(-1)^1 e^x d x$  pelo teorema fundamental trivial.
@@ -408,6 +439,8 @@ p2 = plot(xx, exp.(sin.(xx)); fillrange=0, fillalpha=0.25, label=false,
           xlabel="x", ylabel="exp(sin(x))", ylims=(0, 2.7), lw=2)
 plot(p1, p2; layout=(2, 1), size=(700, 500))
 ```
+
+#image("../assets/interpolacao/integrandos-exp.png", width: 55%)
 
 A integração numérica (*quadratura*) combina valores do integrando amostrados em nós. Nesta seção, primeiro usamos nós igualmente espaçados:
 
@@ -501,6 +534,8 @@ plot(collect(n), errT; yscale=:log10, xlabel="nós", ylabel="erro",
 plot!(collect(n), errG; marker=:circle, label="Gauss-Legendre", lw=2)
 ```
 
+#image("../assets/interpolacao/quad-4x2.png", width: 80%)
+
 E agora com uma integral com um integrando mais pontudo:
 
 $integral_(-1)^1 1/(1 + 16 x^2) thin d x = 1/2 arctan(4) .$
@@ -526,6 +561,8 @@ plot(collect(n), errT; yscale=:log10, xlabel="nós", ylabel="erro",
      marker=:circle, label="trapézio", lw=2)
 plot!(collect(n), errG; marker=:circle, label="Gauss-Legendre", lw=2)
 ```
+
+#image("../assets/interpolacao/quad-16x2.png", width: 80%)
 
 === Exercícios
 
@@ -634,6 +671,10 @@ plot_quasising_sinh(0.0, 0.05)
 plot_quasising_sinh(0.5, 0.02)   # pico deslocado
 ```
 
+#image("../assets/interpolacao/sinh-mapa-jac.png", width: 55%)
+#image("../assets/interpolacao/quasising-a0-b005.png", width: 95%)
+#image("../assets/interpolacao/quasising-a05-b002.png", width: 95%)
+
 aplicando essa técnica para a integral do último exemplo pode-se observar uma redução significativa do erro para a mesma quantidade de pontos.
 
 ```julia
@@ -680,6 +721,8 @@ for b in bs, n in ns
 end
 plot_quasising_sinh(0.0, 1e-3)
 ```
+
+#image("../assets/interpolacao/quasising-b001.png", width: 95%)
 
 === Exercício
 

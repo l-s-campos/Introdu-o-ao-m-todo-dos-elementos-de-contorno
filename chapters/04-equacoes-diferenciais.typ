@@ -75,6 +75,8 @@ plot(sol.t, sol.u; xlabel="t", ylabel="u(t)", label="solução", lw=2)
 scatter!(sol.t, sol.u; label="nós adaptativos", ms=3)
 ```
 
+#image("../assets/equacoes-diferenciais/pvi-tsit5.png", width: 80%)
+
 O objeto `sol` é avaliável em qualquer $t$ (`sol(1.0)`): por baixo há uma malha adaptativa e interpolação. O restante do capítulo explica *como* se constroem valores discretos $(t_i, u_i)$ — com passo fixo, para controlar ordem.
 
 == Método de Euler
@@ -129,6 +131,8 @@ plot!(t50, u50; marker=:circle, label="Euler n=50", lw=2)
 plot!(t50, u_ref.(t50); color=:black, lw=2, label="referência")
 ```
 
+#image("../assets/equacoes-diferenciais/euler-n20-n50.png", width: 80%)
+
 Estudo de erro em norma do máximo nos nós:
 
 ```julia
@@ -143,6 +147,8 @@ plot(ns, err_E; xscale=:log10, yscale=:log10, marker=:circle,
      label="Euler", xlabel="n", ylabel="‖e‖∞", lw=2)
 plot!(ns, err_E[1] .* (ns[1] ./ ns); ls=:dash, label="O(1/n)")
 ```
+
+#image("../assets/equacoes-diferenciais/euler-erro.png", width: 80%)
 
 #block(
   width: 100%,
@@ -204,6 +210,8 @@ plot!(ns, err_E[1] .* (ns[1] ./ ns); ls=:dash, label="O(n⁻¹)")
 plot!(ns, err_R[1] .* (ns[1] ./ ns).^4; ls=:dot, label="O(n⁻⁴)")
 ```
 
+#image("../assets/equacoes-diferenciais/euler-vs-rk4.png", width: 80%)
+
 *Euler melhorado* (RK de ordem 2, um estágio intermediário em $t_i+h\/2$) fica como leitura opcional; a trilha do curso usa Euler (referência de ordem 1) e RK4 (cavalo de batalha explícito).
 
 == Sistemas e redução de ordem
@@ -256,6 +264,8 @@ plot!(sol1.t, [u[1] for u in sol1.u]; label="θ1, k=1", ls=:dash, lw=2)
 plot!(sol1.t, [u[2] for u in sol1.u]; label="θ2, k=1", ls=:dash, lw=2,
       xlabel="t", title="Pêndulos acoplados")
 ```
+
+#image("../assets/equacoes-diferenciais/pendulos-acoplados.png", width: 80%)
 
 #block(
   width: 100%,
@@ -353,6 +363,8 @@ scatter!(x, T; label="MDF", ms=3)
 @show maximum(abs, T - T_ex)
 ```
 
+#image("../assets/equacoes-diferenciais/pvc-laplace1d.png", width: 80%)
+
 #block(
   width: 100%,
   inset: 10pt,
@@ -403,6 +415,8 @@ for tt in 0:0.1:0.7
 end
 plt
 ```
+
+#image("../assets/equacoes-diferenciais/calor-linhas.png", width: 80%)
 
 Animação opcional (GIF local) ou vídeo do repositório:
 
@@ -770,7 +784,11 @@ p2 = plot(xx, T_exact.(xx, t_snap); lw=2, label="analítico",
 plot!(p2, xp, Tp; marker=:circle, lw=2, ls=:dash, label="BEM (nós)")
 
 plot(p1, p2; layout=(1, 2), size=(900, 350))
+```
 
+#image("../assets/equacoes-diferenciais/bem-calor-analitico.png", width: 95%)
+
+```julia
 # --- erros ---
 err_TR = maximum(abs, TR_bem .- TR_ex)
 err_prof = maximum(abs, Tp .- T_exact.(xp, t_snap))
@@ -999,6 +1017,8 @@ plot(tH, uH; label="Houbolt", lw=2)
 plot!(tR, [y[1] for y in UR]; label="RK4", ls=:dash, lw=2,
       xlabel="t", ylabel="u", title="u'' + ω²u = 0")
 ```
+
+#image("../assets/equacoes-diferenciais/houbolt-vs-rk4.png", width: 80%)
 
 Adams–Moulton \/ preditor–corretor: leitura exterior (não são necessários para a trilha BEM deste capítulo).
 

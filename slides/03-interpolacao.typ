@@ -6,15 +6,15 @@
 
 // Conteudo completo da aula (chapters/03-interpolacao.typ)
 
-= "Interpolação"
+= Interpolação
 
-== "Interpolação"
+== Interpolação
 
 Gráficos deste capítulo usam *Plots.jl*.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Objetivos"
+== Objetivos
 
 + Montar e resolver o sistema de Vandermonde para interpolação polinomial.
 + Reconhecer quando o polinômio global oscila (Runge) e quando splines por partes são preferíveis.
@@ -22,9 +22,9 @@ Gráficos deste capítulo usam *Plots.jl*.
 + Aplicar trapézio e Gauss–Legendre e ler a ordem de convergência no gráfico.
 + Suavizar integrandos quase-singulares com transformação ($sinh$ / Monegato).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Mapa do capítulo"
+== Mapa do capítulo
 
 + Interpolação polinomial (Vandermonde, exemplo China)
 + Limites do polinômio global e splines por partes
@@ -33,9 +33,9 @@ Gráficos deste capítulo usam *Plots.jl*.
 + Integrais singulares / quase-singulares
 + Desafio (aleta — ponte para BEM 1D)
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Interpolação polinomial"
+== Interpolação polinomial
 
 Suponha que queremos conhecer a população às vezes entre os anos do censo ou estimar populações futuras. Uma técnica é encontrar um polinômio que passa por todos os pontos de dados.
 
@@ -43,11 +43,11 @@ Dado $n$ pontos $(t_1 , y_1), ..., (t_n , y_n)$, onde os $t_i$ são todos distin
 
 O problema de interpolação polinomial tem uma solução única. Uma vez encontrado o polinômio interpolador, ele pode ser avaliado em qualquer lugar para estimar ou prever valores.
 
+#set text(size: 18pt)
+
+== Interpolação como um sistema linear
+
 #set text(size: 14pt)
-
-== "Interpolação como um sistema linear"
-
-#set text(size: 10.5pt)
 Dados os dados $(t_i , y_i)$ por $i = 1, ..., n$, buscamos um polinômio
 
 $ p(t) = c_1 + c_2 t + c_3 t^2 + dots.c + c_n t^(n - 1) , $
@@ -113,9 +113,13 @@ scatter(t, y; label="real", xlabel="anos desde 1980",
 plot!(tt, p.(tt); label="interpolante", lw=2)
 ```
 
-#set text(size: 14pt)
+== População da China
 
-== "Exercícios"
+#image("../assets/interpolacao/china-pop.png", width: 78%)
+
+#set text(size: 18pt)
+
+== Exercícios
 
 + Suponha que você queira interpolar os pontos (-1,0), (0,1), (2,0), (3,1) e (4,2) por um polinômio de grau o mais baixo possível.
   *(a)* ✍ Qual é o grau máximo necessário desse polinômio?
@@ -124,11 +128,11 @@ plot!(tt, p.(tt); label="interpolante", lw=2)
 + *(a)* ✍ Suponha que você quer encontrar um polinômio cúbico $p$ tal que $p(- 1) = - 2$, $p' (- 1) = 1$, $p(1) = 0$, e $p' (1) = - 1$. (Isso é conhecido como um _Interpolador de Hermite._) Escreva um sistema linear de equações para os coeficientes de $p$.
   *(b)* ⌨ Use Julia para resolver o sistema linear na parte (a), e faça um gráfico de $p$ sobre $-1 <= x <= 1$.
 
+#set text(size: 18pt)
+
+== Continuando com interpolação
+
 #set text(size: 14pt)
-
-== "Continuando com interpolação"
-
-#set text(size: 10.5pt)
 Dado $n + 1$ pontos distintos $(t_0 , y_0)$, $(t_1 , y_1), ..., (t_n , y_n)$, com $t_0 < t_1 < ... < t_n$ chamados de nós, o problema de interpolação é encontrar uma função $p(x)$, chamada de interpolante, tal que $p(t_k) = y_k$  para $k = 0, ..., n$.
 
 Aqui $t_k$ são os nós e $x$ denota a variável independente contínua.
@@ -147,6 +151,12 @@ y = @. t^2 + t + 0.05*sin(20*t)
 scatter(t, y; label="dados", legend=:topleft)
 ```
 
+== Dados, n = 5
+
+#image("../assets/interpolacao/dados-n5.png", width: 78%)
+
+== Interpolante de grau baixo
+
 O interpolante polinomial, calculado usando o `fit`, parece muito bom.
 
 ```julia
@@ -157,6 +167,12 @@ scatter(t, y; label="dados", legend=:topleft)
 plot!(xx, p.(xx); label="interpolante", lw=2)
 ```
 
+== Interpolante, n = 5
+
+#image("../assets/interpolacao/interp-n5.png", width: 78%)
+
+== Mais nós, mesmo gerador
+
 Mas agora considere um conjunto diferente de pontos gerados quase exatamente da mesma maneira.
 
 ```julia
@@ -166,6 +182,12 @@ y = @. t^2 + t + 0.05*sin(20*t)
 scatter(t, y; label="dados", legend=:topleft)
 ```
 
+== Dados, n = 18
+
+#image("../assets/interpolacao/dados-n18.png", width: 78%)
+
+== O interpolante de grau alto
+
 Os pontos em si não têm nada de especial. Mas observe o que acontece com o interpolante polinomial.
 
 ```julia
@@ -174,6 +196,10 @@ x = range(-1, 1; length=1000)
 scatter(t, y; label="dados", legend=:topleft)
 plot!(x, p.(x); label="interpolante", lw=2)
 ```
+
+== Interpolante, n = 18
+
+#image("../assets/interpolacao/interp-n18.png", width: 78%)
 
 Certamente deve haver funções que são mais representativas desses pontos!
 
@@ -187,11 +213,11 @@ Certamente deve haver funções que são mais representativas desses pontos!
   *Ideia-chave.* Polinômio global de grau alto em nós equidistantes pode oscilar violentamente entre os dados (ainda que passe por todos os pontos). Grau baixo *por partes* (spline) costuma representar melhor o mesmo conjunto.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Interpolação por polinômios por partes"
+== Interpolação por polinômios por partes
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Para manter pequenos graus de polinomial enquanto interpolam grandes conjuntos de dados, escolheremos interpolantes dos polinômios por partes. Especificamente, o interpolante p deve ser um polinômio em cada subintervalo $[t_(k - 1) , t_k]$ para  $k = 1, ..., n .$
 
 Geralmente, designamos antecipadamente um grau máximo  para cada parte polinomial de p (x).
@@ -209,11 +235,15 @@ plot!(xx, p1.(xx); label="linear por partes", lw=2)
 plot!(xx, p3.(xx); label="cúbico por partes", lw=2)
 ```
 
-#set text(size: 14pt)
+== Linear vs cúbico por partes
 
-== "Exercício"
+#image("../assets/interpolacao/spline-por-partes.png", width: 78%)
 
-#set text(size: 12pt)
+#set text(size: 18pt)
+
+== Exercício
+
+#set text(size: 15pt)
 + Os dois vetores a seguir definem uma forma geometrica.
 
 ```julia
@@ -238,13 +268,21 @@ ss = range(0, 15; length=400)
 plot(itpx.(ss), itpy.(ss); label="cúbica periódica", lw=2, aspect_ratio=1)
 ```
 
+== Cúbica periódica
+
+#image("../assets/interpolacao/curva-periodica.png", width: 62%)
+
 Compare com a spline *sem* `Periodic` (condição natural).
 
-#set text(size: 14pt)
+== Periódica vs natural
 
-== "Estabilidade da interpolação polinomial"
+#image("../assets/interpolacao/curva-periodica-vs-natural.png", width: 62%)
 
-#set text(size: 12pt)
+#set text(size: 18pt)
+
+== Estabilidade da interpolação polinomial
+
+#set text(size: 15pt)
 Escolhemos uma função em relação ao intervalo  $[0, 1]$ .
 
 ```julia
@@ -259,6 +297,12 @@ plot(xx, f.(xx); label="função", title="Interpolante equidistante, n=6",
 scatter!(t, y; label="nós")
 plot!(xx, p.(xx); label="interpolante", lw=2, ls=:dash)
 ```
+
+== Interpolante equidistante, n = 6
+
+#image("../assets/interpolacao/interp-equidist-n6.png", width: 78%)
+
+== Erro em função de n
 
 Isso parece bom. Queremos rastrear o comportamento do erro à medida que $N$ aumenta. Estimaremos o erro no interpolante contínuo, amostrando-o em um grande número de pontos e tomando a norma máxima.
 
@@ -278,13 +322,17 @@ plot(n, err; yscale=:log10, xlabel="n", ylabel="max error",
      marker=:circle, label=false, lw=2)
 ```
 
+== Erro vs n (nós equidistantes)
+
+#image("../assets/interpolacao/erro-equidist.png", width: 78%)
+
 O erro diminui inicialmente como seria de esperar, mas começa a crescer. Ambas as fases ocorrem a taxas exponenciais em $n$, ou seja,  $O(k^n)$, aparecendo linear em um gráfico semi-log.
 
+#set text(size: 18pt)
+
+== Fenômeno de Runge
+
 #set text(size: 14pt)
-
-== "Fenômeno de Runge"
-
-#set text(size: 10.5pt)
 A decepcionante perda de convergência  é um sinal de mau condicionamento devido ao uso de nós igualmente espaçados.
 
 ```julia
@@ -293,6 +341,10 @@ f = x -> 1/(x^2 + 16)
 xx = range(-1, 1; length=400)
 plot(xx, f.(xx); title="Função teste", label=false, lw=2)
 ```
+
+== Função teste
+
+#image("../assets/interpolacao/runge-funcao.png", width: 72%)
 
 Essa função possui infinitamente muitas derivadas contínuas em toda a linha real e parece fácil de aproximar em $[- 1, 1]$. Começamos fazendo interpolação polinomial equispacada para alguns pequenos valores de $n$.
 
@@ -309,6 +361,12 @@ end
 plt
 ```
 
+== Erro para graus baixos
+
+#image("../assets/interpolacao/runge-erro-baixo.png", width: 78%)
+
+== Graus altos
+
 A convergência até agora parece bastante boa, embora não seja uniformemente. No entanto, observe o que acontece à medida que continuamos aumentando o grau.
 
 ```julia
@@ -321,6 +379,10 @@ for n in @. 12 + 15*(1:3)
 end
 plt
 ```
+
+== Erro para graus altos
+
+#image("../assets/interpolacao/runge-erro-alto.png", width: 78%)
 
 A convergência no meio não pode ficar melhor do que a precisão da máquina em relação aos valores da função. Portanto, a manutenção da lacuna crescente entre o centro e as extremidades empurra as curvas de erro exponencialmente rapidamente nas extremidades, destruindo a convergência.
 
@@ -352,13 +414,17 @@ end
 plt
 ```
 
+== Erro com nós de Chebyshev
+
+#image("../assets/interpolacao/chebyshev-erro.png", width: 78%)
+
 A partir do grau 16, o erro está dentro da precisão de máquina e ele permanece lá à medida que $n$ aumenta.
 
+#set text(size: 18pt)
+
+== Exercício
+
 #set text(size: 14pt)
-
-== "Exercício"
-
-#set text(size: 10.5pt)
 + Para cada caso, calcule o interpolante polinomial usando  $n$ nós de Chebyshev do segundo tipo em  $[- 1, 1]$  por  $n = 4, 8, 12, ..., 60$ . Em cada valor de $n$, calcule o erro (ou seja,  $max | p(x) - f(x) |$  avaliado em 4000 valores de $x$. Usando uma escala log-linear, plote o erro em função de  $n$ e, em seguida, determine uma boa aproximação à constante $k$ de $O(n^(-k))$.
 (a) $f(x) = 1 \/ (25 x^2 + 1)$
 (b) $f(x) = tanh(5 x + 2)$
@@ -407,11 +473,19 @@ plot(ns, err_eq; yscale=:log10, marker=:circle, label="equidistante",
 plot!(ns, err_ch; marker=:square, label="Chebyshev", lw=2)
 ```
 
+== n = 16: equidistante vs Chebyshev
+
+#image("../assets/interpolacao/runge-n16-eq-vs-cheb.png", width: 78%)
+
+== Erro máximo vs n
+
+#image("../assets/interpolacao/runge-erro-eq-vs-cheb.png", width: 78%)
+
+#set text(size: 18pt)
+
+== Integração numérica
+
 #set text(size: 14pt)
-
-== "Integração numérica"
-
-#set text(size: 10.5pt)
 A primitiva de $e^x$ é simples, isso torna a avaliação de $integral_(-1)^1 e^x d x$  pelo teorema fundamental trivial.
 
 ```julia
@@ -446,6 +520,12 @@ p2 = plot(xx, exp.(sin.(xx)); fillrange=0, fillalpha=0.25, label=false,
 plot(p1, p2; layout=(2, 1), size=(700, 500))
 ```
 
+== Dois integrandos, mesma dificuldade numérica
+
+#image("../assets/interpolacao/integrandos-exp.png", width: 50%)
+
+== Quadratura com nós equidistantes
+
 A integração numérica (*quadratura*) combina valores do integrando amostrados em nós. Nesta seção, primeiro usamos nós igualmente espaçados:
 
 $ t_i = a + i h, quad h = (b - a)/n , wide i = 0, ..., n . $
@@ -456,14 +536,16 @@ $ integral_a^b f(x) thin d x approx h sum_(i = 0)^n w_i f(t_i) = h [w_0 f(t_0) +
 
 Uma maneira direta de derivar fórmulas de integração é encontrar um interpolante e operar exatamente nele.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Regra do trapézio"
+== Regra do trapézio
 
-#set text(size: 10.5pt)
-Uma das fórmulas de integração mais importantes resulta da integração do interpolante linear por partes. Geometricamente, a fórmula trapezoidal de áreas de trapezoides que se aproximam da região sob a curva y = f (x)
+#set text(size: 15pt)
+Uma das fórmulas de integração mais importantes resulta da integração do interpolante linear por partes: áreas de trapézios sob $y = f(x)$.
 
-#image("../assets/interpolacao/trapezio.svg", width: 80%)
+#image("../assets/interpolacao/trapezio.svg", width: 58%)
+
+== Pesos do trapézio
 
 Usando áreas de triângulos, é trivial derivar que
 
@@ -507,11 +589,11 @@ foreach(args -> println(args[1], "	", args[2]), zip(n, err))
 
 Cada aumento em um fator de 10 em $n$ reduz o erro em um fator de cerca de 100, o que é consistente com a convergência de segunda ordem.
 
+#set text(size: 18pt)
+
+== Quadratura de Gauss
+
 #set text(size: 14pt)
-
-== "Quadratura de Gauss"
-
-#set text(size: 10.5pt)
 Vamos considerar a fórmula de integração numérica genérica:
 
 $ integral_(-1)^1 f(x) d x approx sum_(k = 1)^n w_k f(t_k) = Q_n [f], $
@@ -544,6 +626,12 @@ plot(collect(n), errT; yscale=:log10, xlabel="nós", ylabel="erro",
 plot!(collect(n), errG; marker=:circle, label="Gauss-Legendre", lw=2)
 ```
 
+== Trapézio vs Gauss: $1/(1+4x^2)$
+
+#image("../assets/interpolacao/quad-4x2.png", width: 78%)
+
+== Integrando mais pontudo
+
 E agora com uma integral com um integrando mais pontudo:
 
 $integral_(-1)^1 1/(1 + 16 x^2) thin d x = 1/2 arctan(4) .$
@@ -570,19 +658,23 @@ plot(collect(n), errT; yscale=:log10, xlabel="nós", ylabel="erro",
 plot!(collect(n), errG; marker=:circle, label="Gauss-Legendre", lw=2)
 ```
 
-#set text(size: 14pt)
+== Trapézio vs Gauss: $1/(1+16x^2)$
 
-== "Exercícios"
+#image("../assets/interpolacao/quad-16x2.png", width: 78%)
+
+#set text(size: 18pt)
+
+== Exercícios
 
 + Usando a mudança de variável:     $z = phi.alt(x) = a + (b - a) ((x + 1))/2$ a integral pode ser reescrita como:     $integral_a^b f(z) thin d z = (b - a)/2 integral_(-1)^1 f(phi.alt(x)) thin d x .$ Sabendo disso, use a quadratura de Gauss para integrar     $integral_(pi \/ 2)^pi x^2 sin 8 x thin d x = - (3 pi^2)/32 .$ Mostre resultados para diferentes valores de $n$ até que se obtenha uma convergência de 10 digitos.
 + Integre  numericamente a  função  $f(x) = - x log(| x - 1 \/ 2 |)$ no intervalo $[0, 1 \/ 2]$ usando  a quadratura de Gauss. Use 5, 10, 15 e 20 pontos de Gauss.
   $ I_a = integral_0^(1 \/ 2) - x log(| x - 1/2 |) d x = 1/16 (3 + 2 log 2) = 0, 274143 $
 
+#set text(size: 18pt)
+
+== Integrais singulares ou quasi-singulares
+
 #set text(size: 14pt)
-
-== "Integrais singulares ou quasi-singulares"
-
-#set text(size: 10.5pt)
 A última função integrada tem uma singularidade quando $x = 1 \/ 2$. Mesmo com essa singularidade, e tendendo a infinito nesse ponto, essa função pode ser integrada analiticamente. Numericamente é interessante usar técnicas especiais para tratar de integrais desses tipo.
 
 Considere uma integral do tipo:
@@ -682,6 +774,18 @@ plot_quasising_sinh(0.0, 0.05)
 plot_quasising_sinh(0.5, 0.02)   # pico deslocado
 ```
 
+== Mapa $xi(s)$ e Jacobiano
+
+#image("../assets/interpolacao/sinh-mapa-jac.png", width: 48%)
+
+== Antes × depois ($a=0$, $b=0.05$)
+
+#image("../assets/interpolacao/quasising-a0-b005.png", width: 90%)
+
+== Pico deslocado ($a=0.5$, $b=0.02$)
+
+#image("../assets/interpolacao/quasising-a05-b002.png", width: 90%)
+
 aplicando essa técnica para a integral do último exemplo pode-se observar uma redução significativa do erro para a mesma quantidade de pontos.
 
 ```julia
@@ -729,11 +833,15 @@ end
 plot_quasising_sinh(0.0, 1e-3)
 ```
 
+== Quase-singular, $b = 10^(-3)$
+
+#image("../assets/interpolacao/quasising-b001.png", width: 90%)
+
+#set text(size: 18pt)
+
+== Exercício
+
 #set text(size: 14pt)
-
-== "Exercício"
-
-#set text(size: 10.5pt)
 + Integre de novo $f(x) = - x log(| x - 1 \/ 2 |)$ em $[0, 1 \/ 2]$ com Gauss, agora usando a transformação abaixo. A singularidade está no *extremo* $x = 1\/2$: mapeie o intervalo para $[-1,1]$ (afim) e chame `Monegato` com `s0 = 1` (ramo Sato). Compare graus $m = 3,4,5$ e $n = 5,10,15,20$ pontos de Gauss com o valor $I_a$ do exercício anterior. (Opcional: repita com uma singularidade *interior* artificial, p.ex. estendendo o intervalo, e graus *ímpares* $q = 3,5$.)
 
 ```julia
@@ -785,9 +893,9 @@ end
 
 $ mat(delim: #none, integral_(-2)^(+3) (x^6 - 2 x^5 + 7) dif x, 144.04761904761904; integral_0^(+3) 2 ln(x + 1) dif x, 5.090354888959125; integral_0^(+3) ln(x) dif x, 0.2958368660043291; integral_0^pi lr(\(sin(x)) times cos(2 x)) dif x, -2/3 = - 0.66666666666667; integral_0^pi (sin(3 x) dot.op cos(2 x) + 2 x^3 + 3 x sin(x)) dif x, 59.3293234777059; integral_0^1 1/(x + 1) dif x, ln(2) = 0.6931471805599453; integral_0^1 1/(x + 0.1) dif x, ln(11) = 2.3978952727983707; ) $
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Desafio"
+== Desafio
 
 Considere o resfriamento de uma aleta circular por meio de transferência de calor por convecção ao longo de seu comprimento. A convecção dá origem a uma perda de calor ou termo de sumidouro dependente da temperatura na equação governante. Mostrada na Figura está uma aleta cilíndrica com área de seção transversal uniforme A. A base está a uma temperatura de 100C (TB) e a extremidade direita está isolada. A aleta está exposta a uma temperatura ambiente de 20C. A transferência de calor unidimensional nesta situação é governada por$dif/(dif x) (k A (dif T)/(dif x)) - h P(T - T_infinity) = 0$
 
@@ -797,4 +905,4 @@ Calcule usando BEM a distribuição de temperatura ao longo da aleta e compare o
 
 #image("../assets/interpolacao/aleta.png", width: 80%)
 
-#set text(size: 14pt)
+#set text(size: 18pt)

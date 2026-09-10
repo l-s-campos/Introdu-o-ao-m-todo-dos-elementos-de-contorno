@@ -6,9 +6,9 @@
 
 // Conteudo completo da aula (chapters/91-contato-halfspace.typ)
 
-= "Contato por BEM de half-space (extra)"
+= Contato por BEM de half-space (extra)
 
-== "Contato por BEM de half-space (extra) - intro"
+== Contato por BEM de half-space (extra) - intro
 
 #block(
   width: 100%,
@@ -27,9 +27,9 @@
   fundamental. Aprofunda a *proposta E* dos trabalhos finais.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Objetivos"
+== Objetivos
 
 + Entender o modelo de *half-plane* (2D) e *half-space* (3D) para contato.
 + Ligar núcleos de influência (Flamant \/ Boussinesq–Cerruti) à convolução na grade.
@@ -37,9 +37,9 @@
 + Ver o esboço de deslizamento parcial (Coulomb) no half-space.
 + Comparar com analítico e reportar erro (apêndice).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Mapa"
+== Mapa
 
 + Contato ≠ BEM de contorno fechado
 + Modelo half-plane / half-space
@@ -52,11 +52,11 @@
 + Exercícios
 + Leituras
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Contato no curso vs. este módulo"
+== Contato no curso vs. este módulo
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 #table(
   columns: (auto, auto, auto),
   inset: 7pt,
@@ -81,11 +81,11 @@
   $u = K * p$ (convolução) na grade, com restrições de contato ($p >= 0$, gap $>= 0$).
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Modelo físico (resumo)"
+== Modelo físico (resumo)
 
-== "Half-plane (linha de contato, 2D)"
+== Half-plane (linha de contato, 2D)
 
 - Sólido: semi-plano elástico $y <= 0$ (plane strain).
 - Indentador rígido (ex. cilindro de raio $R$) ou gap inicial $g_0(x)$.
@@ -98,20 +98,20 @@ $ E^* = (2 G)\/(1 - nu) = E \/ (1 - nu^2) . $
 
 No código: `ElasticHalfPlane2D(G, ν; h=…)` e `contact_modulus(hp)`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Half-space (contato 3D na grade)"
+== Half-space (contato 3D na grade)
 
 - Semi-espaço $z <= 0$; grade retangular na superfície.
 - Gap $g_0(x,y)$ (ex. esfera: $g_0 = (x^2+y^2)\/(2R)$).
 - Indentação rígida $delta > 0$ “para dentro”.
 - `ElasticHalfSpace(G, ν; hx, hy)`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Hertz (referência)"
+== Hertz (referência)
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 *Linha* (cilindro \/ half-plane), força $F$ por unidade de comprimento:
 
 $ a = sqrt((4 F R)\/(pi E^*)) ,
@@ -130,11 +130,11 @@ $ a = sqrt(R delta) ,
 
 (O pacote expõe `hertz_line`, `hertz_line_pressure`, `hertz_halfwidth`, `hertz_pressure`.)
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Núcleos de influência e convolução"
+== Núcleos de influência e convolução
 
-== "2D - Flamant integrado no segmento"
+== 2D - Flamant integrado no segmento
 
 Deflexão no centro da célula $i$ por pressão unitária na célula $i+d_i$:
 
@@ -147,9 +147,9 @@ influence_coeff_2d(di, hp)
 A matriz densa seria Toeplitz; na prática usa-se FFT (`precompute_kernel_2d`,
 `fc_forward_2d`, `fc_inverse_2d`).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "3D - Love / Cerruti em retângulos (Pohrt-Li)"
+== 3D - Love / Cerruti em retângulos (Pohrt-Li)
 
 Coeficientes $K_(a b)$ para pares de componentes (normal–normal $K_(z z)$, etc.),
 integrados na célula $h_x times h_y$:
@@ -163,11 +163,11 @@ p = fc_inverse(u_target, mask, Kzz, prep)
 
 Sinal: pressão e $u_z$ positivos *para dentro* do half-space.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema normal (zona ativa)"
+== Problema normal (zona ativa)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Condições de Karush–Kuhn–Tucker (fricção nula):
 
 $
@@ -194,11 +194,11 @@ sol = solve_normal_contact(gap0, δ, hs)         # 3D grade
 # sol.p, sol.contact, sol.force, sol.u
 ```
 
+#set text(size: 18pt)
+
+== Lab 1 - Hertz linha (half-plane)
+
 #set text(size: 14pt)
-
-== "Lab 1 - Hertz linha (half-plane)"
-
-#set text(size: 10.5pt)
 Espelho de `scripts/hertz_line_2d.jl`:
 
 ```julia
@@ -247,11 +247,11 @@ p_hz, _ = hertz_line_pressure(sol.force, R, hp, x)
 *Esperado:* $p(x)\/p_0$ próximo da semi-elipse de Hertz; $a_"num"\/a$ e $p_0$ com erro
 caindo ao refinar $N$ (grade maior e domínio $L$ adequado).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Lab 2 - Hertz esfera (half-space)"
+== Lab 2 - Hertz esfera (half-space)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Espelho de `scripts/contact_pohrt_li.jl` (parte normal):
 
 ```julia
@@ -284,9 +284,9 @@ p0_hz = 1.5 * F_hz / (π * a_hz^2)
 *Esperado:* $F_"num"\/F_"Hertz"$ e $max p \/ p_0$ próximos de 1 em grade fina
 ($N >= 64$ já dá ideia; $N=128$ melhora a borda do contato).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Lab 3 - Deslizamento parcial (opcional)"
+== Lab 3 - Deslizamento parcial (opcional)
 
 Com $p$ e a máscara de contato do Lab 2:
 
@@ -302,9 +302,9 @@ Ideia Cattaneo–Mindlin: núcleo em *stick*, anel em *slip* com $|tau| = mu p$.
 O solver do half-space é a versão em grade (Pohrt–Li §5); analíticos 2D de
 cilindro estão em `CattaneoMindlin.jl` (`cattaneo_shear`, …).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Armadilhas"
+== Armadilhas
 
 #table(
   columns: (auto, auto),
@@ -319,46 +319,46 @@ cilindro estão em `CattaneoMindlin.jl` (`cattaneo_shear`, …).
   [Partial slip estranho], [$nu != 1\/2$: acoplamento N–T negligenciado no algoritmo simples],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exercícios"
+== Exercícios
 
 Apêndice de erros. Sempre declare $N$, $L$, $E^*$ e o que é analítico.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E1 - Convergência Hertz linha"
+== E1 - Convergência Hertz linha
 
 Lab 1 com $N in {64,128,256,512}$ (e $L$ fixo generoso).
 Tabela: $a_"num"\/a$, $p_0$"num"\/$p_0$, $F$"num"\/$F$, RMSE de $p$ na zona de contato
 (amostrado vs `hertz_line_pressure`). Uma figura $p(x)$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E2 - Convergência Hertz esfera"
+== E2 - Convergência Hertz esfera
 
 Lab 2 com $N in {32,64,128}$. Tabela $F\/F_"hz"$, $max p\/p_0$, fração de nós em contato.
 Comente o custo (FFT) ao dobrar $N$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E3 - Partial slip ou Cattaneo 2D"
+== E3 - Partial slip ou Cattaneo 2D
 
 *Ou* complete o Lab 3 e discuta stick\/slip e $|F_t|\/(mu F_n)$;
 *ou* use `solve_cattaneo_halfplane` \/ `cattaneo_shear` e compare $q(x)$ ao analítico
 para um $Q\/(f P)$ fixo.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E4 - (Desafio) Rugosidade ou indentador não circular"
+== E4 - (Desafio) Rugosidade ou indentador não circular
 
 Altere $g_0$ (ex. superposição de senos de pequena amplitude, ou gap elíptico) e
 compare força–indentação com o caso liso. Sem analítico completo: use refino e
 conservação $F = sum p\, h_x h_y$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Ligação com a trilha e trabalhos"
+== Ligação com a trilha e trabalhos
 
 - *Elasticidade 2D:* mesmo $E$, $nu$, noção de tração; aqui o “contorno” é a grade plana.
 - *Trabalhos, proposta E:* este capítulo é o mapa mínimo; a monografia exige
@@ -366,9 +366,9 @@ conservação $F = sum p\, h_x h_y$.
 - Contato entre *dois corpos malhados* (NTN\/NTS, `MortarContact2D`) é outro nível —
   não misturar com half-space na primeira leitura.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Leituras e código"
+== Leituras e código
 
 - Pohrt & Li (2014), *Physical Mesomechanics* — formulação completa N+T na grade
 - Johnson, *Contact Mechanics* — Hertz, Cattaneo–Mindlin
@@ -379,4 +379,4 @@ conservação $F = sum p\, h_x h_y$.
 - `scripts/compare_contact_acceleration.jl` — variantes de aceleração
 - Cap. *Elasticidade 2D* · *Trabalhos finais* (proposta E) · *Apêndice: medidas de erro*
 
-#set text(size: 14pt)
+#set text(size: 18pt)

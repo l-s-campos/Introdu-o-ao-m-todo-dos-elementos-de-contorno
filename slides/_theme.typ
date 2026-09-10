@@ -19,10 +19,10 @@
     config-common(slide-level: 2),
   )
 
-  set text(size: 14pt, lang: "pt")
-  set par(justify: true, leading: 0.55em)
+  set text(size: 18pt, lang: "pt")
+  set par(justify: true, leading: 0.62em)
   show raw.where(block: true): it => {
-    set text(size: 10pt)
+    set text(size: 13pt)
     block(
       width: 100%,
       fill: luma(245),

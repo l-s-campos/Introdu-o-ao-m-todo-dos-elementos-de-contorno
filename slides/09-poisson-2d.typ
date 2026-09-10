@@ -6,9 +6,9 @@
 
 // Conteudo completo da aula (chapters/09-poisson-2d.typ)
 
-= "Poisson 2D"
+= Poisson 2D
 
-== "Poisson 2D - intro"
+== Poisson 2D - intro
 
 #set text(size: 12.5pt)
 No capítulo *Laplace 2D* o problema era $nabla^2 T = 0$ e o sistema ficou
@@ -31,9 +31,9 @@ $
 usando RBF nos nós de colocação (contorno + internos) e redução das integrais de
 volume ao contorno — o mesmo espírito do `geometric_props` no cap. *Indo para 2D*.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Objetivos"
+== Objetivos
 
 + Derivar *por que* aparece $integral_Omega T^* f$ a partir do Laplace.
 + Entender DIBEM: RBF $arrow.r$ $F$ $arrow.r$ primitivas no contorno $arrow.r$ $M$.
@@ -42,9 +42,9 @@ volume ao contorno — o mesmo espírito do `geometric_props` no cap. *Indo para
 + Ver $M$ como “massa” no transiente (ponte).
 + Exercícios clássicos com API DIBEM e erros do apêndice.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Mapa"
+== Mapa
 
 + De Laplace a Poisson (PDE $arrow.r$ BIE)
 + DIBEM em detalhe (ideia, fórmulas, código)
@@ -56,11 +56,11 @@ volume ao contorno — o mesmo espírito do `geometric_props` no cap. *Indo para
 + Exercícios
 + Leituras
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "De Laplace a Poisson"
+== De Laplace a Poisson
 
-== "PDE e notação"
+== PDE e notação
 
 $
   nabla^2 T = f quad "em" Omega ,
@@ -75,11 +75,11 @@ $
 Física típica (tabela de aplicações do Laplace): geração de calor, membrana
 ($S nabla^2 w = -p$), etc. Mudam os *nomes* de $T$ e $f$.
 
+#set text(size: 18pt)
+
+== Identidade integral
+
 #set text(size: 14pt)
-
-== "Identidade integral"
-
-#set text(size: 10.5pt)
 Mesma identidade de Green do Laplace, peso = SF $T^*$ com $-nabla^2 T^* = delta(x-x_d)$:
 
 $
@@ -122,21 +122,21 @@ $
   bold(d) approx M bold(f) .
 $
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "DIBEM em detalhe"
+== DIBEM em detalhe
 
-== "Ideia em uma frase"
+== Ideia em uma frase
 
 Interpola $f$ (ou outra densidade de domínio) por RBF nos $N =$ `dad.nt` pontos
 (contorno + internos) e transforma $integral_Omega T^* f$ em combinações de
 *integrais só em* $Gamma$, montando a matriz $M$ uma vez.
 
+#set text(size: 18pt)
+
+== Passo a passo
+
 #set text(size: 14pt)
-
-== "Passo a passo"
-
-#set text(size: 10.5pt)
 Sejam $x_1,...,x_N$ as colocações (`point(dad,i)`, $i=1..N$).
 
 *1. Interpolação*
@@ -220,19 +220,19 @@ Depois disso:
 
 $ bold(d) = M bold(f) . $
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que DIBEM *não* é"
+== O que DIBEM *não* é
 
 - Não é malha de volume MEF: internos são *centros de RBF* e sensores, não elementos de $Omega$.
 - Não substitui $H,G$: só constrói $M$.
 - Poucos internos, aglomerados ou fora de $Omega$ $arrow.r$ $F$ mal-condicionada e $M$ ruim.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Código no pacote"
+== Código no pacote
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 ```julia
 # Laplace/Domain.jl — essência DIBEM_dense
 # F_ij = φ(|xi-xj|),  D_ij = T*(xi,xj)
@@ -263,13 +263,13 @@ DIBEM(dad; method=:hmatrix)        # N grande — extra / trabalhos
 Exige colocações de domínio: `format2d(..., pontointerno=true)` (ou lista de internos no `dad`).
 Então `dad.nt = dad.n + n_"int"`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Onde entra no sistema"
+== Onde entra no sistema
 
-== "Estacionário (Poisson)"
+== Estacionário (Poisson)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Equação discreta *antes* das CDC:
 
 $ H T - G q = M f . $
@@ -295,9 +295,9 @@ $ H T - G q = M f . $
   em todas as equações de colocação (contorno e internos).
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Transiente / outros"
+== Transiente / outros
 
 #table(
   columns: (auto, auto),
@@ -309,11 +309,11 @@ $ H T - G q = M f . $
   [Helmholtz $nabla^2 T + kappa^2 T = 0$], [desloca $H - kappa^2 M$ (`κ2` em `applyBC`)],
 )
 
+#set text(size: 18pt)
+
+== Poisson manufaturado ()
+
 #set text(size: 14pt)
-
-== "Poisson manufaturado ()"
-
-#set text(size: 10.5pt)
 No quadrado unitário, $u = x^2+y^2$ $arrow.r$ $nabla^2 u = 4$.
 Dirichlet com o valor exato em todo o contorno.
 
@@ -378,9 +378,9 @@ Normas: *Apêndice: medidas de erro*. Aqui RMSE e $epsilon_infinity$ em `pts`.
   estacionário com DIBEM, use-o — a matemática é a mesma: $H T - G q = M f$.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Transiente (ponte)"
+== Transiente (ponte)
 
 Com $M$ no cache:
 
@@ -394,9 +394,9 @@ DIBEM(dad)
 Estabilidade Δt ↔ malha ↔ qualidade de $M$: monografia (proposta C dos trabalhos).
 Nos exercícios E3–E4, o foco é sensor no tempo + erro, não a teoria completa de CFL.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Armadilhas"
+== Armadilhas
 
 #table(
   columns: (auto, auto),
@@ -411,15 +411,15 @@ Nos exercícios E3–E4, o foco é sensor no tempo + erro, não a teoria complet
   [Transiente explode], [Δt grande; $M$ pobre],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exercícios"
+== Exercícios
 
 Apêndice de erros. Sempre reporte $N$ (`dad.n`, `dad.nt`) e a norma usada.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E1 - Membrana triangular"
+== E1 - Membrana triangular
 
 $ S nabla^2 w = -f $, $a=5$, $f=10$, $S=1$ (unidades do enunciado); contorno $w=0$.
 
@@ -436,9 +436,9 @@ $
 No código a PDE é $nabla^2 T = f_"bem"$ com $T=w$: use $f_"bem" = -f\/S$.
 DIBEM + RHS; erros em ≥ 100 internos; mapa de $w$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E2 - Elipse"
+== E2 - Elipse
 
 $ nabla^2 u = 4 - x^2 $ no domínio da figura.
 
@@ -454,9 +454,9 @@ Amostra $f(x,y)=4-x^2$ em cada colocação para montar `fvec`.
 Erros de $u$ (internos) e de $q$ no contorno ($q=-partial_n u$, normal exterior);
 ≥ 3 malhas.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E3 - Transiente (placa / cubo)"
+== E3 - Transiente (placa / cubo)
 
 $T_0=0$; uma face em $T=1$; propriedades unitárias. Série:
 
@@ -473,4 +473,4 @@ $
 
 `DIBEM` + `solve_transient` (ou Houbolt); sensores vs $t$; erro em 2–3 instantes.
 
-#set text(size: 14pt)
+#set text(size: 18pt)

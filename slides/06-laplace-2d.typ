@@ -6,25 +6,25 @@
 
 // Conteudo completo da aula (chapters/06-laplace-2d.typ)
 
-= "Laplace 2D"
+= Laplace 2D
 
-== "Laplace 2D"
+== Laplace 2D
 
 Geometria, $N_k$, $J$ e $upright(bold(n))$ já vieram de *Indo para 2D*.
 Aqui o Gmsh deixa de ser só malha e passa a carregar *CDC*; montamos $H,G$ e resolvemos o primeiro BEM 2D completo.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Objetivos"
+== Objetivos
 
 + Rodar o fluxo mínimo do quadrado ($T = x$) no `BEM_gmsh`.
 + Ler CDCs nos *grupos físicos* (`"0;T"`, `"1;q"`) e ligar a `dad.BC` \/ `dad.BV`.
 + Seguir o pipeline PDE $arrow.r$ equação integral $arrow.r$ $H T = G q$ $arrow.r$ $A x = b$ $arrow.r$ internos.
 + Entender a diagonal de $H$ (corpo rígido) e o papel de `npg` na montagem.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Setup"
+== Setup
 
 Código: #link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`].
 Na pasta do projeto:
@@ -41,11 +41,11 @@ include(datadir("Laplace", "Laplace_dad.jl"))
 
 Se o capítulo *Indo para 2D* ainda não rodou, comece por `data/examples/geo_unit_square.jl`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Fluxo mínimo (quadrado, )"
+== Fluxo mínimo (quadrado, )
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Rode *antes* da álgebra — o resto do capítulo só nomeia cada linha.
 
 ```julia
@@ -63,11 +63,11 @@ plot_geo(dad)
 
 As CDCs já vêm dos grupos físicos do `quadrado` (ver abaixo). `attach_analytical!` *não* sobrescreve CDC: só guarda a solução exata para `rel_error`.
 
+#set text(size: 18pt)
+
+== Por que Laplace / Poisson importam
+
 #set text(size: 14pt)
-
-== "Por que Laplace / Poisson importam"
-
-#set text(size: 10.5pt)
 A *mesma* PDE descreve vários problemas: mudam o nome do campo, a lei constitutiva e o significado de $f$ e do fluxo. Com $f = 0$ é Laplace; com fonte de domínio, Poisson (capítulo seguinte).
 
 #figure(
@@ -130,9 +130,9 @@ A *mesma* PDE descreve vários problemas: mudam o nome do campo, a lei constitut
   lógica: campo no contorno + fluxo conjugado.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Grupos físicos CDC"
+== Grupos físicos CDC
 
 No Gmsh, o *nome* da curva física carrega tipo e valor. O `format2d` lê isso e preenche `dad.BC` (0 = Dirichlet, 1 = Neumann) e `dad.BV` (valor).
 
@@ -147,9 +147,9 @@ No Gmsh, o *nome* da curva física carrega tipo e valor. O `format2d` lê isso e
 
 Exemplos: `"0;100"`, `"1;0"` (isolado). Elasticidade: `"tx;ux;ty;uy"` (capítulo próprio).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O quadrado do pacote (CDCs de )"
+== O quadrado do pacote (CDCs de )
 
 Em `data/Laplace/Laplace_dad.jl`, com $k = 1$ e solução $T = x$
 ($q = - partial T \/ partial n$):
@@ -165,9 +165,9 @@ gmsh.model.addPhysicalGroup(2, [s1], -1, "Domain")
 
 Conferência rápida: normal saindo à direita é $+upright(bold(e))_x$, $partial T\/partial n = 1$, logo $q = -1$; topo\/base $partial T\/partial n = 0$; esquerda $T = 0$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Cantos e elemento descontínuo"
+== Cantos e elemento descontínuo
 
 Em um vértice, duas arestas podem pedir CDCs *incompatíveis* no mesmo nó
 (ex.: $T$ de um lado e $q$ do outro, ou dois $T$ diferentes).
@@ -176,9 +176,9 @@ Por isso o `format2d` coloca nós de *campo* no interior do elemento
 sem nó compartilhado no canto. A geometria pode continuar isoparamétrica nos vértices
 (`Equispaced`), como no capítulo *Indo para 2D*.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "attach_analytical! vs CDC da malha"
+== attach_analytical! vs CDC da malha
 
 ```julia
 # Analytical.jl (essência)
@@ -194,11 +194,11 @@ Para *forçar* Dirichlet analítico em todos os nós (patch test), o pacote tem
 No fluxo didático padrão do quadrado, *não* chame `apply_analytical_bc!`:
 as CDCs do `.msh` já batem com $T = x$.
 
+#set text(size: 18pt)
+
+== Mapa do BEM (leia antes da álgebra)
+
 #set text(size: 14pt)
-
-== "Mapa do BEM (leia antes da álgebra)"
-
-#set text(size: 10.5pt)
 Cada seção seguinte preenche *um* passo. A diagonal de $H$ é detalhe do passo 4.
 
 #block(
@@ -261,13 +261,13 @@ Cada seção seguinte preenche *um* passo. A diagonal de $H$ é detalhe do passo
   o preço é matrizes cheias e integrais singulares quando a fonte $x_d$ cai no elemento integrado.
 ]
 
+#set text(size: 18pt)
+
+== Formulação
+
+== Passos 1-3: da PDE à equação integral
+
 #set text(size: 14pt)
-
-== "Formulação"
-
-== "Passos 1-3: da PDE à equação integral"
-
-#set text(size: 10.5pt)
 Problema canônico do capítulo:
 
 $ nabla^2 T = 0 quad "em" Omega, $
@@ -315,11 +315,11 @@ $ T^* = - (ln r)\/(2 pi k) ,
   quad
   q^* = (upright(bold(r)) · upright(bold(n))) \/ (2 pi r^2) . $
 
+#set text(size: 18pt)
+
+== Passo 4: discretização e
+
 #set text(size: 14pt)
-
-== "Passo 4: discretização e"
-
-#set text(size: 10.5pt)
 Em cada elemento descontínuo com $m$ nós:
 
 $ T(xi) = sum_(k=1)^m N_k (xi) T_k ,
@@ -374,11 +374,11 @@ end
 
 No elemento singular o pacote usa Guiggiani; no quase-singular, regra $sinh$; longe, lumping nodal — detalhes em `integrate_element`. Para a aula, o essencial é: *integra o que for regular e fecha a diagonal de $H$ por identidade*.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Diagonal de : corpo a temperatura constante"
+== Diagonal de : corpo a temperatura constante
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Quando a fonte está no mesmo elemento, integrar $H_(i i)$ “na marra” é delicado.
 Em vez disso, usa-se a solução exata trivial de Laplace
 
@@ -406,11 +406,11 @@ No código: exatamente o laço `H[i,i] = -sum(H[i,:])` acima.
   4. diagonal de $G$: em geral *integre* (singularidade fraca) — o truque indireto raramente é necessário.
 ]
 
+#set text(size: 18pt)
+
+== Passos 5-6: CDC e
+
 #set text(size: 14pt)
-
-== "Passos 5-6: CDC e"
-
-#set text(size: 10.5pt)
 Depois de $H T = G q$ ainda falta, em cada nó, *uma* informação.
 A CDC decide qual coluna vai para a esquerda (incógnita) e o que alimenta $b$.
 
@@ -452,9 +452,9 @@ function solve(dad::BEMdata{<:Union{Laplace,OrthotropicLaplace}}; ...)
 end
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exemplo didático (1 elemento por lado)"
+== Exemplo didático (1 elemento por lado)
 
 Condução unidimensional com um elemento por aresta do retângulo:
 
@@ -469,9 +469,9 @@ Reorganizando colunas conhecidas \/ desconhecidas obtém-se $A x = b$ com
 $x = (q_1, T_2, q_3, T_4)$. No `quadrado` real as CDCs misturam Dirichlet e Neumann
 como na seção dos grupos físicos — o mecanismo é o mesmo `applyBC`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Passo 7: pontos internos"
+== Passo 7: pontos internos
 
 Para $x_d in Omega$ (fora de $Gamma$), $c = 1$:
 
@@ -481,11 +481,11 @@ Com $(T,q)$ *já conhecidos em todo o contorno*, isso é pós-processamento:
 *não* se monta nem se resolve outro $A x = b$.
 Ative com `format2d(..., pontointerno=true)`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Lab guiado: quadrado"
+== Lab guiado: quadrado
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Um único script (relatório em tela). CDCs = grupos do `quadrado`; referência = `ana_laplace_linear`.
 
 ```julia
@@ -522,11 +522,11 @@ Observar:
 - lados verticais: $T approx x$; horizontais: $q approx 0$;
 - internos seguem $T approx x$ sem novo sistema.
 
+#set text(size: 18pt)
+
+== Exercícios
+
 #set text(size: 14pt)
-
-== "Exercícios"
-
-#set text(size: 10.5pt)
 Notação: $T$, $q = -k partial T \/ partial n$. Erros: *Apêndice: medidas de erro* e\/ou `rel_error(dad)`.
 Ordem do elemento: `tipo` \/ `ordem` no gerador e em `format2d` (linear $p=1$, quadrático $p=2$, …).
 
@@ -565,19 +565,19 @@ $(sqrt(2)\/2, sqrt(2)\/2)$.
 
 #image("../assets/laplace-2d/placa-mapa.png", width: 80%)
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Desafio"
+== Desafio
 
 Com base neste #link("https://onlinelibrary.wiley.com/doi/epdf/10.1002/fld.1650030504")[artigo],
 estime o coeficiente de sustentação de um perfil NACA via BEM.
 #link("https://youtu.be/_G4yNayAPPE")[gravação]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Extra: montagem hierárquica (H-matriz)"
+== Extra: montagem hierárquica (H-matriz)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 *Fora da trilha obrigatória* (também aparece em *Trabalhos finais*, proposta D).
 Até $N tilde.eq 10^3$–$5 times 10^3$, a montagem *densa* `H_G_full_direct` basta para o curso.
 
@@ -608,9 +608,9 @@ solve(dad)                 # caminho iterativo quando A é hierárquica
 Regra: comece denso e grosso; só compre quando o denso não couber ou demorar demais.
 Detalhes: `docs/src/pt-br/performance.md` no repositório.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Leituras e código"
+== Leituras e código
 
 - `data/Laplace/Laplace_dad.jl` — `quadrado`, CDCs
 - `src/Laplace/Fundamental.jl` — $T^*$, $q^*$
@@ -620,4 +620,4 @@ Detalhes: `docs/src/pt-br/performance.md` no repositório.
 - `src/Core/Analytical.jl` — `attach_analytical!`, `apply_analytical_bc!`
 - Capítulo *Indo para 2D* (geometria) · *Poisson 2D* (fonte $f$) · *Medidas de erro*
 
-#set text(size: 14pt)
+#set text(size: 18pt)

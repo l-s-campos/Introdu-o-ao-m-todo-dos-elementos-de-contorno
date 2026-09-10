@@ -6,16 +6,16 @@
 
 // Conteudo completo da aula (chapters/04-equacoes-diferenciais.typ)
 
-= "Equações diferenciais"
+= Equações diferenciais
 
-== "Equações diferenciais"
+== Equações diferenciais
 
 Gráficos deste capítulo usam *Plots.jl*.
 Pacotes: `DifferentialEquations`, `Plots`, `LinearAlgebra`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Objetivos"
+== Objetivos
 
 Ao final, você deve ser capaz de:
 
@@ -26,9 +26,9 @@ Ao final, você deve ser capaz de:
 + Integrar no tempo o sistema semi-discreto (método das linhas) para a equação do calor — em MDF e em BEM 1D.
 + Explicar a forma $M dot(T) + H T = G Q$ e extrair um PVI nas incógnitas de contorno.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Mapa do capítulo"
+== Mapa do capítulo
 
 + PVI e o solucionador `Tsit5`
 + Euler (ordem 1) e estudo de erro
@@ -41,11 +41,11 @@ Ao final, você deve ser capaz de:
 + Exercícios
 + (Extra) multi-passo AB4 e Houbolt
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "PVI escalar"
+== PVI escalar
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Quantidades que mudam no tempo (ou ao longo de um parâmetro) são modeladas por equações diferenciais. Condições suplementares fecham o problema: no *problema de valor inicial* (PVI) tudo é prescrito em um único valor da variável independente — em geral o tempo.
 
 PVI escalar de primeira ordem:
@@ -67,11 +67,11 @@ $ u' (t) = f(t, u(t)), wide a <= t <= b, \ u(a) = u_0 . $
   *Ideia-chave.* Métodos de PVI *avançam* a partir de $u(a)$: a cada passo usam $f$ (a inclinação) para construir $u$ em tempos futuros. A qualidade depende da *ordem*, da *estabilidade* e do tamanho de passo $h$.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Com DifferentialEquations.jl"
+== Com DifferentialEquations.jl
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Exemplo: $u' = sin((u+t)^2)$, $t in [0,4]$, $u(0)=1$.
 
 A API pede $f(u,p,t)$ — o argumento $p$ carrega parâmetros constantes (mesmo que não usemos).
@@ -90,13 +90,17 @@ plot(sol.t, sol.u; xlabel="t", ylabel="u(t)", label="solução", lw=2)
 scatter!(sol.t, sol.u; label="nós adaptativos", ms=3)
 ```
 
+== Solução com Tsit5
+
+#image("../assets/equacoes-diferenciais/pvi-tsit5.png", width: 78%)
+
 O objeto `sol` é avaliável em qualquer $t$ (`sol(1.0)`): por baixo há uma malha adaptativa e interpolação. O restante do capítulo explica *como* se constroem valores discretos $(t_i, u_i)$ — com passo fixo, para controlar ordem.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Método de Euler"
+== Método de Euler
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Discretize o tempo em passos iguais:
 
 $ t_i = a + i h, quad h = (b-a)/n, quad i = 0, ..., n. $
@@ -130,11 +134,11 @@ function euler(ivp, n)
 end
 ```
 
+#set text(size: 18pt)
+
+== Exemplo e convergência
+
 #set text(size: 14pt)
-
-== "Exemplo e convergência"
-
-#set text(size: 10.5pt)
 Mesma EDO, agora $u(0) = -1$:
 
 ```julia
@@ -149,6 +153,12 @@ plot(t20, u20; marker=:circle, label="Euler n=20", xlabel="t", ylabel="u", lw=2)
 plot!(t50, u50; marker=:circle, label="Euler n=50", lw=2)
 plot!(t50, u_ref.(t50); color=:black, lw=2, label="referência")
 ```
+
+== Euler vs referência
+
+#image("../assets/equacoes-diferenciais/euler-n20-n50.png", width: 78%)
+
+== Estudo de erro
 
 Estudo de erro em norma do máximo nos nós:
 
@@ -165,6 +175,10 @@ plot(ns, err_E; xscale=:log10, yscale=:log10, marker=:circle,
 plot!(ns, err_E[1] .* (ns[1] ./ ns); ls=:dash, label="O(1/n)")
 ```
 
+== Ordem de Euler
+
+#image("../assets/equacoes-diferenciais/euler-erro.png", width: 78%)
+
 #block(
   width: 100%,
   inset: 10pt,
@@ -175,11 +189,11 @@ plot!(ns, err_E[1] .* (ns[1] ./ ns); ls=:dash, label="O(1/n)")
   *Ideia-chave — ordem.* Se o erro global se comporta como $O(h^p) = O(n^(-p))$, no plano $log n$ × $log "erro"$ a reta tem inclinação $-p$. Euler tem $p = 1$: multiplicar $n$ por 10 reduz o erro cerca de 10×.
 ]
 
+#set text(size: 18pt)
+
+== Runge-Kutta de 4ª ordem
+
 #set text(size: 14pt)
-
-== "Runge-Kutta de 4ª ordem"
-
-#set text(size: 10.5pt)
 Euler usa *uma* avaliação de $f$ por passo. Métodos de Runge–Kutta (RK) combinam várias avaliações (*estágios*) no intervalo $[t_i, t_(i+1)]$ para subir a ordem.
 
 O RK clássico de ordem 4:
@@ -228,11 +242,15 @@ plot!(ns, err_E[1] .* (ns[1] ./ ns); ls=:dash, label="O(n⁻¹)")
 plot!(ns, err_R[1] .* (ns[1] ./ ns).^4; ls=:dot, label="O(n⁻⁴)")
 ```
 
-*Euler melhorado* (RK de ordem 2, um estágio intermediário em $t_i+h\/2$) fica como leitura opcional; a trilha do curso usa Euler (referência de ordem 1) e RK4 (cavalo de batalha explícito).
+== Euler vs RK4
 
-#set text(size: 14pt)
+#image("../assets/equacoes-diferenciais/euler-vs-rk4.png", width: 78%)
 
-== "Sistemas e redução de ordem"
+*Euler melhorado* (RK de ordem 2, um estágio intermediário em $t_i+h\/2$) fica como leitura opcional; a trilha do curso usa Euler (referência de ordem 1) e RK4.
+
+#set text(size: 18pt)
+
+== Sistemas e redução de ordem
 
 Poucas aplicações são escalares. O mesmo Euler/RK4 vale para $upright(bold(u)) in RR^d$ se $f$ devolver um vetor:
 
@@ -240,11 +258,11 @@ $ upright(bold(u))_(i+1) = upright(bold(u))_i + h upright(bold(f))(t_i, upright(
 
 EDOs de ordem $m$ viram sistemas de 1ª ordem introduzindo derivadas inferiores como novas incógnitas.
 
+#set text(size: 18pt)
+
+== Pêndulos acoplados (2ª ordem -> 1ª)
+
 #set text(size: 14pt)
-
-== "Pêndulos acoplados (2ª ordem -> 1ª)"
-
-#set text(size: 10.5pt)
 #image("../assets/equacoes-diferenciais/pendulos.png", width: 75%)
 
 $
@@ -286,6 +304,10 @@ plot!(sol1.t, [u[2] for u in sol1.u]; label="θ2, k=1", ls=:dash, lw=2,
       xlabel="t", title="Pêndulos acoplados")
 ```
 
+== Pêndulos: k = 0 vs k = 1
+
+#image("../assets/equacoes-diferenciais/pendulos-acoplados.png", width: 78%)
+
 #block(
   width: 100%,
   inset: 10pt,
@@ -296,11 +318,11 @@ plot!(sol1.t, [u[2] for u in sol1.u]; label="θ2, k=1", ls=:dash, lw=2,
   *Receita.* Para cada variável de ordem máxima $m$, crie $m$ componentes $(y, y', ..., y^((m-1)))$. Relações cinemáticas $y'=v$, etc., + a EDO original fecham o sistema. Dimensão = soma das ordens.
 ]
 
+#set text(size: 18pt)
+
+== Matrizes de diferenças finitas
+
 #set text(size: 14pt)
-
-== "Matrizes de diferenças finitas"
-
-#set text(size: 10.5pt)
 Até aqui a variável independente era o *tempo*. No espaço, para um PVC ou para semi-discretizar uma EDP, aproximamos $d\/d x$ e $d^2\/d x^2$ por *matrizes de diferenciação*.
 
 Nós uniformes em $[a,b]$:
@@ -361,11 +383,11 @@ function diffmat(n, xspan)
 end
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "PVC estacionário (Laplace 1D)"
+== PVC estacionário (Laplace 1D)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 $T''(x) = 0$ em $(-1,1)$, $T(-1)=100$, $T(1)=0$.
 Solução exata: $T(x) = 50(1 - x)$.
 
@@ -388,6 +410,10 @@ scatter!(x, T; label="MDF", ms=3)
 @show maximum(abs, T - T_ex)
 ```
 
+== PVC 1D: MDF vs exato
+
+#image("../assets/equacoes-diferenciais/pvc-laplace1d.png", width: 78%)
+
 #block(
   width: 100%,
   inset: 10pt,
@@ -398,11 +424,11 @@ scatter!(x, T; label="MDF", ms=3)
   *Ideia-chave.* $D_(x x) upright(bold(T)) = upright(bold(b))$ é um sistema algébrico esparso nos nós do *domínio*. No BEM 1D da apresentação, o sistema vive só nas *pontas* e usa $H T = G Q$. Mesma física, densidades de informação diferentes.
 ]
 
+#set text(size: 18pt)
+
+== Método das linhas: equação do calor
+
 #set text(size: 14pt)
-
-== "Método das linhas: equação do calor"
-
-#set text(size: 10.5pt)
 EDP parabólica 1D:
 
 $ u_t = kappa u_(x x), $
@@ -442,6 +468,10 @@ end
 plt
 ```
 
+== Calor / método das linhas
+
+#image("../assets/equacoes-diferenciais/calor-linhas.png", width: 78%)
+
 Animação opcional (GIF local) ou vídeo do repositório:
 
 ```julia
@@ -456,9 +486,9 @@ gif(anim, "calor.gif"; fps=15)
 
 Os integradores do início do capítulo (Euler, RK4, `Tsit5`) aplicam-se a esse sistema; a estabilidade explícita exige $Delta t = O(h^2)$ para o calor — por isso solucionadores *adaptativos* ou implícitos ajudam.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Equação da onda (método das linhas)"
+== Equação da onda (método das linhas)
 
 EDP hiperbólica 1D (corda / acústica unidimensional):
 
@@ -466,11 +496,11 @@ $ u_(t t) = c^2 u_(x x) , $
 
 com velocidade de onda $c > 0$. Diferente do calor, a informação propaga com *velocidade finita* $c$ e a energia (em domínio isolado) se conserva no contínuo.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Redução a 1ª ordem no tempo"
+== Redução a 1ª ordem no tempo
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Como no pêndulo, introduza a velocidade $v = u_t$:
 
 $ u_t = v , quad v_t = c^2 u_(x x) . $
@@ -500,11 +530,11 @@ com BC aplicadas em $upright(bold(u))$ (e $dot(u)=v=0$ nos extremos se Dirichlet
   5. CFL prático: com passo *fixo* explícito, $Delta t <= h\/c$; com `Tsit5` adaptativo o passo se ajusta, mas malha grossa demais ainda dispersa a onda.
 ]
 
+#set text(size: 18pt)
+
+== Problema-modelo com solução exata
+
 #set text(size: 14pt)
-
-== "Problema-modelo com solução exata"
-
-#set text(size: 10.5pt)
 $
   u_(t t) = c^2 u_(x x) , quad 0 < x < 1 , quad t > 0 , \
   u(0,t)=u(1,t)=0 , \
@@ -553,13 +583,13 @@ BEM (só a *forma*, para o exercício): no contorno, algo como
 $ M upright(bold(u))'' + H upright(bold(u)) = G upright(bold(q)) $
 com $q$ ligado a $partial_n u$; o método das linhas no contorno seria um sistema de 2ª ordem no tempo (ou 1ª ordem em $(u, dot(u))$ nas faces). No E5 pede-se o MDF completo e apenas o esboço matricial BEM.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Ponte com o BEM"
+== Ponte com o BEM
 
-== "Duas semi-discretizações da mesma física"
+== Duas semi-discretizações da mesma física
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 A equação do calor 1D $T_t = kappa T_(x x)$ pode ser atacada de dois jeitos depois de discretizar o *espaço*:
 
 #table(
@@ -589,19 +619,19 @@ A equação do calor 1D $T_t = kappa T_(x x)$ pode ser atacada de dois jeitos de
   *Ideia-chave.* O *método das linhas* é o mesmo em ambos: depois do espaço, sobra um PVI (ou DAE) no tempo. O que muda é *quem* são as incógnitas e *quais* matrizes multiplicam $T$, $Q$ e $dot(T)$.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "De para o calor"
+== De para o calor
 
 Na aula 1 (estacionário), $H T = G Q$ nas pontas ($n_c=2$). Com $T_t = kappa T''$ vem o domínio
 
 $ integral_(x_0)^(x_f) T^* (x,x_d), (dot(T)(x)\/kappa) dif x . $
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Cada Gauss é fonte interior: bloco"
+== Cada Gauss é fonte interior: bloco
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Gauss–Legendre em $[x_0,x_f]$: nós $x^g_j$, pesos $w_j$ ($j=1..n_i$).
 Cada $x^g_j$ tem *dois* papéis:
 
@@ -632,11 +662,11 @@ no problema misto $T_0$ fixo ($dot(T)_0=0$) e $Q_f=0$. As $N$ colocações forne
   *Ideia-chave.* Montar $M$ *não* é “somar $T^*$ nos Gauss e jogar numa diagonal”. Cada Gauss gera uma *linha* (fonte interior) e uma *coluna* (amostra de $dot(T)$).
 ]
 
+#set text(size: 18pt)
+
+== Código: bem1d_M e RHS
+
 #set text(size: 14pt)
-
-== "Código: bem1d_M e RHS"
-
-#set text(size: 10.5pt)
 ```julia
 using LinearAlgebra, Plots, FastGaussQuadrature, DifferentialEquations
 
@@ -713,11 +743,11 @@ Equações em cada colocação $p=1..N$ (vetor $T^b=(T_0,T_f)$, $Q^b=(Q_0,Q_f)$,
   (no código: `argmax(xg)`). Para acoplar $dot(T)_f$ à massa de fato, use Gauss–Lobatto ou DIBEM.
 ]
 
+#set text(size: 18pt)
+
+== Método das linhas (implementação)
+
 #set text(size: 14pt)
-
-== "Método das linhas (implementação)"
-
-#set text(size: 10.5pt)
 Estado $y = (T_f, T^g_1, ..., T^g_(n_i)) in RR^(N-1)$.
 
 A matriz $A$ do sistema em $z = (Q_0, dot(T)^g)$ depende só da malha (`Gb`, `Mg`), *não* de $y$. Fatora-se *uma vez*; a cada RHS só monta o residual $r(y)$ e faz $z = F \\ r$.
@@ -782,11 +812,11 @@ function profile_at(solB, mesh, TL, t)
 end
 ```
 
+#set text(size: 18pt)
+
+== Exemplo com solução analítica
+
 #set text(size: 14pt)
-
-== "Exemplo com solução analítica"
-
-#set text(size: 10.5pt)
 Problema (compatível com as BC mistas do código: Dirichlet à esquerda, Neumann nulo à direita):
 
 $
@@ -833,7 +863,13 @@ p2 = plot(xx, T_exact.(xx, t_snap); lw=2, label="analítico",
 plot!(p2, xp, Tp; marker=:circle, lw=2, ls=:dash, label="BEM (nós)")
 
 plot(p1, p2; layout=(1, 2), size=(900, 350))
+```
 
+== BEM 1D × analítico
+
+#image("../assets/equacoes-diferenciais/bem-calor-analitico.png", width: 90%)
+
+```julia
 # --- erros ---
 err_TR = maximum(abs, TR_bem .- TR_ex)
 err_prof = maximum(abs, Tp .- T_exact.(xp, t_snap))
@@ -878,9 +914,9 @@ Leitura esperada: com o modo fundamental nas BC certas, o erro em $T(L,t)$ e no 
   + 2D: o mesmo papel dos Gauss é o dos pontos interiores DIBEM.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Checklist MDF × BEM (linhas)"
+== Checklist MDF × BEM (linhas)
 
 + Espaço → PVI\/DAE no tempo.
 + BEM: estado = contorno livre + $T$ em cada Gauss (fonte interior).
@@ -888,11 +924,11 @@ Leitura esperada: com o modo fundamental nas BC certas, o erro em $T(L,t)$ e no 
 + Integrador no tempo intercambiável (`Tsit5`, RK4, Houbolt).
 + $n_i arrow.t$ enriquece domínio e tamanho do sistema.
 
+#set text(size: 18pt)
+
+== Exercícios
+
 #set text(size: 14pt)
-
-== "Exercícios"
-
-#set text(size: 10.5pt)
 Entregue para cada item: código Julia (Plots), figuras pedidas e *duas ou três frases* de interpretação. Use os solucionadores e rotinas do capítulo (`euler`, `rk4`, `diffmat`, `bem1d_M`, `solve_bem_heat`, …).
 
 + *E1 — Ordem de Euler e RK4.*
@@ -996,17 +1032,17 @@ Entregue para cada item: código Julia (Plots), figuras pedidas e *duas ou três
 
   (f) *Opcional (Houbolt).* Com o extra do capítulo, integre o oscilador modal equivalente $U'' + (c pi)^2 U = 0$ (amplitude do modo $sin(pi x)$) com Houbolt e compare $U(t)$ a $cos(c pi t)$. Relacione com o item (b) no ponto médio.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Extra: multi-passo AB4 e Houbolt"
+== Extra: multi-passo AB4 e Houbolt
 
 RK avalia $f$ várias vezes por passo *sem* histórico. Métodos de *múltiplos passos* reutilizam $f_i = f(t_i, u_i)$ passados. Ficam no fim porque a trilha BEM já está completa com Euler\/RK\/`Tsit5`; use-os quando quiser menos avaliações de $f$ ou integradores da dinâmica estrutural.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Adams-Bashforth 4 (explícito)"
+== Adams-Bashforth 4 (explícito)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 $
   u_(i+1) = u_i + h (55/24 f_i - 59/24 f_(i-1) + 37/24 f_(i-2) - 9/24 f_(i-3)).
 $
@@ -1032,11 +1068,11 @@ function ab4(ivp, n)
 end
 ```
 
+#set text(size: 18pt)
+
+== Houbolt (2ª ordem no tempo)
+
 #set text(size: 14pt)
-
-== "Houbolt (2ª ordem no tempo)"
-
-#set text(size: 10.5pt)
 Comum em dinâmica estrutural e em BEM elástico transiente. Aproxima
 
 $
@@ -1076,6 +1112,10 @@ plot!(tR, [y[1] for y in UR]; label="RK4", ls=:dash, lw=2,
       xlabel="t", ylabel="u", title="u'' + ω²u = 0")
 ```
 
+== Houbolt vs RK4
+
+#image("../assets/equacoes-diferenciais/houbolt-vs-rk4.png", width: 78%)
+
 Adams–Moulton \/ preditor–corretor: leitura exterior (não são necessários para a trilha BEM deste capítulo).
 
-#set text(size: 14pt)
+#set text(size: 18pt)

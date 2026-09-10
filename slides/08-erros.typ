@@ -6,16 +6,16 @@
 
 // Conteudo completo da aula (chapters/08-erros.typ)
 
-= "Apêndice: medidas de erro"
+= Apêndice: medidas de erro
 
-== "Apêndice: medidas de erro"
+== Apêndice: medidas de erro
 
 Este apêndice fixa *como* reportar erro nos exercícios e trabalhos.
 Não é uma aula da trilha: use-o quando um capítulo pedir “erro médio / $L_2$ / `rel_error`”.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Princípio"
+== Princípio
 
 Sempre que houver referência $upright(bold(u))^"ex"$ nos *mesmos* pontos que o numérico $upright(bold(u))$:
 
@@ -26,11 +26,11 @@ Sempre que houver referência $upright(bold(u))^"ex"$ nos *mesmos* pontos que o 
 
 Seja $e_i = u_i - u_i^"ex"$ o erro nodal (componente a componente; em elasticidade empilhe $u_x,u_y$).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Normas em pontos discretos"
+== Normas em pontos discretos
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 *Máximo ($infinity$):*
 
 $
@@ -65,11 +65,11 @@ Use $epsilon_"floor" > 0$ pequeno (ex. $10^(-16)$) só para evitar divisão por 
   significava aplicar a norma ao *vetor diferença*.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que o BEM_gmsh calcula"
+== O que o BEM_gmsh calcula
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Com solução analítica no cache (`attach_analytical!` ou `apply_analytical_bc!`) e após `solve`:
 
 ```julia
@@ -94,11 +94,11 @@ Ou seja: `rel_error` $equiv$ $epsilon_2$ no vetor de solução primária armazen
 (potencial $T$ ou deslocamentos empilhados). *Não* substitui erro em fluxo $q$,
 tensões ou sensores internos — calcule à parte quando o exercício pedir.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Receita mínima de convergência"
+== Receita mínima de convergência
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 ```julia
 rows = []
 for ndiv in (8, 16, 32)
@@ -119,9 +119,9 @@ Boas práticas:
 - se a solução for polinomial e o elemento a reproduz, espere erro de máquina no patch test;
 - em cantos com CDC mista, compare também pontos *longe* da singularidade geométrica.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Onde medir"
+== Onde medir
 
 #table(
   columns: (auto, auto),
@@ -134,13 +134,13 @@ Boas práticas:
   [Fluxo $q$ ou tração $t$], [sempre que a CDC de Neumann for o alvo],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Checklist de relatório"
+== Checklist de relatório
 
 + Definição da norma e do conjunto de pontos.
 + Tabela $N$ (ou $h$) × erros.
 + Uma frase sobre a taxa observada vs. a esperada (ordem do elemento).
 + Se usou só `rel_error`, declare que é $epsilon_2$ na primária do `dad`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)

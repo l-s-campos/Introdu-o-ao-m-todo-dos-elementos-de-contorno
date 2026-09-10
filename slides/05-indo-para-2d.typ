@@ -1,52 +1,49 @@
 #import "_theme.typ": *
 #show: bem-slides.with(
   title: [Indo para 2D],
-  subtitle: [Malha · N · J · n · propgeo],
+  subtitle: [Malha · N · J · n · propgeo · GeomGmsh],
 )
 
-// Conteudo completo da aula (chapters/05-indo-para-2d.typ)
+// Conteúdo completo da aula (chapters/05-indo-para-2d.typ)
 
-= "Indo para 2D"
+= Indo para 2D
 
-== "Indo para 2D - intro"
+== Indo para 2D
 
-A partir desta aula o laboratório usa o repositório
-#link("https://github.com/l-s-campos/BEM_gmsh")[`BEM_gmsh`]
-(Julia + Gmsh). O foco é *geometria de contorno*: malha, elementos,
-jacobiano, normal e integrais só em $Gamma$.
+A partir desta aula o laboratório usa o pacote
+#link("https://github.com/l-s-campos/BEM_gmsh")[`GeomGmsh`]
+em `codes/geom_gmsh` (Julia + Gmsh; recorte de geometria do `BEM_gmsh`).
+
+Foco: *geometria de contorno* — malha, elementos, jacobiano, normal e
+integrais só em $Gamma$.
+
 *Condições de contorno* (o que cada aresta “vale” em $T$ ou $q$) ficam para o capítulo *Laplace 2D*.
 
-Os trechos Julia abaixo são *pedaços do próprio pacote* (ou dos exemplos em `data/examples/`),
-para você reconhecer os mesmos nomes no código-fonte.
+Os trechos Julia são *pedaços do próprio pacote* (`src/`) ou dos exemplos em `scripts/` e `_solu/`.
 
-#set text(size: 14pt)
+== Objetivos
 
-== "Objetivos"
-
-+ Ativar o ambiente `BEM_gmsh` e gerar uma malha de contorno com Gmsh.
++ Ativar o ambiente `GeomGmsh` e gerar uma malha de contorno com Gmsh.
 + Entender o elemento descontínuo de ordem $p$ via `discontinuous_nodes_weights` + `shapefun` (Lagrange baricêntrico).
 + Calcular $J$, tangente e normal como em `format2d`.
-+ Obter perímetro, área e centróide por *integração radial* (como `geometric_props`).
-+ Reobter área (e análogos) pelo *teorema da divergência* e comparar.
-+ Usar `geometric_props` / `geometric_props_2d_polygon` no fluxo do curso.
++ Obter perímetro, área e centróide com `geometric_props` nas *duas* estratégias: `:radial` (default) e `:divergence`.
++ Rodar os exemplos `scripts/circulo.jl` (2D) e `scripts/toro.jl` (3D).
 
-#set text(size: 14pt)
-
-== "Mapa"
+== Mapa
 
 + Por que 2D e o que muda em relação ao BEM 1D
-+ Ambiente `BEM_gmsh` e Gmsh (geometria, sem CDC)
++ Ambiente `GeomGmsh` e Gmsh (geometria, sem CDC)
 + Elemento descontínuo + Lagrange baricêntrico (`Interpolation.jl` / `Input.jl`)
-+ Jacobiano, normal (como em `format2d_lagrange`)
-+ Propriedades geométricas — integração radial (`GeometricProperties.jl`)
-+ O mesmo pelo teorema da divergência
++ Jacobiano, normal (como em `format2d`)
++ `geometric_props` — radial e divergência (`GeometricProperties.jl`)
++ Exemplo: disco unitário
++ Exemplo: toro 3D (`format3d`)
 + Exercícios
 
-#set text(size: 14pt)
+== Por que “indo para 2D”
 
-== "Por que \"indo para 2D\""
+#set text(size: 16pt)
 
-#set text(size: 13pt)
 No BEM 1D o “contorno” eram dois pontos. Em 2D:
 
 - $Omega subset RR^2$ tem fronteira $Gamma = partial Omega$ *unidimensional* (curva fechada, eventualmente com furos);
@@ -54,121 +51,54 @@ No BEM 1D o “contorno” eram dois pontos. Em 2D:
 - campo e fluxo no contorno usam interpolação em $xi in [-1,1]$ sobre cada $Gamma_e$;
 - integrais de área em $Omega$ que admitem redução a $Gamma$ (radial ou divergência) preparam as identidades do BEM.
 
-#image("../assets/indo-para-2d/perimetro.png", width: 75%)
+#image("../assets/indo-para-2d/perimetro.png", width: 52%)
 
-#block(
-  width: 100%,
-  inset: 10pt,
-  radius: 4pt,
-  stroke: 0.5pt + luma(180),
-  fill: luma(248),
-)[
+== Ideia-chave
+
+#keybox[
   *Ideia-chave.* Malhar só $Gamma$ não elimina a necessidade de boa geometria:
   $N_k$, $J$ e $upright(bold(n))$ em cada elemento são os tijolos de `geometric_props` e, depois, de $H$ e $G$.
 ]
 
-#set text(size: 14pt)
+== Ambiente: GeomGmsh + Gmsh
 
-== "Ambiente: BEM_gmsh + Gmsh"
+Na pasta `codes/geom_gmsh`:
 
-Como em `scripts/intro.jl` e `data/examples/geo_unit_square.jl`:
-
-```julia
-using DrWatson
-@quickactivate :BEM
-include(datadir("Laplace", "Laplace_dad.jl"))
+```bash
+julia --project=. -e "using Pkg; Pkg.instantiate()"
+julia --project=. scripts/circulo.jl
+julia --project=. scripts/toro.jl
 ```
 
-(Na primeira vez: `Pkg.activate` na pasta do clone + `Pkg.instantiate`.)
-O pacote `Gmsh.jl` já é dependência. A GUI do sistema
-(#link("https://gmsh.info/#Download")[gmsh.info]) ajuda a inspecionar `.geo` / `.msh`.
+O pacote `Gmsh.jl` já é dependência. GUI: #link("https://gmsh.info/#Download")[gmsh.info].
 
-#set text(size: 14pt)
+Geradores (`circulo`, `anel`, `placa_com_furo`, `cubo`, `toro`, …) em `src/Meshes.jl`:
+`gmsh.initialize()` → gerar → `datadir(nome * ".msh")` → `finalize()`.
+Depois `format2d` / `format3d` e `geometric_props`.
 
-== "Por que Gmsh no BEM (só geometria)"
+== Por que Gmsh no BEM (só geometria)
 
-1. Curvas, arcos, splines e furos com orientação controlável.
-2. Malha de contorno (curvas) + superfície opcional (pontos internos / DIBEM depois).
+1. Curvas, arcos, splines, furos e sólidos OCC (toro) com orientação controlável.
+2. Malha de contorno (curvas) + superfície 3D; volume opcional (pontos internos / orientação).
 3. Ordem geométrica alinhada ao grau do elemento (`ordem` / `tipo`).
-4. O mesmo gerador alimenta Laplace, Poisson e elasticidade.
+4. O mesmo gerador alimenta Laplace, Poisson e elasticidade no `BEM_gmsh` completo.
 
 *Nesta aula* os grupos físicos *nomeiam* pedaços de curva e a superfície do domínio.
 A convenção `"0;T"` / `"1;q"` entra em *Laplace 2D*.
 
-#set text(size: 14pt)
-
-== "Anatomia de um .geo (sem CDC)"
-
-#set text(size: 10.5pt)
-1. pontos e curvas;
-2. *curve loop* + superfície plana;
-3. grupos físicos de *geometria*;
-4. `Mesh 2`.
-
-```geo
-lc = 0.15;
-
-Point(1) = {0, 0, 0, lc};
-Point(2) = {1, 0, 0, lc};
-Point(3) = {1, 1, 0, lc};
-Point(4) = {0, 1, 0, lc};
-
-Line(1) = {1, 2};
-Line(2) = {2, 3};
-Line(3) = {3, 4};
-Line(4) = {4, 1};
-
-Curve Loop(1) = {1, 2, 3, 4};   // anti-horário = normal para fora
-Plane Surface(1) = {1};
-
-Transfinite Curve {1, 2, 3, 4} = 16;
-Transfinite Surface{1};
-Recombine Surface{1};
-
-Physical Curve("contorno") = {1, 2, 3, 4};
-Physical Surface("Domain") = {1};
-
-Mesh 2;
-```
-
-```bash
-gmsh -2 quadrado_geo.geo -o quadrado_geo.msh
-```
-
-No curso, preferimos geradores em `data/Laplace/Laplace_dad.jl` (ex.: `quadrado`, `placa_com_furo`).
-Fluxo geométrico mínimo — o mesmo de `data/examples/geo_unit_square.jl`:
-
-```julia
-using DrWatson
-@quickactivate :BEM
-include(datadir("Laplace", "Laplace_dad.jl"))
-
-msh = quadrado(ndiv=10, show=false, nome="ex_geo_sq", ordem=2)
-dad = format2d(msh, Laplace(1.0); tipo=2, pontointerno=false)
-g = geometric_props(dad)
-println("  perimeter = ", g.perimeter, "  (exact 4)")
-println("  area      = ", g.area, "  (exact 1)")
-println("  centroid  = ", g.centroid, "  (exact 0.5,0.5)")
-plot_geo(dad)   # nós, elementos, normais — ainda sem solve
-```
-
-`format2d` lê a malha e monta `BEMdata` (elementos, nós de colocação, normais, pesos).
-*Nesta aula* use `plot_geo` e `geometric_props`, não `solve` / `H_G_*`.
-
-#set text(size: 14pt)
-
-== "Orientação (crítico)"
+== Orientação (crítico)
 
 - Contorno *externo*: *anti-horário* → normal *para fora* de $Omega$.
 - Contorno de *furo*: *horário* → normal ainda saindo de $Omega$.
-- $A < 0$ nas fórmulas abaixo denuncia orientação invertida.
+- $A < 0$ (ou $V < 0$ em 3D) denuncia orientação invertida.
 
-#set text(size: 14pt)
+`format2d(; orient=true)` (default) corrige o sinal de $upright(bold(n))$ com as
+células 2D da malha de superfície. `placa_com_furo(; reverse_hole=true)` já
+inverte o laço do furo no Gmsh.
 
-== "O que format2d faz na geometria"
+== O que format2d faz (Input.jl)
 
-#set text(size: 13pt)
-Trecho essencial de `src/Core/Input.jl` (`format2d_lagrange`):
+#set text(size: 16pt)
 
 ```julia
 # nós de colocação descontínuos = Gauss–Legendre (p+1 pontos)
@@ -178,30 +108,62 @@ qsi, wi = discontinuous_nodes_weights(p)   # = gausslegendre(p+1)
 Ngeo, dNgeo = shapefun(Equispaced(p), qsi)
 
 # para cada aresta da malha Gmsh, com vértices X:
-NOS[idx]   .= Ngeo * X          # posições dos nós de campo
-dx          = dNgeo * X
-J           = norm.(dx)
-normal[idx] = tan2normal.(dx ./ J)
-L           = abs(dot(J, wi))   # comprimento do elemento
+nodes[idx]  .= Ngeo * X          # posições dos nós de campo
+dx           = dNgeo * X
+J            = norm.(dx)
+normal[idx]  = tan2normal.(dx ./ J)
+L            = abs(dot(J, wi))   # comprimento do elemento
 ```
 
-Ou seja: *os mesmos* `shapefun` e pesos que você verá na montagem de $H$ e $G$.
+Os *mesmos* `shapefun` e pesos entram depois em $H$ e $G$.
 
-#set text(size: 14pt)
+== Fluxo mínimo — scripts/circulo.jl
 
-== "Elemento de contorno descontínuo"
+```julia
+using GeomGmsh
 
-No `BEM_gmsh` o padrão é *elemento descontínuo*: graus de liberdade de campo
+msh = circulo(; ndiv=16, show=false, nome="ex_circulo", ordem=2)
+dad = format2d(msh, Laplace(1.0); tipo=2, pontointerno=false)
+g = geometric_props(dad)          # strategy=:radial
+println("  perimeter = ", g.perimeter, "  (exact 2π)")
+println("  area      = ", g.area, "  (exact π)")
+println("  centroid  = ", g.centroid, "  (exact 0,0)")
+plot_geo(dad; show_normals=true)
+```
+
+`format2d` monta `BEMdata`. *Nesta aula:* `plot_geo` e `geometric_props`, não `solve` / `H_G_*`.
+
+== Disco unitário (plot_geo)
+
+#image("../assets/indo-para-2d/circulo-geo.png", width: 62%)
+
+== Disco: números (`tipo=2`, `ndiv=16`)
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 6pt,
+  stroke: 0.5pt + luma(200),
+  [*Grandeza*], [*Numérico*], [*Exato*],
+  [perímetro], [$6.2827$], [$2 pi approx 6.2832$],
+  [área], [$3.1411$], [$pi approx 3.1416$],
+  [centróide], [$approx (0,0)$], [$(0,0)$],
+)
+
+A malha linear (`tipo=1`) é um $n$-ágono regular:
+$P = 2 n sin(pi\/n) = 2 pi - O(n^(-2))$,
+$A = (n\/2) sin(2 pi\/n) = pi - O(n^(-2))$.
+Com `tipo=2` os arcos parabólicos aproximam o círculo e o erro cai bem mais rápido.
+
+== Elemento de contorno descontínuo
+
+No `GeomGmsh` o padrão é *elemento descontínuo*: graus de liberdade de campo
 *não* são compartilhados nos vértices entre elementos vizinhos
 (evita conflito de CDC em cantos — detalhe em Laplace 2D).
 
-#image("../assets/indo-para-2d/elemento-parabolico.png", width: 70%)
+#image("../assets/indo-para-2d/elemento-parabolico.png", width: 52%)
 
-#set text(size: 14pt)
+== Mapa de referência
 
-== "Mapa de referência"
-
-#set text(size: 13pt)
 $ Gamma_e $ é a imagem de $xi in [-1,1]$:
 
 $
@@ -213,59 +175,34 @@ $
   `discontinuous_nodes_weights(p)`.
 
 ```julia
-# src/Core/Input.jl
 function discontinuous_nodes_weights(p::Integer)
     p >= 1 || error("degree must be ≥ 1, got $p")
     return gausslegendre(p + 1)
 end
 ```
 
-`tipo=1,2,3` em `format2d` escolhe o grau $p$ do campo (e alinha a ordem da malha se preciso).
+`tipo=1,2,3` em `format2d` = grau $p$ do campo.
 
-#set text(size: 14pt)
+== Lagrange baricêntrico (Interpolation.jl)
 
-== "Lagrange baricêntrico (como no pacote)"
-
-#set text(size: 12pt)
-O núcleo está em `src/Core/Interpolation.jl`: pesos baricêntricos + matriz de interpolação
-(Berrut–Trefethen) e `shapefun` (= $N$ e $d N\/d xi$ nos pontos pedidos).
-
-Pesos (para nós $x_0$ do polinômio):
-
-$ w_i = 1 \/ product_(j != i) (x_i - x_j) . $
-
-Funções de forma no ponto $xi$ (fora dos nós):
+Pesos (nós $x_0$): $ w_i = 1 \/ product_(j != i) (x_i - x_j) . $
 
 $
   N_i (xi) = (w_i \/ (xi - x_i)) \/ sum_j (w_j \/ (xi - x_j)) .
 $
-#image("../assets/indo-para-2d/funcoes-forma-d.png", width: 70%)
-
-No código:
 
 ```julia
-# Interpolation.jl — interpolation_matrix (forma baricentrica)
-# M[j,i] = w[i] / (xx - x0[i]), normalizado pela soma da linha
-# se xx == no: linha de Kronecker
-
 function shapefun(poly::AbstractPolynomial, x)
-    L = interpolation_matrix(poly, x)   # N(x) nos pontos pedidos
-    L, L * poly.Dmat                    # N e dN/dxi
+    L = interpolation_matrix(poly, x)   # N(x)
+    L, L * poly.Dmat                    # N e dN/dξ
 end
 ```
 
-#set text(size: 14pt)
+#image("../assets/indo-para-2d/funcoes-forma-d.png", width: 42%)
 
-== "Dmat = differentiation_matrix(poly) (resumo)"
+== Dmat (resumo)
 
-#set text(size: 10.5pt)
-Com valores nodais $u_i = u(xi_i)$, o interpolante $u(xi)=sum_i N_i(xi) u_i$ tem
-
-$ u'(xi_k) = sum_i N_i'(xi_k) u_i quad arrow.r.double quad upright(bold(u))' = D upright(bold(u)) , $
-
-onde $D_(k i) = N_i'(xi_k)$. No pacote, $D$ = `poly.Dmat`, montada *uma vez* por `differentiation_matrix` (`Interpolation.jl`).
-
-Com os pesos baricêntricos $w_i$ e nós $x_i$:
+$ u'(xi_k) = sum_i N_i'(xi_k) u_i quad arrow.r.double quad upright(bold(u))' = D upright(bold(u)) $
 
 $
 D_(k i) = (w_i \/ w_k) \/ (x_k - x_i) quad (k != i),
@@ -273,71 +210,60 @@ wide
 D_(k k) = - sum_(i != k) D_(k i)
 $
 
-(a diagonal impõe $sum_i N_i' = 0$: derivada de constante é zero).
-
-`shapefun` devolve $N$ e $d N\/d xi$ em pontos *quaisquer* $xi$ via
+`poly.Dmat` é montada *uma vez* por `diff_matrix`. A diagonal impõe $sum_i N_i' = 0$.
 
 ```julia
 L = interpolation_matrix(poly, x)   # N
 dN = L * poly.Dmat                  # N_i'(ξ) = Σ_k N_k(ξ) D_ki
 ```
 
-`Dmat` *não* é o jacobiano da malha: age no interpolante 1D em $xi$. O jacobiano geométrico vem depois,
-$dif upright(bold(x)) \/ dif xi = sum_i (dif N_i \/ dif xi) upright(bold(X))_i$.
+`Dmat` *não* é o jacobiano da malha.
 
-Uso didático (os mesmos tipos do `dad`):
+== Uso didático (tipos do dad)
+
+#set text(size: 16pt)
 
 ```julia
-using FastGaussQuadrature  # já no projeto
-
 p = 2
 poly = Legendre(p)                 # campo descontínuo (nós de Gauss)
-ξ, wN = nodes_weights(poly)        # nós e pesos baricêntricos do interpolante
-ξg, wg = gausslegendre(6)          # pontos de quadratura “de laboratório”
+ξ = nodes(poly)                    # nós de colocação
+wN = weights(poly)                 # pesos *baricêntricos* (não de Gauss)
+ξg, wg = gausslegendre(6)
 N, dN = shapefun(poly, ξg)         # size (6 × 3) se p=2
 
-# geometria contínua da aresta (vértices Gmsh)
-poly_geo = Equispaced(p)
+poly_geo = Equispaced(p)           # geometria contínua da aresta
 Ngeo, dNgeo = shapefun(poly_geo, ξg)
 ```
 
-Partição da unidade (teste rápido):
+Partição da unidade (E1):
 
 ```julia
 poly = Legendre(3)
-for ξ in range(-1, 1; length=21)
-    N, dN = shapefun(poly, ξ)
-    @assert abs(sum(N) - 1) < 1e-11
-    @assert abs(sum(dN)) < 1e-9
-end
+N, dN = shapefun(poly, ξ)
+@assert abs(sum(N) - 1) < 1e-11
+@assert abs(sum(dN)) < 1e-9
 ```
 
-Caso contínuo clássico $p=2$, nós $xi in {-1,0,1}$ (`Equispaced(2)`):
+== Equispaced(2) = Lagrange clássico
 
 $
   N_1 = xi(xi-1)\/2 , quad N_2 = 1-xi^2 , quad N_3 = xi(xi+1)\/2 .
 $
 
-#image("../assets/indo-para-2d/funcoes-forma.png", width: 70%)
+#image("../assets/indo-para-2d/funcoes-forma.png", width: 52%)
 
-#block(
-  width: 100%,
-  inset: 10pt,
-  radius: 4pt,
-  stroke: 0.5pt + luma(180),
-  fill: luma(248),
-)[
-  *No `BEMdata`.* Depois de `format2d`, `dad.element_type` é o polinômio do campo
-  (`Legendre(p)`), `dad.elem_weight` são os pesos de Gauss da colocação, e cada
-  `dad.elements[e]` guarda índices dos nós, jacobianos nos nós de colocação e comprimento.
+Usado na *geometria* da aresta Gmsh de ordem 2.
+
+== No BEMdata
+
+#keybox[
+  Depois de `format2d`, `dad.element_type` é o polinômio do campo (`Legendre(p)`),
+  `dad.elem_weight` são os pesos de Gauss da colocação, e cada `dad.elements[e]`
+  guarda índices, jacobianos nos nós de colocação e comprimento.
+  `dad.Nodes` / `dad.Normal` são vistas de `collocation`.
 ]
 
-#set text(size: 14pt)
-
-== "Jacobiano, comprimento e normal"
-
-#set text(size: 12pt)
-Com nós geométricos $upright(bold(X))_k$ da aresta e $N, N'$ em $xi$:
+== Jacobiano, comprimento e normal
 
 $
   upright(bold(x))' (xi) = sum_k N_k' (xi)\, upright(bold(X))_k ,
@@ -347,32 +273,35 @@ $
   upright(bold(n)) = (y', -x') \/ J
 $
 
-(normal “à esquerda” do sentido de percurso — contorno externo anti-horário ⇒ exterior).
-
-No pacote (`format2d_lagrange` + `tan2normal`):
-
 ```julia
 dx = dNgeo * X
 J  = norm.(dx)
-normal = tan2normal.(dx ./ J)   # (dx,dy) → (dy, -dx)/|·|  (unitário)
+normal = tan2normal.(dx ./ J)   # (dx,dy) → (dy, -dx)/|·|
 L  = abs(dot(J, wi))            # ∫ J dξ ≈ Σ J_k w_k
 ```
 
-Perímetro global: $P = sum_e L_e$ (é o `gp.perimeter`).
+Perímetro global: $P = sum_e L_e$ (`g.perimeter`).
 
 #image("../assets/indo-para-2d/normal-1.png", width: 32%)
 #image("../assets/indo-para-2d/normal-2.png", width: 32%)
 
-#set text(size: 14pt)
+== geometric_props — duas estratégias
 
-== "Propriedades geométricas por integração radial"
+```julia
+g  = geometric_props(dad)                         # strategy=:radial
+g2 = geometric_props(dad; strategy=:divergence)
+g3 = geometric_props(dad; npg_radial=20)
+g4 = geometric_props(dad; npg_boundary=16)
+```
 
-#set text(size: 10.5pt)
-É a formulação de `geometric_props` / `geometric_props_2d` em
-`src/Core/GeometricProperties.jl`.
+`npg_boundary=nothing` reutiliza `elem.Jacobian` $times$ `dad.elem_weight`.
+Um inteiro reintegra cada elemento com `shapefun(dad.element_type, ξ)` e Gauss.
 
-Fixe o pólo (no código, a *origem*). Para $upright(bold(x)) in Gamma$,
-$upright(bold(r))=upright(bold(x))$, $r=|upright(bold(r))|$, $hat(upright(bold(r)))=upright(bold(r))\/r$.
+== Integração radial (`:radial`, default)
+
+#set text(size: 16pt)
+
+Pólo na *origem*. $upright(bold(r))=upright(bold(x))$, $r=|upright(bold(r))|$, $hat(upright(bold(r)))=upright(bold(r))\/r$.
 
 $
   dif A = rho \, dif rho \, dif theta ,
@@ -380,67 +309,51 @@ $
   dif theta = (upright(bold(n)) · hat(upright(bold(r)))) (dif Gamma) \/ r .
 $
 
-#image("../assets/indo-para-2d/area-polar.png", width: 70%)
-#image("../assets/indo-para-2d/area-contorno.png", width: 70%)
+#image("../assets/indo-para-2d/area-polar.png", width: 42%)
+#image("../assets/indo-para-2d/area-contorno.png", width: 42%)
+
+== Radial: F e o loop
 
 $
   I = integral_Omega f \, dif A
-  = integral_Gamma F(upright(bold(x))) thin (upright(bold(n)) · upright(bold(r))) / r^2 dif Gamma ,
+  = integral_Gamma F(upright(bold(x))) thin (upright(bold(n)) · upright(bold(x))) / r^2 dif Gamma
 $
 
 $
-  F = integral_0^r f(upright(bold(x))_0 + rho hat(upright(bold(r)))) \, rho \, dif rho .
+  F = integral_0^r f(rho hat(upright(bold(r)))) \, rho \, dif rho .
 $
-
-No código, $F$ para $f=1$, $f=x$, $f=y$ é numérico na direção radial
-(`_calc_F_2d` com `npg_radial` pontos de Gauss em $rho$):
 
 ```julia
-# GeometricProperties.jl (essência do loop 2D)
-# wJ = J * w  no ponto de contorno
-# nr = n · r̂
-# Fa, Fx, Fy = ∫_0^r {1, x, y} ρ dρ
+# GeometricProperties.jl — _geom_accum_2d_radial
+# Fa, Fx, Fy = ∫_0^r {1, x, y} ρ dρ     (_calc_F_2d)
 # A  += Fa * nr / r * wJ
-# xdA += Fx * nr / r * wJ
-# ydA += Fy * nr / r * wJ
-# centróide = (xdA, ydA) / A
+# Sx += Fx * nr / r * wJ
+# Sy += Fy * nr / r * wJ
+# centróide = (Sx, Sy) / A
 ```
 
-API do aluno:
+== `_calc_F_2d`
 
 ```julia
-g = geometric_props(dad)                      # default: quad. já no dad
-g2 = geometric_props(dad; npg_boundary=12)    # reintegra com shapefun + Gauss
-g3 = geometric_props(dad; npg_radial=20)      # mais pontos na primitiva F
-
-# polígono CCW sem Gmsh:
-using StaticArrays
-verts = [SA[0.0,0.0], SA[1.0,0.0], SA[1.0,1.0], SA[0.0,1.0]]
-gp = geometric_props_2d_polygon(verts)
+function _calc_F_2d(r, theta, qsi, w)
+    dro = r / 2
+    Fa = Fx = Fy = 0.0
+    for i in eachindex(qsi)
+        ρ = r / 2 * (qsi[i] + 1)      # ρ ∈ [0, r]
+        x, y = ρ * cos(theta), ρ * sin(theta)
+        Fa += ρ * dro * w[i]          # ∫ ρ dρ  (f = 1)
+        Fx += x * ρ * dro * w[i]
+        Fy += y * ρ * dro * w[i]
+    end
+    return Fa, Fx, Fy
+end
 ```
 
-#block(
-  width: 100%,
-  inset: 10pt,
-  radius: 4pt,
-  stroke: 0.5pt + luma(180),
-  fill: luma(248),
-)[
-  *Leitura do fonte.* Abra `geometric_props_2d`: o ramo `npg_boundary === nothing`
-  reutiliza `elem.Jacobian` e `dad.elem_weight` (colocação); o outro chama
-  `shapefun(dad.element_type, ξ)` — o mesmo `shapefun` da seção anterior.
-]
+Para $f=1$: $F = r^2\/2$ $arrow.r$ $A = 1/2 integral_Gamma (n · x) dif Gamma$.
+Com `npg_radial=12` a primitiva polinomial já é exata.
 
-Para $f=1$ e pólo na origem recupera-se
-$A = 1/2 integral_Gamma (upright(bold(n)) · upright(bold(x))) dif Gamma$
-(quando a forma fechada vale). Momentos estáticos seguem de $F$ com $f=x$ e $f=y$;
-centróide $bar(upright(bold(x))) = (S_x, S_y)\/A$ como em `GeometricProps2D`.
+== Teorema da divergência (`:divergence`)
 
-#set text(size: 14pt)
-
-== "O mesmo pelo teorema da divergência"
-
-#set text(size: 10.5pt)
 $
   integral_Omega nabla · upright(bold(F)) \, dif A
   = integral_Gamma upright(bold(F)) · upright(bold(n)) \, dif Gamma .
@@ -448,143 +361,211 @@ $
 
 #table(
   columns: (auto, auto, auto),
-  inset: 7pt,
+  inset: 5pt,
   stroke: 0.5pt + luma(200),
   [*$upright(bold(F))$*], [*$nabla · upright(bold(F))$*], [*Resultado*],
-  [$(x,0)$ ou $(0,y)$], [$1$], [$A = integral_Gamma x n_x dif Gamma$],
-  [$(x,y)\/2$], [$1$], [$A = 1/2 integral_Gamma upright(bold(x)) · upright(bold(n)) dif Gamma$],
-  [$(x^2\/2, 0)$], [$x$], [$integral_Omega x dif A = integral_Gamma (x^2\/2) n_x dif Gamma$],
-  [$(0, y^2\/2)$], [$y$], [$integral_Omega y dif A = integral_Gamma (y^2\/2) n_y dif Gamma$],
-  [$(0, y^3\/3)$], [$y^2$], [$I_x = integral_Omega y^2 dif A = integral_Gamma (y^3\/3) n_y dif Gamma$],
+  [$(x,0)$ ou $(0,y)$], [$1$], [$A = integral_Gamma x n_x$],
+  [$(x,y)\/2$], [$1$], [$A = 1/2 integral_Gamma x · n$],
+  [$(x^2\/2, 0)$], [$x$], [$integral_Omega x = integral_Gamma (x^2\/2) n_x$],
+  [$(0, y^2\/2)$], [$y$], [$integral_Omega y = integral_Gamma (y^2\/2) n_y$],
+  [$(0, y^3\/3)$], [$y^2$], [$I_x$ (`moment_Ix`)],
 )
 
-Implementação *sobre o `dad`* (mesmos $J$, $upright(bold(n))$, pesos da colocação):
+== Acumulador de divergência
 
 ```julia
-"""Área por divergência A = ∮ x n_x dΓ, usando a quad. já guardada no dad."""
-function area_divergence_dad(dad)
+P += wJ
+A += 0.5 * dot(x, n) * wJ
+Sx += 0.5 * x[1]^2 * n[1] * wJ
+Sy += 0.5 * x[2]^2 * n[2] * wJ
+```
+
+`npg_radial` é ignorado. A outra fórmula ($A = integral_Gamma x n_x$) está em `area_divergence`:
+
+```julia
+function area_divergence(dad::BEMdata)
     A = 0.0
     w_el = dad.elem_weight
-    for elem in dad.elements
-        for k in eachindex(elem.index)
-            i = elem.index[k]
-            x = dad.Nodes[i]
-            n = dad.Normal[i]
-            wJ = elem.Jacobian[k] * w_el[k]
-            A += x[1] * n[1] * wJ
-        end
+    for elem in dad.elements, k in eachindex(elem.index)
+        i = elem.index[k]
+        wJ = elem.Jacobian[k] * w_el[k]
+        A += dad.Nodes[i][1] * dad.Normal[i][1] * wJ
     end
     return A
 end
-
-# comparar com a integração radial do pacote:
-g = geometric_props(dad)
-A_div = area_divergence_dad(dad)
-@show g.area A_div abs(g.area - A_div)
 ```
 
-#block(
-  width: 100%,
-  inset: 10pt,
-  radius: 4pt,
-  stroke: 0.5pt + luma(180),
-  fill: luma(248),
-)[
-  *Radial × divergência.* Para $f=1$ coincidem (a menos de erro de quadratura).
-  Radial generaliza $f$ via $F$ (é o que `geometric_props` faz para área/centróide).
-  Divergência é imediata quando existe $upright(bold(F))$ polinomial simples ($I_x$, etc.).
+== Comparar no disco
+
+```julia
+g = geometric_props(dad)                          # :radial
+gd = geometric_props(dad; strategy=:divergence)
+Adiv = area_divergence(dad)
+@show g.area gd.area Adiv
+```
+
+No `scripts/circulo.jl` as três áreas coincidem até o erro de quadratura de $Gamma$ ($approx 3.14110$).
+
+#keybox[
+  *Radial × divergência.* Para $f=1,x,y$ coincidem (primitiva polinomial + mesma quad. em $Gamma$).
+  Radial generaliza $f$ via $F$. Divergência é imediata quando existe $upright(bold(F))$ polinomial simples (`moment_Ix`, etc.).
 ]
 
-#set text(size: 14pt)
+== Exemplo 2D: disco unitário
 
-== "Boas práticas de malha (geometria)"
+Arquivo `scripts/circulo.jl`. Quatro arcos, ordem 2, 16 elementos 1D.
+
+```julia
+msh = circulo(; ndiv=16, show=false, nome="ex_circulo", ordem=2)
+dad = format2d(msh, Laplace(1.0); tipo=2, pontointerno=false)
+g = geometric_props(dad)
+plot_geo(dad; show_normals=true, title="unit disk tipo=2 ndiv=16")
+```
+
+#image("../assets/indo-para-2d/circulo-geo.png", width: 48%)
+
+== Exemplo 3D: toro — scripts/toro.jl
+
+A *mesma* API vale em 3D: gerador → `format3d` → `geometric_props`.
+
+`toro` chama `gmsh.model.occ.addTorus` (raio maior $R$, tubo $r$, eixo $z$, origem).
+
+$
+  S = 4 pi^2 R r , quad V = 2 pi^2 R r^2 , quad upright(bold(c)) = upright(bold(0)) .
+$
+
+```julia
+R, r = 2.0, 0.5
+msh = toro(; nome="ex_toro", R=R, r=r, lc=0.25, show=false)
+dad = format3d(msh, Laplace(1.0); tipo=1, pontointerno=false)
+g  = geometric_props(dad)                         # :radial
+gd = geometric_props(dad; strategy=:divergence)
+plot_geo(dad; show_normals=false, show_nodes=false)
+```
+
+== Toro (malha de superfície)
+
+#image("../assets/indo-para-2d/toro-geo.png", width: 72%)
+
+== Toro: números (`R=2`, $r=1\/2$, `lc=0.25`)
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 6pt,
+  stroke: 0.5pt + luma(200),
+  [*Grandeza*], [*Numérico*], [*Exato*],
+  [área de superfície], [$39.18$], [$4 pi^2 R r approx 39.48$],
+  [volume], [$9.57$], [$2 pi^2 R r^2 approx 9.87$],
+  [centróide], [$approx (0,0,0)$], [$(0,0,0)$],
+)
+
+Radial = divergência até roundoff.
+3D: $V = (1\/3) integral_Gamma x · n$; radial usa `_calc_F_3d` e
+$j_"fac" = (n · x)\/R^3$.
+
+== format3d (essência)
+
+$
+  upright(bold(n)) parallel partial_xi upright(bold(x)) times partial_eta upright(bold(x)) ,
+  quad
+  J = | partial_xi upright(bold(x)) times partial_eta upright(bold(x)) | .
+$
+
+```julia
+N, dNx, dNy = shapefun2D(Equispaced(1), qsi)
+nodes[idx]  .= N * X
+dx1, dx2     = dNx * X, dNy * X
+J            = norm.(cross.(dx1, dx2))
+normal[idx]  = cross.(dx1, dx2) ./ J
+```
+
+Faces Gmsh: só quads (tipo 3 linear ou tipo 10 quadrático).
+`cubo` + `format3d`: $S=6$, $V=1$, $c=(1\/2,1\/2,1\/2)$.
+
+== Boas práticas de malha
 
 1. Contorno externo anti-horário; furos horários.
-2. Elementos descontínuos no campo (padrão `format2d`) — cantos sem nó compartilhado de CDC.
+2. Elementos descontínuos no campo (padrão `format2d`).
 3. `ordem` da malha Gmsh alinhada a `tipo` em `format2d`.
-4. Refino perto de cantos e furos (`placa_com_furo` como modelo).
+4. Refino perto de cantos e furos (`placa_com_furo`).
 5. Nesta aula: `pontointerno=false` basta para prop. de $Gamma$.
+6. Em 3D, volume no `.msh` ajuda a orientar $upright(bold(n))$ (`toro` tenta `generate(3)`).
 
-#set text(size: 14pt)
+== Exercícios — entrega
 
-== "Exercícios"
+Scripts no ambiente `GeomGmsh` (`julia --project=codes/geom_gmsh`),
+`plot_geo` quando fizer sentido, erro vs analítico e 2–3 frases.
 
-#set text(size: 10.5pt)
-Entrega: scripts no ambiente `BEM_gmsh`, uso de `plot_geo` quando fizer sentido,
-números com erro vs analítico e 2–3 frases de interpretação.
-Fontes: `data/Laplace/Laplace_dad.jl`, `src/Core/{Input,Interpolation,GeometricProperties}.jl`,
-`data/examples/geo_unit_square.jl`.
+Fontes: `src/{Input,Interpolation,GeometricProperties,Meshes}.jl`,
+`scripts/circulo.jl`, `scripts/toro.jl`. Soluções em `_solu/`.
 
-+ *E1 — `shapefun` e partição da unidade.*
-  Para $p in {1,2,3,4}$:
-  (a) crie `poly = Legendre(p)` e, em 21 abscissas de $[-1,1]$, verifique
-  $sum_i N_i = 1$ e $sum_i N_i' = 0$ via `shapefun`;
-  (b) plote as colunas de $N(xi)$ (`Plots`) para $p=2$ e $p=3$;
-  (c) com `Equispaced(2)` e $xi in {-1,0,1}$, confira $N$ com
-  $xi(xi-1)\/2$, $1-xi^2$, $xi(xi+1)\/2$;
-  (d) compare `nodes(Legendre(p))` com `discontinuous_nodes_weights(p)[1]` — são o quê?
+== E1 — shapefun e partição da unidade
 
-+ *E2 — Coroa circular: geometria, ordem e duas fórmulas de área.*
-  Domínio $1 <= r <= 2$ (anel completo) ou o *quarto de coroa* do repo, se preferir
-  adaptar um gerador em `Laplace_dad.jl` / API Gmsh.
-  Valores analíticos do anel completo: $P = 2 pi (1+2) = 6 pi$, $A = pi(2^2-1^2)=3 pi$,
-  centróide na origem.
+Para $p in {1,2,3,4}$:
 
-  (a) Gere malhas com `ndiv in {8,16,32}` e `tipo in {1,2}` (`format2d(..., tipo=...)`).
-  Para cada par $(n_"div", "tipo")$ obtenha `geometric_props(dad)` e os erros relativos
-  de $P$ e $A$.
+(a) `poly = Legendre(p)`: em 21 abscissas, $sum_i N_i = 1$ e $sum_i N_i' = 0$.
 
-  (b) Com o *mesmo* `dad`, calcule a área por divergência (`area_divergence_dad` acima)
-  e compare com `g.area`. Há diferença sistemática ao mudar `tipo`?
+(b) Plote as colunas de $N(xi)$ para $p=2$ e $p=3$.
 
-  (c) Refaça `geometric_props(dad; npg_boundary=16)` e compare com o default
-  (quadratura de colocação). Quando a reintegração muda o resultado de verdade?
+(c) `Equispaced(2)` em $xi in {-1,0,1}$ vs Lagrange clássico.
 
-  (d) Plote `plot_geo(dad)` na malha mais grossa e na mais fina; comente se as normais
-  no contorno interno (furo) apontam para fora de $Omega$.
+(d) `nodes(Legendre(p))` vs `discontinuous_nodes_weights(p)[1]` — são o quê?
+(`weights(poly)` são baricêntricos; o segundo retorno é a quad. de Gauss.)
 
-  (e) *Síntese:* tabela com colunas
-  `ndiv, tipo, n_col (length(dad.Nodes)), e_P, e_A, e_Adiv`.
-  Qual combinação atinge $e_A < 10^(-3)$ com menos nós de colocação?
+== E2 — coroa circular (`anel`)
 
-+ *E3 — Círculo unitário e ordem em $n$.*
-  Aproxime o disco unitário (malha Gmsh de um círculo ou polígono regular via
-  `geometric_props_2d_polygon` nos vértices).
-  Estude $P$ e $A$ vs $2 pi$ e $pi$ para $n$ crescente e `tipo=1` vs `tipo=2`.
-  Qual ordem aparente em $n$ (ou em $h ~ 1\/n$)?
+$1 <= r <= 2$. Exato: $P = 6 pi$, $A = 3 pi$, centróide na origem.
 
-+ *E4 — Momento $I_x$.*
-  #image("../assets/indo-para-2d/exercicio-1.png", width: 55%)
-  #image("../assets/indo-para-2d/exercicio-2.png", width: 55%)
-  Calcule $I_x = integral_Omega y^2 dif A$ nas duas figuras
-  (divergência com $upright(bold(F))=(0,y^3\/3)$ *ou* radial com $f=y^2$) e compare com
-  $I_x = (a^4)/96 (9 sqrt(3) - 2 pi)$ e
-  $I_x = 2 · 10^4 pi - (20^2 pi)/2 (80\/(3 pi))^2 + ((20^2 pi)/2)(15 + 80\/(3 pi))^2$.
-  Reutilize malha Gmsh + laço no estilo de `geometric_props_2d` (nós, normais, $w J$).
+(a) `ndiv in {8,16,32}`, `tipo in {1,2}`: erros de $P$ e $A$.
 
-+ *E5 — Furo e orientação.*
-  `placa_com_furo` (ou `.geo` próprio).
-  (a) `geometric_props`: confira $A = A_"ret" - pi R^2$ (e o perímetro $P_"ret"+2 pi R$).
-  (b) Inverta a orientação do furo no gerador e relate o sinal de $A$.
-  (c) `plot_geo`: normais no contorno externo vs furo.
+(b) No *mesmo* `dad`: `:divergence`, `area_divergence` vs `:radial`.
 
-#set text(size: 14pt)
+(c) `npg_boundary=16` e `npg_radial=20` vs default.
 
-== "O que fica para Laplace 2D"
+(d) `plot_geo`: normais no furo para fora de $Omega$?
+
+(e) Tabela `ndiv, tipo, n_col, e_P, e_A, e_Adiv`. Quem atinge $e_A < 10^(-3)$ com menos nós?
+
+== E3 — círculo unitário, ordem em $n$
+
+`circulo` com `ndiv in {8,16,32,64}`, `tipo=1` e `tipo=2`.
+
+$P$ e $A$ vs $2 pi$ e $pi$. Qual ordem aparente em $n$ (ou $h ~ 1\/n$)?
+
+Lembrete: `tipo=1` é o $n$-ágono regular.
+
+== E4 — momento $I_x$
+
+#image("../assets/indo-para-2d/exercicio-1.png", width: 38%)
+#image("../assets/indo-para-2d/exercicio-2.png", width: 38%)
+
+$I_x = integral_Omega y^2 dif A$ via `moment_Ix` ($F=(0,y^3\/3)$).
+
+Fórmulas da lista; geradores: `triangulo_equilatero`, `triangulo_com_incirculo`, `setor60`, `semicirculo`.
+
+== E5 — furo e orientação
+
+`placa_com_furo`.
+
+(a) $A = A_"ret" - pi R^2$, $P = P_"ret" + 2 pi R$.
+
+(b) `reverse_hole=false` e `format2d(; orient=false)`: sinal de $A$.
+
+(c) `plot_geo`: normais no externo vs furo.
+
+Extra 3D: `cubo` ($S=6$, $V=1$) ou `scripts/toro.jl`.
+
+== O que fica para Laplace 2D
 
 - Convenção `"0;T"`, `"1;q"` (e elasticidade `tx;ux;ty;uy`).
 - `attach_analytical!`, `H_G_*`, `solve`, `rel_error`.
-- CDC em cantos e o papel do elemento descontínuo no conflito de nós.
+- CDC em cantos e o papel do elemento descontínuo.
 
-#set text(size: 14pt)
+== Leituras e código
 
-== "Leituras e código"
-
-- `data/examples/geo_unit_square.jl`
-- `src/Core/Input.jl` — `format2d`, `discontinuous_nodes_weights`
-- `src/Core/Interpolation.jl` — pesos baricêntricos, `shapefun`
-- `src/Core/GeometricProperties.jl` — radial + `geometric_props_2d_polygon`
-- `data/Laplace/Laplace_dad.jl` — `quadrado`, `placa_com_furo`
-- Manual Gmsh: #link("https://gmsh.info/doc/texinfo/gmsh.html")[documentação]
-
-#set text(size: 14pt)
+- `codes/geom_gmsh/scripts/circulo.jl`, `scripts/toro.jl`
+- `src/Input.jl` — `format2d`, `format3d`, `discontinuous_nodes_weights`
+- `src/Interpolation.jl` — `shapefun`, `shapefun2D`
+- `src/GeometricProperties.jl` — `:radial`, `:divergence`, `moment_Ix`
+- `src/Meshes.jl` — `circulo`, `anel`, `placa_com_furo`, `toro`, `cubo`
+- `_solu/` — E1 a E5 resolvidos

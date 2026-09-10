@@ -6,15 +6,15 @@
 
 // Conteudo completo da aula (chapters/02-glossario.typ)
 
-= "Glossário e notação"
+= Glossário e notação
 
-== "Glossário e notação"
+== Glossário e notação
 
 Este capítulo fixa a *notação padrão* das notas. Quando um capítulo legado usar outro símbolo, a tabela abaixo prevalece.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Domínio e contorno"
+== Domínio e contorno
 
 #table(
   columns: (auto, auto),
@@ -31,11 +31,11 @@ Este capítulo fixa a *notação padrão* das notas. Quando um capítulo legado 
   [$J$], [jacobiano da transformação para $xi in [-1, 1]$],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema de potencial (Laplace / Poisson)"
+== Problema de potencial (Laplace / Poisson)
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Usamos *temperatura/potencial* $T$ e *fluxo de contorno* $q$ com a convenção do `BEM_gmsh`:
 
 $ q := - k (partial T)/(partial n) . $
@@ -57,11 +57,11 @@ $ q := - k (partial T)/(partial n) . $
 
 Em textos de mecânica dos fluidos o potencial costuma ser $phi$ ou $u$; *nestas notas de potencial térmico* preferimos $T$. Nos exercícios de membrana, a deflexão é $w$ e a equação é a de Poisson em $w$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Elasticidade 2D"
+== Elasticidade 2D
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 #table(
   columns: (auto, auto),
   inset: 7pt,
@@ -78,9 +78,9 @@ Em textos de mecânica dos fluidos o potencial costuma ser $phi$ ou $u$; *nestas
 
 *Não* use $nu$ (nu) e $v$ (velocidade ou função peso) no mesmo parágrafo sem deixar claro. A função peso dos resíduos é $v$ ou $T^*$; o Poisson do material é sempre $nu$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Condições de contorno (CDC)"
+== Condições de contorno (CDC)
 
 #table(
   columns: (auto, auto),
@@ -95,9 +95,9 @@ Em textos de mecânica dos fluidos o potencial costuma ser $phi$ ou $u$; *nestas
 
 No Gmsh / `BEM_gmsh`: Laplace `"0;T"` ou `"1;q"`; elasticidade `"tx;ux;ty;uy"` (ver capítulo *Laplace 2D*).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Integração e erro"
+== Integração e erro
 
 #table(
   columns: (auto, auto),
@@ -111,9 +111,9 @@ No Gmsh / `BEM_gmsh`: Laplace `"0;T"` ou `"1;q"`; elasticidade `"tx;ux;ty;uy"` (
   [`rel_error(dad)`], [erro relativo agregado no `BEM_gmsh`],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Siglas"
+== Siglas
 
 #table(
   columns: (auto, auto),
@@ -130,9 +130,9 @@ No Gmsh / `BEM_gmsh`: Laplace `"0;T"` ou `"1;q"`; elasticidade `"tx;ux;ty;uy"` (
   [PVI], [problema de valor inicial],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Gráficos no curso"
+== Gráficos no curso
 
 Salvo menção em contrário, os scripts usam *Plots.jl*:
 
@@ -143,4 +143,4 @@ plot(x, y; xlabel="x", ylabel="T", label="numérico", lw=2)
 
 Funções de visualização do repositório de código (quando usadas) podem ter backend próprio; nestas notas o padrão didático é `Plots`.
 
-#set text(size: 14pt)
+#set text(size: 18pt)

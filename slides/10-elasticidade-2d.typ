@@ -6,9 +6,9 @@
 
 // Conteudo completo da aula (chapters/10-elasticidade-2d.typ)
 
-= "Elasticidade 2D"
+= Elasticidade 2D
 
-== "Elasticidade 2D - intro"
+== Elasticidade 2D - intro
 
 O pipeline é o *mesmo* do Laplace: malha de contorno $arrow.r$ SF $arrow.r$ $H,G$
 $arrow.r$ CDC $arrow.r$ $A x = b$ $arrow.r$ `solve`. O que muda:
@@ -29,9 +29,9 @@ $arrow.r$ CDC $arrow.r$ $A x = b$ $arrow.r$ `solve`. O que muda:
 Notação (glossário): Poisson do *material* $nu$; *não* use $v$ para o Poisson
 (reserve $v$ à função peso da formulação, se aparecer).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Objetivos"
+== Objetivos
 
 + Ligar equilíbrio + Hooke à BIE de contorno (Kelvin).
 + Entender plane strain vs plane stress no `Elasticity(...)`.
@@ -39,9 +39,9 @@ Notação (glossário): Poisson do *material* $nu$; *não* use $v$ para o Poisso
 + Rodar o *patch test* de Dirichlet e um problema clássico do repo.
 + Reportar erro em $upright(bold(u))$ (e tensões nos exercícios) — apêndice de erros.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Mapa"
+== Mapa
 
 + Problema contínuo (resumo operacional)
 + De Navier à equação integral
@@ -54,13 +54,13 @@ Notação (glossário): Poisson do *material* $nu$; *não* use $v$ para o Poisso
 + Exercícios (cilindro, Kirsch, viga)
 + Leituras
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Problema contínuo (o que importa para o BEM)"
+== Problema contínuo (o que importa para o BEM)
 
-== "Equilíbrio, cinemática, Hooke"
+== Equilíbrio, cinemática, Hooke
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 $
 partial_j sigma_(i j) + f_i = 0 ,
 quad
@@ -78,11 +78,11 @@ A SF de Kelvin é a resposta a uma *força pontual* unitária nesse operador
 No contorno, *por nó e por direção* ($x$ e $y$): ou se prescreve deslocamento $u_i$,
 ou se prescreve tração $t_i$ — nunca os dois no mesmo DOF (como $T$ vs $q$).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Estado plano"
+== Estado plano
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 #table(
   columns: (auto, auto, auto),
   inset: 7pt,
@@ -111,11 +111,11 @@ O código usa um Poisson *efetivo* $tilde(nu)$ nos núcleos 2D:
   de inconsistência — prefira a flag do `Elasticity`.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Da PDE à equação integral"
+== Da PDE à equação integral
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Mesma lógica do Laplace (resíduos $arrow.r$ identidades de Betti\/Green $arrow.r$ SF):
 
 $
@@ -149,11 +149,11 @@ $ H upright(bold(U)) = G upright(bold(T)) $
 Força de corpo $f_i$: DIBEM elástico existe no pacote — *fora* do núcleo desta aula
 (análogo ao Poisson; ver trabalhos se precisar).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Kelvin no BEM_gmsh"
+== Kelvin no BEM_gmsh
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 ```julia
 # Elasticity/Fundamental.jl — essência 2D
 function fundamental(props::Elasticity, r::SVector{2}, n::SVector{2})
@@ -178,11 +178,11 @@ Montagem: o *mesmo* `H_G_full_direct(dad, npg)` do Laplace, no branch *vectorial
 Você *não* precisa reprogramar Kelvin: confira que `dad.properties isa Elasticity`
 antes de montar.
 
+#set text(size: 18pt)
+
+== CDC no Gmsh - formato real do pacote
+
 #set text(size: 14pt)
-
-== "CDC no Gmsh - formato real do pacote"
-
-#set text(size: 10.5pt)
 O parser (`parse_pairs` em `Input.jl`) lê o nome do grupo físico como
 
 `tipo_1; valor_1; tipo_2; valor_2`
@@ -228,11 +228,11 @@ Exemplos:
 Cantos: elementos *descontínuos* no campo (como no Laplace) evitam um nó com duas
 CDCs incompatíveis. `format2d` + `tipo`\/ordem alinhados à malha.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Lab 1 - Patch test (deformação uniforme)"
+== Lab 1 - Patch test (deformação uniforme)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Solução exata $upright(bold(u)) = bold(epsilon)\, upright(bold(x))$ (polinômio linear) —
 o BEM com elementos adequados deve reproduzi-la com erro muito pequeno.
 
@@ -266,11 +266,11 @@ Default do `quadrado_elasticity` *sem* `apply_analytical_bc!`: esquerda engastad
 `"0;0;0;0"`, resto livre `"1;0;1;0"` — útil para outros testes; o patch *exige*
 o `apply_analytical_bc!` (Dirichlet em todo o contorno).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Lab 2 - Tubo pressurizado (repo)"
+== Lab 2 - Tubo pressurizado (repo)
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 ```julia
 include(datadir("elastico", "iso", "pressurized_tube.jl"))
 # define Ra, Rb, E, ν, P, ur_tube, σr_tube, σθ_tube, mesh_pressurized_tube
@@ -304,11 +304,11 @@ u_r (r) = ((1+nu)\/E)\, c\, [ (1-2 nu) r + R_b^2\/r ]
 quad "(plane strain do arquivo)" .
 $
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Tensões (pós-processamento)"
+== Tensões (pós-processamento)
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Com $upright(bold(u)), upright(bold(t))$ no contorno, tensões em pontos *interiores*
 vêm de integrais com núcleos $D_(k i j)$ e $S_(k i j)$ (hipersingulares no contorno).
 
@@ -327,9 +327,9 @@ vêm de integrais com núcleos $D_(k i j)$ e $S_(k i j)$ (hipersingulares no con
   Fórmulas completas: material legado \/ livros de BEM elástico.
 ]
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Armadilhas"
+== Armadilhas
 
 #table(
   columns: (auto, auto),
@@ -344,24 +344,24 @@ vêm de integrais com núcleos $D_(k i j)$ e $S_(k i j)$ (hipersingulares no con
   [`parse` estranho da CDC], [String com número ímpar de campos; label sem pares],
 )
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exercícios"
+== Exercícios
 
 `BEM_gmsh` + malhas em `data/elastico/iso/` (ou Gmsh próprio).
 ≥ 3 refinamentos. Apêndice de erros: $epsilon_2$ (`rel_error` quando houver ana)
 e $epsilon_infinity$ em sensores de $upright(bold(u))$ e $sigma$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E0 - Patch"
+== E0 - Patch
 
 Rode o Lab 1 com `ndiv in {6,10,16}` e `tipo in {1,2}`. Tabela `N`, `rel_error`.
 Comente a taxa (deve saturar em erro de integração\/máquina se o patch for exato).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E1 - Cilindro / tubo pressurizado"
+== E1 - Cilindro / tubo pressurizado
 
 $R_a = 50$, $R_b = 100$ (mm); $E = 200$ GPa; $nu = 0.32$; $P = 100$ N\/mm
 (valores alinhados a `pressurized_tube.jl` em MPa·mm).
@@ -371,11 +371,11 @@ $R_a = 50$, $R_b = 100$ (mm); $E = 200$ GPa; $nu = 0.32$; $P = 100$ N\/mm
 Compare $u_r$ e $sigma_r, sigma_theta$ com Lamé; simetria de quarto de círculo.
 Documente as CDCs de simetria e a pressão no raio interno.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E2 - Placa com furo (Kirsch)"
+== E2 - Placa com furo (Kirsch)
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 $R = 50$ mm; tração remota $P$ em $x$; $E$, $nu$ como em `plate_with_hole.jl`.
 *Plane stress:* `Elasticity(..., plane_stress=true)`.
 
@@ -396,11 +396,11 @@ $
 (com $a=R$; confira a forma exata no arquivo do repo se os coeficientes diferirem.)
 Malha: `mesh_plate_with_hole`. Erros em sensores perto do furo e longe.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "E3 - Viga em balanço (cisalhamento parabólico)"
+== E3 - Viga em balanço (cisalhamento parabólico)
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 $L=48$, $D=12$; $E$, $nu$, $P$ como `cantilever_beam.jl` (plane stress).
 Analítico:
 
@@ -424,18 +424,18 @@ O gerador deixa o extremo livre com `"1;0;1;0"`: para o exercício, imponha a tr
 parabólica $t_y (y)$ no extremo $x=L$ (via BV nos nós ou grupo físico adequado) e
 engaste em $x=0$. Compare $u$ e $sigma$ em $x=L\/2$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O que fica para depois"
+== O que fica para depois
 
 - Trinca dual \/ $K_I$ — trabalhos, proposta A (`src/Crack/`).
 - Anisotropia Lekhnitskii — `data/elastico/aniso/`.
 - Contato Hertz — proposta E.
 - DIBEM com força de corpo — espelho do Poisson.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Leituras e código"
+== Leituras e código
 
 - Cap. *Laplace 2D* — pipeline $H,G$, CDC, diagonal, `solve`
 - Cap. *Indo para 2D* — $N_k$, $J$, $upright(bold(n))$, descontínuo
@@ -448,4 +448,4 @@ engaste em $x=0$. Compare $u$ e $sigma$ em $x=L\/2$.
 - `data/elastico/iso/pressurized_tube.jl`, `plate_with_hole.jl`, `cantilever_beam.jl`
 - #link("https://youtu.be/R6-_ECEQXRk")[gravação]
 
-#set text(size: 14pt)
+#set text(size: 18pt)

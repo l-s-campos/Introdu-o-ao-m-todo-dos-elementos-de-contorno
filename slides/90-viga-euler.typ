@@ -6,9 +6,9 @@
 
 // Conteudo completo da aula (chapters/90-viga-euler.typ)
 
-= "Viga de Euler (extra)"
+= Viga de Euler (extra)
 
-== "Viga de Euler (extra) - intro"
+== Viga de Euler (extra) - intro
 
 #block(
   width: 100%,
@@ -24,11 +24,11 @@
   Os códigos deste capítulo são *pedagógicos e autônomos*: rode-os em um script Julia simples (com `Plots` se for plotar), sem esperar um `Viga(...)` + `format2d` no `BEM_gmsh`. Servem para fixar SF de ordem alta, dualidade deslocamento/rotação e, se desejar, um projeto de monografia.
 ]
 
+#set text(size: 18pt)
+
+== Teoria de vigas
+
 #set text(size: 14pt)
-
-== "Teoria de vigas"
-
-#set text(size: 10.5pt)
 Considerando a viga representada, a equação governante pode ser escrita como:
 
 $E I (dif^4 u)/(dif x^4) = q(x)$
@@ -124,19 +124,19 @@ A=[-G[:,1] H[:,2] -G[:,3] H[:,4]]
 x=A\b
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exercício"
+== Exercício
 
 1- Generalize esse código para qualquer condição de contorno. Ele é capaz de resolver problemas hiperestáticos? Como?
 
 2- Generalize esse código para qualquer carga distribuída e compare com a solução analítica.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-= "Efeitos transientes"
+= Efeitos transientes
 
-== "Efeitos transientes - intro"
+== Efeitos transientes - intro
 
 #set text(size: 12.5pt)
 #image("../assets/viga-euler/viga-transiente.png", width: 80%)
@@ -168,17 +168,17 @@ duas equações integrais distintas. Assim, escreve-se, para a rotação:
 
 $ theta(xi, t) = & -1/(rho A) {integral_0^t [(partial u^*)/(partial xi) Q - (partial theta^*)/(partial xi) M + (partial M^*)/(partial xi) theta - (partial Q^*)/(partial xi) u]_(x = 0) dif tau} \ & +1/(rho A) {integral_0^t [(partial u^*)/(partial xi) Q - (partial theta^*)/(partial xi) M + (partial M^*)/(partial xi) theta - (partial Q^*)/(partial xi) u]_(x = L) dif tau} \ & +1/(rho A) {integral_0^t integral_0^L (partial u^*)/(partial xi) f dif x dif tau}, $
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exercício"
+== Exercício
 
 3 - Faça um gráfico 3D de $u^*$ e $partial u^* / partial xi$. Considere $xi$ e $tau$ iguais a zero, tempo de 0 a 10 s e $x$ de $0$ a $L$. Em Plots use `surface` (#link("https://docs.juliaplots.org/stable/")[docs Plots]).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-= "Desafio"
+= Desafio
 
-== "Desafio - intro"
+== Desafio - intro
 
 1- Implemente um código que usando a formulação transiente e resolva um problema de vibração livre.
 
@@ -189,4 +189,4 @@ $ theta(xi, t) = & -1/(rho A) {integral_0^t [(partial u^*)/(partial xi) Q - (par
 
 3-Implemente a formulação da #link("https://link.springer.com/article/10.1007/s40996-020-00359-z")[viga de Timoshenko] e de #link("https://link.springer.com/article/10.1007/s00366-019-00774-5")[BICKFORD-REDDY] e compare as três para diferentes tamanhos de viga.
 
-#set text(size: 14pt)
+#set text(size: 18pt)

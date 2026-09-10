@@ -6,9 +6,9 @@
 
 // Conteudo completo da aula (chapters/01-apresentacao.typ)
 
-= "Apresentação"
+= Apresentação
 
-== "Objetivos desta aula"
+== Objetivos desta aula
 
 Ao final, você deve ser capaz de:
 
@@ -18,11 +18,11 @@ Ao final, você deve ser capaz de:
 + Calcular $T$ em pontos *internos* a partir só dos dados de contorno já resolvidos.
 + Resolver no Julia (com `Plots`) os dois casos-modelo e o exercício de convecção.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O problema reduz para o contorno"
+== O problema reduz para o contorno
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Considere uma barra (ou a espessura de uma grande placa) no intervalo
 
 $ Omega = (x_0, x_f), quad Gamma = {x_0, x_f}. $
@@ -50,11 +50,11 @@ Em 1D o contorno $Gamma$ *é* o par de pontas. A pergunta do BEM fica literal:
 
 Para Laplace 1D a resposta analítica é óbvia ($T$ é reta). O objetivo é outro: montar a *mesma* lógica que, em 2D/3D, transforma um problema de domínio em um problema só de contorno.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "O BEM em uma figura"
+== O BEM em uma figura
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 #image("../assets/apresentacao/bem-overview.jpeg", width: 85%)
 
 Ideia-chave (guarde esta frase):
@@ -82,11 +82,11 @@ Comparação rápida com métodos de domínio:
 
 Em 2D, malhar só a curva que cerca a peça reduz uma dimensão da discretização. Em troca, cada ponto de contorno “enxerga” todos os outros: a matriz deixa de ser esparsa. Não existe almoço grátis.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Quando o BEM costuma valer a pena"
+== Quando o BEM costuma valer a pena
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 *Vantagens típicas*
 
 + Só o contorno é discretizado: menos geometria para preparar quando $Omega$ é grande e a física é linear e homogênea.
@@ -110,11 +110,11 @@ Em 2D, malhar só a curva que cerca a peça reduz uma dimensão da discretizaç�
 
 Este curso  ataca sobretudo formulação passo a passo, integração de termos delicados e a passagem 1D $->$ 2D.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Notação mínima (aula 1)"
+== Notação mínima (aula 1)
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Alinhada ao glossário do curso, com um atalho só para o 1D:
 
 #table(
@@ -138,11 +138,11 @@ $ q := - k (partial T)/(partial n). $
 
 Em 1D, $partial T \/ partial n = n \, Q$. Com $k = 1$, $q = - n Q$. Nesta aula trabalhamos com $Q$ para a álgebra ficar transparente; quando formos ao 2D, a incógnita de contorno volta a ser $q$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Da integração por partes ao contorno"
+== Da integração por partes ao contorno
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 Sejam $u$ e $v$ funções regulares em $[x_1, x_2]$. Integração por partes:
 
 $
@@ -170,19 +170,19 @@ Leitura operacional:
 + Cada transferência produz termos de contorno.
 + No BEM repetimos o processo até o operador diferencial cair inteiro sobre a função peso (a SF). O número de integrações acompanha a ordem do operador (Laplace: 2; biarmônico/viga: 4; …).
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Laplace 1D, em camadas"
+== Laplace 1D, em camadas
 
-== "Camada 0 - problema forte"
+== Camada 0 - problema forte
 
 $ (d^2 T)/(d x^2) = 0 quad "em" quad (x_0, x_f), $
 
 mais duas CDC entre ${T(x_0), T(x_f), Q(x_0), Q(x_f)}$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Camada 1 - resíduo ponderado (ainda sem escolher o peso)"
+== Camada 1 - resíduo ponderado (ainda sem escolher o peso)
 
 Para uma função peso $T^*$ suficientemente regular,
 
@@ -196,11 +196,11 @@ $
   - integral_(x_0)^(x_f) T (T^*)'' dif x.
 $
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Camada 2 - escolha da função peso: solução fundamental"
+== Camada 2 - escolha da função peso: solução fundamental
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Em vez de um peso polinomial arbitrário, o BEM escolhe $T^*$ especial:
 
 $ - (d^2 T^* (x, x_d))/(d x^2) = delta(x - x_d). $
@@ -217,11 +217,11 @@ $
 
 Com $T'' = 0$, a identidade colapsa para uma relação *só com valores de contorno* e com o valor $T(x_d)$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Camada 3 - SF explícita em 1D"
+== Camada 3 - SF explícita em 1D
 
-#set text(size: 13pt)
+#set text(size: 16pt)
 Uma SF conveniente é
 
 $
@@ -240,11 +240,11 @@ $
   - T(x_0) Q^*(x_0, x_d) + T^*(x_0, x_d) Q(x_0).
 $
 
+#set text(size: 18pt)
+
+== Camada 4 - colocação no contorno ()
+
 #set text(size: 14pt)
-
-== "Camada 4 - colocação no contorno ()"
-
-#set text(size: 10.5pt)
 O contorno só tem dois pontos. Colocamos a fonte em cada um deles: $x_d = x_0$ e $x_d = x_f$.
 
 Valores da SF:
@@ -303,9 +303,9 @@ Leitura que você vai reencontrar em 2D:
 
 *Condições de contorno.* Das quatro quantidades $(T_0, T_f, Q_0, Q_f)$, *duas* são dados e duas são incógnitas. Move-se para a esquerda tudo o que é desconhecido e para a direita tudo o que é conhecido, até obter $A x = b$ com $A$ $2 times 2$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Camada 5 - pontos internos (pós-processamento)"
+== Camada 5 - pontos internos (pós-processamento)
 
 Com $T$ e $Q$ já conhecidos *nas pontas*, a mesma identidade com $x_d in (x_0, x_f)$ devolve $T(x_d)$ sem resolver outro sistema. Para a SF deste capítulo:
 
@@ -318,11 +318,11 @@ $
 
 Isso materializa a vantagem “interior sob demanda”: o sistema linear é só de contorno; o campo interno é avaliação.
 
+#set text(size: 18pt)
+
+== Exemplos numéricos (Julia + Plots)
+
 #set text(size: 14pt)
-
-== "Exemplos numéricos (Julia + Plots)"
-
-#set text(size: 10.5pt)
 Ambiente mínimo desta aula:
 
 ```julia
@@ -394,11 +394,11 @@ T_interior(xd, x0, xf, T, Q) =
     0.5 * (T[1] + T[2]) + (xd - x0)/2 * Q[1] + (xd - xf)/2 * Q[2]
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Caso 1 - Dirichlet"
+== Caso 1 - Dirichlet
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 $
   T(0) = 100, quad T(1) = 0
   quad => quad T_"exata"(x) = 100 - 100 x, quad Q = -100.
@@ -423,9 +423,9 @@ plot(xs, T_exato; label="exato", xlabel="x", ylabel="T",
 plot!(xs, T_num; label="BEM (interior)", ls=:dash, lw=2)
 ```
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Caso 2 - mista (um dado em cada ponta)"
+== Caso 2 - mista (um dado em cada ponta)
 
 $
   T(0) = 100, quad Q(1) = 0
@@ -441,9 +441,9 @@ T, Q, A, b, x = solve_bem1d(H, G, T_data, Q_data)
 
 *Caso 2b (variante).* $T(0)=100$, $Q(0)=0$ também fecha algebricamente e devolve $T_f=100$, $Q_f=0$. Serve para ver que bastam *dois dados independentes* entre os quatro slots — não necessariamente um em cada lado.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Roteiro"
+== Roteiro
 
 + Operador no domínio $->$ resíduo ponderado.
 + Integrar por partes até o operador cair na função peso.
@@ -453,11 +453,11 @@ T, Q, A, b, x = solve_bem1d(H, G, T_data, Q_data)
 + Aplicar CDC $->$ $A x = b$.
 + Interior: reavaliar a identidade com $x_d in Omega$.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Exercícios"
+== Exercícios
 
-#set text(size: 12pt)
+#set text(size: 15pt)
 + *Convecção (Robin) à direita.*
   No extremo direito, $Q_f = h (T_f - T_infinity)$ com $T_infinity = 20$ °C e $h = 3$ (unidades consistentes do modelo 1D). À esquerda, $T_0 = 100$ °C. Como $Q_f$ depende de $T_f$, substitua essa relação *antes* de montar $A x = b$ (a linha correspondente mistura colunas de $H$ e $G$).
   Resolva analítica e numericamente. Compare $T(x)$ e os fluxos nas pontas.
@@ -487,9 +487,9 @@ T, Q, A, b, x = solve_bem1d(H, G, T_data, Q_data)
   - O que precisa existir para o BEM “clássico” de um operador linear?
   - Se só $T_0$ e $T_f$ são dados, o sistema devolve o quê?
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Preparar o Julia desta aula"
+== Preparar o Julia desta aula
 
 ```powershell
 winget install julia -s msstore
@@ -504,9 +504,9 @@ using Plots
 
 Gráficos desta aula usam *Plots.jl*. Capítulos seguintes reintroduzem malha, Gmsh e o fluxo de trabalho completo quando a geometria deixar de ser um intervalo.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
 
-== "Extra (fora da trilha da aula 1) - radiação"
+== Extra (fora da trilha da aula 1) - radiação
 
 Condição não linear de radiação entre superfícies:
 
@@ -520,4 +520,4 @@ com $kappa approx 5.699 times 10^(-8)$ W/(m²·K⁴) (Stefan–Boltzmann), $0 <=
 
 Projeto opcional *depois* de dominar Robin linear — não é pré-requisito da aula 1.
 
-#set text(size: 14pt)
+#set text(size: 18pt)
