@@ -20,23 +20,24 @@ só com integrais em $Gamma$. Agora admitimos *fonte de domínio*:
 $ nabla^2 T = f(x) quad "em" Omega . $
 
 A equação integral *ganha um termo em* $Omega$. Em vez de malha volumétrica de EF, o
-`BEM_gmsh` monta o operador *DIBEM* (Direct Interpolation BEM): uma matriz $M$ tal que
+`BEM_gmsh` monta o operador *DIBEM* (Dual Integration Boundary Element Method): uma matriz $M$ tal que
 
 $
   bold(d) approx M bold(f) ,
   quad
-  d_i approx integral_Omega T^* (x, x_i)\, f(x)\, dif Omega ,
+  d_i approx integral_Omega T^* (x, x_i)\, f(x)\, dif Omega .
 $
 
-usando RBF nos nós de colocação (contorno + internos) e redução das integrais de
-volume ao contorno — o mesmo espírito do `geometric_props` no cap. *Indo para 2D*.
+O produto $T^* f$ é aproximado por RBF mais um polinômio de primeira ordem nas
+colocações (contorno + internos). As integrais das bases e de $T^*$ sozinha caem no
+contorno — o mesmo espírito do `geometric_props` no cap. *Indo para 2D*.
 
 #set text(size: 18pt)
 
 == Objetivos
 
 + Derivar *por que* aparece $integral_Omega T^* f$ a partir do Laplace.
-+ Entender DIBEM: RBF $arrow.r$ $F$ $arrow.r$ primitivas no contorno $arrow.r$ $M$.
++ Entender DIBEM: produto $T^* f$ $arrow.r$ pesos $S$ $arrow.r$ $M$, diagonal por $I_s$.
 + Montar `H_G_full_direct` + `DIBEM` e usar o cache `dad.M`.
 + Resolver Poisson estacionário $H T - G q = M f$ (RHS de domínio).
 + Ver $M$ como “massa” no transiente (ponte).
@@ -128,78 +129,109 @@ $
 
 == Ideia em uma frase
 
-Interpola $f$ (ou outra densidade de domínio) por RBF nos $N =$ `dad.nt` pontos
-(contorno + internos) e transforma $integral_Omega T^* f$ em combinações de
-*integrais só em* $Gamma$, montando a matriz $M$ uma vez.
+#set text(size: 16pt)
+Aproxima-se o produto $T^*(x, y)\, f(y)$ por RBF mais um polinômio de primeira ordem.
+A integral em $Omega$ fica $S$ vezes os valores nodais desse produto. Fora da diagonal,
+$M_(i j) = S_j T^*(x_i, x_j)$; a diagonal sai de $integral T^*$, sem avaliar a solução
+fundamental na singularidade.
+
+$x$ é o ponto fonte; $y$ percorre $Omega$. Os centros das bases são as $N =$ `dad.nt`
+colocações (contorno + internos).
 
 #set text(size: 18pt)
 
-== Passo a passo
+== 1. Aproximação
+
+#set text(size: 15pt)
+$
+  T^*(x, y) f(y)
+  approx
+  sum_(j=1)^N phi_j(y) alpha_j
+  + c_0 + c_1 y_1 + c_2 y_2
+  =
+  Phi(y) alpha + P(y) c.
+$
+
+$P(y) = mat(1, y_1, y_2)$ e $c = mat(c_0; c_1; c_2)$.
+$alpha$ pesa as bases; $c$ pesa o polinômio.
+Default do pacote: `PHS()` (`poly_deg = 2`; o caso linear é `poly_deg = 1`).
+
+#set text(size: 18pt)
+
+== 2. Coeficientes
+
+#set text(size: 15pt)
+Nos pontos $x_i$, com $F_(i j) = phi_j(x_i)$:
+
+$
+  F alpha + P^T c = T^* f,
+  quad
+  P alpha = 0.
+$
+
+$
+  A = mat(F, P^T; P, 0),
+  quad
+  mat(alpha; c) = A^(-1) mat(T^* f; 0).
+$
+
+A segunda equação do bloco é a reprodução polinomial.
+
+#set text(size: 18pt)
+
+== 3. Integração sobre o domínio
 
 #set text(size: 14pt)
-Sejam $x_1,...,x_N$ as colocações (`point(dad,i)`, $i=1..N$).
-
-*1. Interpolação*
-
 $
-  f(x) approx sum_(j=1)^N phi.alt(|x - x_j|) alpha_j
-$
-(mais monômios de baixa ordem se `poly_deg` $>= 0$).
-
-
-Nos nós:
-
-$
-  F bold(alpha) = bold(f) ,
+  integral_Omega T^* f dif y
+  = I alpha + I_p c,
   quad
-  F_(i j) = phi.alt(|x_i-x_j|)
-  \ (i != j),\
-  F_(i i)\ "com regularização" .
+  I = integral_Omega Phi dif y,
+  quad
+  I_p = integral_Omega P dif y.
 $
 
-No pacote o default é `PHS()` (polyharmonic spline; ver `Radial_Basis_Functions.jl`).
-
-*2. Integral contra a SF*
-
 $
-  d(x_i)
-  =
-  integral_Omega T^* (x,x_i) f(x) dif Omega
-  approx
-  sum_j alpha_j integral_Omega T^* (x,x_i) phi.alt_j (x) dif Omega .
+  mat(S, S_p) = mat(I, I_p) A^(-1),
+  quad
+  integral_Omega T^* f dif y = S (T^* f).
 $
 
-*3. Redução ao contorno*
+$S$ não depende de $f$ nem do ponto fonte. O bloco $S_p$ multiplica o zero do lado direito.
 
-Integrais radiais $integral_Omega g(r) dif Omega$ com $r=|x-x_i|$ viram integrais em
-$Gamma$ via primitiva + fator $upright(bold(n))·upright(bold(r))\/r^2$ em 2D
-(mesma geometria da área no cap. *Indo para 2D*).
+`IF` guarda $I$, `IP` guarda $I_p$, `ID[i]` guarda $I_s(x_i) = integral T^* dif y$.
+Essas integrais caem em $Gamma$ pela primitiva vezes $upright(bold(n)) dot.op upright(bold(r)) \/ r^2$.
+$I_s$ não usa a RBF. Longe do elemento: lumping; perto: Gauss (`_dibem_accumulate_IF_ID!`).
 
-O código acumula, por fonte $i$:
+#set text(size: 18pt)
 
-- `IF[i]` — contribuição de contorno ligada à RBF;
-- `ID[i]` — contribuição ligada à SF (caso $f equiv 1$).
+== 4. Matriz $M$
 
-Longe do elemento: lumping nodal; perto: Gauss regular (`_dibem_accumulate_IF_ID!`).
-
-*4. Matriz $M$*
-
-Forma densa típica (RBF genérica em `DIBEM_dense`):
-
-```julia
-M = IF' / F .* D          # D_ij ~ T*(xi, xj), i≠j
-for i in 1:dad.nt
-    M[i, i] = 0
-    M[i, i] = -sum(M[i, :]) + ID[i]
-end
-```
-
-A diagonal impõe a identidade do caso constante:
+#set text(size: 16pt)
+O mesmo $S$ vale em todo ponto fonte. Para $i != j$,
 
 $
-  M bold(1) = bold(I D)
-  quad arrow.r.double.long quad
-  M_(i i) = I D_i - sum_(j != i) M_(i j) .
+  M_(i j) = S_j T^*(x_i, x_j),
+  quad
+  (M f)_i = sum_(j=1)^N M_(i j) f_j.
+$
+
+$T^*(x_i, x_i)$ é singular: $M_(i i)$ não sai dessa fórmula.
+
+No pacote, $S$ é `dibem_c` e $D_(i j) = T^*(x_i, x_j)$ ($i != j$). Fora da diagonal:
+`M = D .* S'`.
+
+#set text(size: 18pt)
+
+== 5. Diagonal indireta
+
+#set text(size: 15pt)
+Com $f equiv 1$, a integral é $I_s$, sem RBF. A discretização reproduz esse caso:
+
+$
+  M bold(1) = bold(I_s),
+  quad
+  M_(i i) = (I_s)_i - sum_(j != i) M_(i j).
 $
 
 #block(
@@ -212,13 +244,69 @@ $
   *Analogia com $H$.*
   Laplace: $T equiv 1$, $q equiv 0$ $arrow.r$ $H bold(1)=0$ $arrow.r$
   $H_(i i)=-sum_(j!=i) H_(i j)$.
-  DIBEM: $f equiv 1$ $arrow.r$ $M bold(1)=bold(I D)$ $arrow.r$ diagonal de $M$ por linha.
-  Em ambos: *não integre o singular “na marra”*.
+  DIBEM: $f equiv 1$ $arrow.r$ $M bold(1)=bold(I_s)$ (`ID` no código).
+  Em ambos, a singularidade fica fora da quadratura.
 ]
 
-Depois disso:
+$ bold(d) = M bold(f). $
 
-$ bold(d) = M bold(f) . $
+#set text(size: 18pt)
+
+== 6. Regularização constante
+
+#set text(size: 14pt)
+A diagonal indireta é a decomposição
+
+$
+  integral_Omega T^* f dif y
+  =
+  integral_Omega T^* (f - f_0) dif y
+  + f_0 I_s.
+$
+
+Com $f_0 = f_i$, a diferença se anula em $y = x_i$. Só entram $j != i$:
+
+$
+  integral_Omega T^* f dif y
+  approx
+  sum_(j != i) M_(i j) (f_j - f_i) + f_i I_s.
+$
+
+O fator de $f_i$ é $M_(i i)$ do passo 5. A condição $M bold(1) = bold(I_s)$ é essa regularização em forma matricial.
+
+#set text(size: 18pt)
+
+== 7. Regularização linear
+
+#set text(size: 13pt)
+Com $r = y - x$ e $f_0 = f_i$,
+
+$
+  integral T^* f
+  =
+  integral T^* (f - f_0 - f_0' dot.op r)
+  +
+  integral T^* (f_0 + f_0' dot.op r).
+$
+
+$F alpha = f$ e $(F')_(i j) = nabla phi_j(x_i)$, logo $f_0' = F' (F backslash f)$ na linha $x_i$.
+A parcela linear integra sem RBF:
+
+$
+  integral T^* (f_0 + f_0' dot.op r) dif y
+  = f_0 I_s + f_0' dot.op I_r,
+  quad
+  I_r = integral T^* r dif y.
+$
+
+Em $y = x_i$, $r = 0$: o resto e a sua derivada se anulam. Para $i != j$, com $r_(i j) = x_j - x_i$,
+
+$
+  M_(i j) = S_j (T^*(x_i, x_j) - (F' F^(-1)) r_(i j)).
+$
+
+$(F' F^(-1)) r_(i j) = F' (F backslash r)$ é o mesmo operador de $f_0'$, na posição relativa.
+$f_0 + f_0' dot.op r$ segue em $I_s$ e $I_r$. A diagonal continua a do passo 5.
 
 #set text(size: 18pt)
 
@@ -232,27 +320,23 @@ $ bold(d) = M bold(f) . $
 
 == Código no pacote
 
-#set text(size: 15pt)
-```julia
-# Laplace/Domain.jl — essência DIBEM_dense
-# F_ij = φ(|xi-xj|),  D_ij = T*(xi,xj)
-# IF, ID = primitivas no contorno
-# M = (IF'/F) .* D  +  diagonal via ID
+#set text(size: 14pt)
+`DIBEM_dense` monta a $M$ dos passos 4 e 5 (ação = regularização constante).
+No código, `P` tem uma linha por nó: `K = [F P; P' 0]`.
 
-function DIBEM_dense(dad::BEMdata{<:Laplace}; rbf=PHS())
-    # ... monta F, D ...
-    _dibem_accumulate_IF_ID!(IF, ID, dad, rbf; mon=mon, IP=IP)
-    M = IF' / F .* D
-    for i in 1:dad.nt
-        M[i, i] = 0
-        M[i, i] = -sum(M[i, :]) + ID[i]
-    end
-    set_cache!(dad; M, dibem_F=F, dibem_rbf=rbf, dibem_method=:dense)
-    return M
+```julia
+# F_ij = φ_j(x_i)
+# [S; λ] = [F P; P' 0] \ [IF; IP]   # S = dibem_c
+# D_ij = T*(xi, xj), i ≠ j
+# M = D .* S' ;  M_ii = ID[i] - Σ_{j≠i} M_ij
+
+S = _dibem_poly_c(F, IF, pts, rbf; IP=IP)
+M = D .* S'
+for i in 1:dad.nt
+    M[i, i] = 0
+    M[i, i] = -sum(M[i, :]) + ID[i]
 end
 ```
-
-API:
 
 ```julia
 DIBEM(dad)                         # :dense, rbf=PHS()
@@ -260,8 +344,7 @@ DIBEM(dad; rbf=PHS(3; poly_deg=0))
 DIBEM(dad; method=:hmatrix)        # N grande — extra / trabalhos
 ```
 
-Exige colocações de domínio: `format2d(..., pontointerno=true)` (ou lista de internos no `dad`).
-Então `dad.nt = dad.n + n_"int"`.
+Exige `format2d(..., pontointerno=true)`. Então `dad.nt = dad.n + n_"int"`.
 
 #set text(size: 18pt)
 
